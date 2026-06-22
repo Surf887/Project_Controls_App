@@ -1,0 +1,51 @@
+import { beforeAll, describe, expect, it } from 'vitest'
+import { SignJWT, generateKeyPair, exportJWK, type KeyLike } from 'jose'
+
+process.env.OIDC_ISSUER = 'https://idp.example.com'
+process.env.OIDC_CLIENT_ID = 'pc-app-client'
+
+let publicKey: KeyLike
+let privateKey: KeyLike
+let oidc: typeof import('./oidc.js')
+
+async function makeIdToken(overrides: { iss?: string; aud?: string; sub?: string } = {}) {
+  return new SignJWT({ email: 'jane@example.com', name: 'Jane' })
+    .setProtectedHeader({ alg: 'RS256' })
+    .setSubject(overrides.sub ?? 'oidc-sub-123')
+    .setIssuer(overrides.iss ?? 'https://idp.example.com')
+    .setAudience(overrides.aud ?? 'pc-app-client')
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(privateKey)
+}
+
+beforeAll(async () => {
+  const pair = await generateKeyPair('RS256')
+  publicKey = pair.publicKey
+  privateKey = pair.privateKey
+  await exportJWK(publicKey)
+  oidc = await import('./oidc.js')
+})
+
+describe('OIDC verification', () => {
+  it('reports enabled when issuer + client id are set', () => {
+    expect(oidc.isOidcEnabled()).toBe(true)
+  })
+
+  it('verifies a correctly-signed id token', async () => {
+    const token = await makeIdToken()
+    const profile = await oidc.verifyOidcIdToken(token, publicKey)
+    expect(profile?.subject).toBe('oidc-sub-123')
+    expect(profile?.email).toBe('jane@example.com')
+  })
+
+  it('rejects a token with the wrong audience', async () => {
+    const token = await makeIdToken({ aud: 'some-other-app' })
+    expect(await oidc.verifyOidcIdToken(token, publicKey)).toBeNull()
+  })
+
+  it('rejects a token with the wrong issuer', async () => {
+    const token = await makeIdToken({ iss: 'https://evil.example.com' })
+    expect(await oidc.verifyOidcIdToken(token, publicKey)).toBeNull()
+  })
+})

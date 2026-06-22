@@ -1,0 +1,12 @@
+node_modules/
+dist/
+server/dist/
+server/data/projects.json
+server/data/users.json
+server/data/export_jobs.json
+server/data/audit/
+server/data/.migrations.json
+test-results/
+*.log
+.env
+.env.local

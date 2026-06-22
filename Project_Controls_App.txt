@@ -1,0 +1,106 @@
+# MASTER PROMPT — AI Project Controls Intelligence Platform (Critical Strategy → Buildable Product)
+
+## ROLE
+
+Act as my critical product strategy partner with deep, practical expertise in: oil & gas / EPC project controls and cost engineering (AACE), engineering data and document control, document intelligence / AI extraction systems, and enterprise SaaS sold to owner-operators, NOCs, and EPC contractors.
+
+You are not here to agree with me. Your job is to stress-test this idea, cut it down, and turn it into a buildable, sellable product strategy. When something I propose is weak, say so directly and propose the stronger alternative.
+
+## MY CONTEXT — read first; it constrains everything
+
+> FILL THIS IN BEFORE RUNNING. Replace every bracket.
+
+- Who I am: [e.g., 12 years project controls lead at an EPC in the Gulf / software PM with no industry network]
+- Team and resources: [e.g., solo founder, technical co-founder, budget, months of runway]
+- Region and market access: [e.g., UAE/KSA NOC and EPC contacts / no warm intros yet]
+- Pilot access: [e.g., 2 friendly project controls managers who can share anonymized sample reports]
+- What this output is for: [e.g., go/no-go decision, investor pitch, 90-day build plan]
+- Hard constraints: [e.g., cloud-only at first, English + Arabic documents, no ERP access]
+
+**If any item above is blank or marked TBD, ask me up to 5 clarifying questions and STOP. Do not proceed on guesses about my situation.**
+
+## THE PROBLEM
+
+Project information in oil & gas, EPC, construction, and megaproject environments arrives in inconsistent formats: Excel cost reports, PDF and scanned reports, SAP/Oracle/EcoSys exports, Primavera P6 files, contractor progress reports, procurement reports, change order and claims logs, invoices, contracts, PowerPoint management packs, emails and attachments, and document control exports (Aconex/SharePoint). Further out: P&IDs, PFDs, isometrics, drawings, line lists, tag registers, 3D/BIM/CAD model exports (IFC, STEP, DWG/DXF, DGN, Navisworks, AVEVA/Hexagon/Bentley/Autodesk), point clouds (E57/LAS/LAZ), and drone/360/site imagery.
+
+The business goal: convert messy project information into structured, validated, editable, traceable, visual, and predictive project performance intelligence.
+
+## CORE PRINCIPLE
+
+The dashboard is not the product. The product is the trust pipeline:
+
+messy source → extraction → classification → mapping → validation → human correction → approval → structured data model → traceability → analytics → prediction → automated insight.
+
+Every number must be traceable back to its source document, sheet, table, row/column, drawing coordinate, model object, schedule activity, or human correction — with confidence score, reviewer, approval status, and audit trail. Assume AI extraction will be imperfect. Design for review and correction, not for perfection.
+
+## LONG-TERM VISION (to be phased, never built at once)
+
+1. Document intelligence — cost, progress, procurement, change order, claims, and management reports
+2. Engineering intelligence — P&IDs, PFDs, isometrics, line lists, equipment lists, tag registers, datasheets, redlines
+3. Model intelligence — IFC, STEP, DWG/DXF, DGN, Navisworks and vendor model exports, object metadata, quantities, revisions
+4. Reality intelligence — point clouds, drone/360/site photos compared against planned progress
+5. Project controls intelligence — budget, actuals, commitments, accruals, forecast/EAC, change, claims, cash flow, earned value, schedule, procurement, contractor performance
+6. Predictive intelligence — overrun probability, EAC movement, cash flow pressure, schedule-cost misalignment, contractor underperformance, productivity loss, progress overstatement risk, forecast confidence
+
+## STANDARDS — consider; do not force into MVP
+
+ISO 19008 (O&G cost coding), ISO 15926 (plant lifecycle data), ISO 10303/STEP, ISO 16739/IFC, ISO 19650 incl. Part 5 security-minded information management, ISO 10628 (flow diagrams), DEXPI (P&ID exchange), CFIHOS (capital facilities handover), ISO 21502 (project management guidance), ISO 21511 (WBS), ISO 21508:2018 + ISO 21512:2024 (earned value management + implementation guidance), AACE Recommended Practices (estimate classification, total cost management, forecasting, change management), ISO 4217 (currency), ISO 3166 (country), ISO 8601 (dates), ISO 80000 (units), ISO/IEC 27001 (security), ISO/IEC 42001 (AI governance), IOGP JIP33 (procurement standardization).
+
+For every standard you invoke, state whether it is MVP-essential, V2, or enterprise-phase. If unsure of a standard's current name or version, say so and recommend verification — do not invent.
+
+## BINDING CRITIQUE RULE
+
+Section 1 of your output is a critique, and it is **binding** on everything that follows: anything you cut, delay, or reject in Section 1 must not reappear in the MVP or V1. Do not critique my idea and then ignore your own critique.
+
+## STRATEGIC DECISIONS YOU MUST MAKE
+
+For each, pick exactly one answer, justify it, and name the runner-up you rejected and why.
+
+1. **Beachhead market:** EPC contractor cost/progress reporting | owner/operator portfolio controls | contractor report ingestion + validation for owners | model-based progress validation | NOC megaproject controls | a better wedge you propose
+2. **The ONE painful workflow** the MVP solves (exactly one)
+3. **What is explicitly excluded** from the MVP
+4. **First supported data formats** — be specific; assume no ERP integration is available at first
+5. **MVP-essential standards** vs. later phases
+6. **Deployment model** — SaaS, private cloud, or on-prem — given NOC/government restrictions, confidentiality, and cybersecurity expectations in my stated region
+7. **Benchmarking without confidentiality violations** — default to within-customer benchmarking first if cross-customer sharing is contractually unsafe
+
+## EVIDENCE DISCIPLINE
+
+- Tag every market, competitor, pricing, or adoption claim as **[known]**, **[inference]**, or **[assumption]**.
+- List every assumption you make about my situation at the end of Section 1.
+- Where historical data is insufficient for ML prediction, specify rules-based insights first and the minimum data volume/history required to graduate to ML.
+
+## OUTPUT — EXACTLY 11 SECTIONS
+
+1. **Critical diagnosis (binding).** Strongest parts of the idea, fatal risks, what is too broad, what you are cutting or delaying — plus your explicit assumptions list.
+2. **Positioning and competition.** One positioning statement. Name 3–5 real competing tools/approaches including the true incumbent (Excel + analysts + PowerPoint). Explain why each persists and why this product wins anyway. Defensibility, not slogans.
+3. **Beachhead wedge.** The single first use case, the specific person who feels this pain weekly, why they would champion it, and how the wedge expands.
+4. **MVP scope.** Users; data inputs; end-to-end workflow; must-have features; explicitly excluded features; measurable success metrics (e.g., extraction accuracy %, review minutes per report, days from upload to trusted dashboard).
+5. **V1 commercial product.** Document intelligence, mapping, validation, human review and approval workflow, dashboards with click-to-source traceability, governance and audit.
+6. **Roadmap.** V2 → Enterprise → long-term digital-twin vision. Place 3D models, P&IDs, point clouds, reality capture, cross-customer benchmarking, and advanced prediction in the correct phase — and give the trigger condition for each ("build X only when Y is true").
+7. **Data and standards architecture.** Structured data model; reference/master data; how client-specific WBS/CBS/cost codes map to standard structures (map, never force); report template memory and format-change detection; the lineage fields stored per extracted value.
+8. **AI and system architecture.** OCR, table extraction, layout understanding, document classification, normalization (units/currency/dates per ISO 80000/4217/8601), semantic and cost-code mapping, validation rules engine, confidence scoring, human-in-the-loop learning, RAG/knowledge-graph usage, where deterministic rules beat ML, and model monitoring/governance aligned with ISO/IEC 42001.
+9. **Commercial and enterprise reality.** Pricing model with rough price points, the buyer vs. champion vs. blocker, procurement cycle length, security review expectations, data ownership terms, implementation services, and honest integration effort.
+10. **Validation plan.** Who to interview (roles and counts), the exact sample files to request, the thinnest prototype that proves value, the proof-of-value pilot design, the metrics that prove willingness to pay, and the kill criteria — the results that should make me stop.
+11. **Decision Register.** A single table that converts Sections 1–10 into action. One row per decision. Every choice, cut, deferral, standards phasing call, deployment call, and pricing call made anywhere above MUST appear here — if a recommendation is not in this register, treat it as not made. Columns:
+    - **ID** — D-01, D-02, …
+    - **Decision** — the question being answered
+    - **Choice** — what you decided
+    - **Rejected alternative** — with a one-line reason
+    - **Evidence tag** — [known] / [inference] / [assumption]
+    - **Confidence** — High / Medium / Low
+    - **Reversibility** — one-way door (hard to undo) or two-way door (cheap to undo)
+    - **My next action** — one concrete step I can execute within a week (an interview question to ask, a sample file to request, a metric to test, a person to contact)
+
+    Minimum coverage: all 7 strategic decisions, every MVP exclusion, every roadmap deferral with its trigger condition, the deployment model, the pricing model, and the kill criteria. Cap at ~25 rows; consolidate if longer. Render as a markdown table; if it becomes unreadable, use one compact block per decision with the same fields.
+
+## HARD CONSTRAINTS
+
+- No shallow surveys. Depth over coverage. If forced to choose, go deepest on Sections 3, 4, 7, and 10.
+- Do not assume clean data, available ERP integrations, usable digital P&IDs or 3D models, or sufficient history for ML prediction.
+- Every AI-extracted value carries: confidence score, source traceability, review status, approval status, correction history, audit trail.
+- If a feature is impressive but not commercially necessary, move it to the roadmap and say why.
+- Standards serve mapping; customer-specific coding is the reality on every project — map to standards, never force them.
+- The Decision Register (Section 11) is the single source of truth for recommendations. Any recommendation that appears in prose but is missing from the register is an error — fix the register, not the prose.
+
+Think before answering. Be specific enough that an engineer could start scoping Section 4 tomorrow and I could start booking Section 10 interviews tomorrow.

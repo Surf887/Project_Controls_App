@@ -1,0 +1,96 @@
+# Enterprise architecture roadmap
+
+Maps product capabilities to implementation phases. The trust milestone established control-account aggregation and monthly close; this document defines the path to enterprise-grade governance.
+
+## Capability matrix
+
+| Capability | Today | Phase 1 (foundation) | Phase 2 (enterprise) | Phase 3 (scale) |
+|---|---|---|---|---|
+| **Configurable workflows** | Hard-coded forecast/change flows | `workflowConfig.ts` + `workflowEngine.ts` | Admin UI, delegation, SLAs | BPMN, multi-tenant templates |
+| **Multi-project / portfolio** | 3-project compare, active sync | Portfolio API, roll-up policies | PMO dashboards, cross-project RBAC | Federated portfolios, JV structures |
+| **Role-based permissions** | Demo `x-pc-role` header | `actionPolicy.ts` aligned to reducer | OIDC/JWT, project-scoped roles | SoD, attribute-based access |
+| **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
+| **Audit immutability** | Mutable in-state array (100 cap) | Append-only JSONL + hash chain | Postgres `audit_events` (no UPDATE) | WORM storage, SIEM export |
+| **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
+| **Integrations** | Simulated connectors UI | Adapter registry + sync jobs API | SAP/P6 OAuth, webhooks | iPaaS, message bus |
+| **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
+| **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
+| **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
+| **Edge cases** | Core O&G scenarios in seed | Documented edge-case register | Per-domain regression suites | Production incident library |
+
+## Phase 1 — Foundation (implemented in this repo)
+
+### Configurable enterprise workflows
+
+- Shared definitions: `src/data/workflowConfig.ts`
+- Server validation: `server/src/services/workflowEngine.ts`
+- Workflows: forecast approval, change board, monthly close gates
+
+### Role-based permissions
+
+- Single policy map: `server/src/auth/actionPolicy.ts`
+- Blocks client-only actions (`ADD_AUDIT`, `HYDRATE`, `RESET` via actions)
+- Route guards on mutating endpoints
+
+### Immutable audit
+
+- Append-only store: `server/data/audit/{projectId}.jsonl`
+- Hash chain per entry: `server/src/services/auditService.ts`
+- API: `GET /api/projects/:id/audit` (never via reducer from client)
+
+### Budget versioning
+
+- Immutable snapshots: `server/data/baselines/{projectId}/`
+- API: `GET/POST /api/projects/:id/baselines`
+
+### Real database path
+
+- Postgres schema: `server/src/db/migrations/002_core_schema.sql`
+- Enable with `DATABASE_URL` (Docker Compose included)
+- JSON store remains default for local dev without Postgres
+
+### Integrations
+
+- Adapter registry: `server/src/integrations/connectorRegistry.ts`
+- Types: ERP, schedule (P6), contracts, procurement, document control
+- Client connectors UI becomes config; execution moves server-side
+
+### Report packs
+
+- Server bundles: `server/src/services/exportService.ts`
+- API: `GET /api/projects/:id/exports/close-pack`
+
+### Deployment
+
+- `docker-compose.yml` — app + Postgres
+- `.env.example` — required variables
+
+## Phase 2 — Enterprise hardening
+
+1. Wire Postgres store when `DATABASE_URL` is set (dual-write migration from JSON)
+2. OIDC provider (`server/src/auth/providers/oidcProvider.ts`)
+3. Portfolio governance policies (approval thresholds, delegation)
+4. PDF close packs (puppeteer or pdfkit)
+5. Webhook delivery for approved forecast/change events
+6. Optimistic concurrency (`version` column, 409 on conflict)
+
+## Phase 3 — Production scale
+
+1. Event sourcing for cost sheet mutations
+2. Cross-portfolio consolidation currency
+3. Backup automation (pg_dump schedule, audit archive)
+4. Pen-test remediation, SOC2 controls mapping
+5. Edge-case library from field deployments (accrual reversals, FX revals, JV splits, etc.)
+
+## Edge-case register (initial)
+
+Categories to cover before claiming “production ready”:
+
+- **Cost**: parallel WBS detail vs control account, contingency double-draw, FX revaluation timing
+- **Change**: budget vs forecast variance mechanism, partial approval, withdrawn COs
+- **Forecast**: locked period override, forecast-only changes after budget freeze
+- **Portfolio**: inactive benchmark drift, currency mix, JV non-operated share
+- **Integration**: partial ERP load, schedule actuals lag, duplicate PO lines
+- **Audit**: actor impersonation, retroactive correction (requires compensating entry, not delete)
+
+See `src/data/edgeCaseRegister.ts` for tracked scenarios and test linkage.

@@ -1,0 +1,247 @@
+import bcrypt from 'bcryptjs'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
+import { isPostgresEnabled, query } from '../db/postgres.js'
+import type { Role } from './roles.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const usersPath = process.env.USERS_PATH ?? path.resolve(__dirname, '../../data/users.json')
+
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12)
+
+export interface UserRecord {
+  id: string
+  email: string
+  name: string
+  role: Role
+  provider: 'local' | 'oidc'
+  passwordHash: string | null
+  oidcSubject: string | null
+  disabled: boolean
+  createdAt: string
+}
+
+/** Shape safe to return over the API — never includes the password hash. */
+export interface PublicUser {
+  id: string
+  email: string
+  name: string
+  role: Role
+  provider: 'local' | 'oidc'
+  disabled: boolean
+}
+
+export function toPublicUser(user: UserRecord): PublicUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    provider: user.provider,
+    disabled: user.disabled,
+  }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+// ---------------------------------------------------------------------------
+// JSON-file backing (default / no DATABASE_URL)
+// ---------------------------------------------------------------------------
+
+function readJsonUsers(): UserRecord[] {
+  if (!fs.existsSync(usersPath)) return []
+  return JSON.parse(fs.readFileSync(usersPath, 'utf8')) as UserRecord[]
+}
+
+function writeJsonUsers(rows: UserRecord[]): void {
+  fs.mkdirSync(path.dirname(usersPath), { recursive: true })
+  fs.writeFileSync(usersPath, JSON.stringify(rows, null, 2), 'utf8')
+}
+
+// ---------------------------------------------------------------------------
+// Postgres backing
+// ---------------------------------------------------------------------------
+
+interface UserRow {
+  id: string
+  email: string
+  name: string
+  role: Role
+  provider: 'local' | 'oidc'
+  password_hash: string | null
+  oidc_subject: string | null
+  disabled: boolean
+  created_at: string | Date
+}
+
+function rowToRecord(row: UserRow): UserRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+    provider: row.provider,
+    passwordHash: row.password_hash,
+    oidcSubject: row.oidc_subject,
+    disabled: row.disabled,
+    createdAt: typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString(),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+export async function countUsers(): Promise<number> {
+  if (isPostgresEnabled()) {
+    const result = await query<{ count: string }>('SELECT COUNT(*)::text AS count FROM users')
+    return Number(result.rows[0]?.count ?? '0')
+  }
+  return readJsonUsers().length
+}
+
+export async function listUsers(): Promise<PublicUser[]> {
+  if (isPostgresEnabled()) {
+    const result = await query<UserRow>('SELECT * FROM users ORDER BY created_at ASC')
+    return result.rows.map((row) => toPublicUser(rowToRecord(row)))
+  }
+  return readJsonUsers().map(toPublicUser)
+}
+
+export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  const normalized = normalizeEmail(email)
+  if (isPostgresEnabled()) {
+    const result = await query<UserRow>('SELECT * FROM users WHERE LOWER(email) = $1', [normalized])
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null
+  }
+  return readJsonUsers().find((u) => normalizeEmail(u.email) === normalized) ?? null
+}
+
+export async function findUserById(id: string): Promise<UserRecord | null> {
+  if (isPostgresEnabled()) {
+    const result = await query<UserRow>('SELECT * FROM users WHERE id = $1', [id])
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null
+  }
+  return readJsonUsers().find((u) => u.id === id) ?? null
+}
+
+export async function findUserByOidcSubject(subject: string): Promise<UserRecord | null> {
+  if (isPostgresEnabled()) {
+    const result = await query<UserRow>('SELECT * FROM users WHERE oidc_subject = $1', [subject])
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null
+  }
+  return readJsonUsers().find((u) => u.oidcSubject === subject) ?? null
+}
+
+export interface CreateUserInput {
+  email: string
+  name: string
+  role: Role
+  password?: string
+  provider?: 'local' | 'oidc'
+  oidcSubject?: string | null
+}
+
+export async function createUser(input: CreateUserInput): Promise<UserRecord> {
+  const email = normalizeEmail(input.email)
+  const provider = input.provider ?? 'local'
+  const passwordHash = input.password ? await bcrypt.hash(input.password, BCRYPT_ROUNDS) : null
+
+  if (provider === 'local' && !passwordHash) {
+    throw new Error('Local users require a password')
+  }
+
+  const record: UserRecord = {
+    id: `usr-${randomUUID()}`,
+    email,
+    name: input.name,
+    role: input.role,
+    provider,
+    passwordHash,
+    oidcSubject: input.oidcSubject ?? null,
+    disabled: false,
+    createdAt: new Date().toISOString(),
+  }
+
+  if (isPostgresEnabled()) {
+    await query(
+      `INSERT INTO users (id, email, name, role, provider, password_hash, oidc_subject, disabled, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        record.id,
+        record.email,
+        record.name,
+        record.role,
+        record.provider,
+        record.passwordHash,
+        record.oidcSubject,
+        record.disabled,
+        record.createdAt,
+      ],
+    )
+    return record
+  }
+
+  const rows = readJsonUsers()
+  if (rows.some((u) => normalizeEmail(u.email) === email)) {
+    throw new Error('A user with that email already exists')
+  }
+  rows.push(record)
+  writeJsonUsers(rows)
+  return record
+}
+
+export async function setUserRole(id: string, role: Role): Promise<void> {
+  if (isPostgresEnabled()) {
+    await query('UPDATE users SET role = $2, updated_at = NOW() WHERE id = $1', [id, role])
+    return
+  }
+  const rows = readJsonUsers()
+  const user = rows.find((u) => u.id === id)
+  if (user) {
+    user.role = role
+    writeJsonUsers(rows)
+  }
+}
+
+export async function setUserDisabled(id: string, disabled: boolean): Promise<void> {
+  if (isPostgresEnabled()) {
+    await query('UPDATE users SET disabled = $2, updated_at = NOW() WHERE id = $1', [id, disabled])
+    return
+  }
+  const rows = readJsonUsers()
+  const user = rows.find((u) => u.id === id)
+  if (user) {
+    user.disabled = disabled
+    writeJsonUsers(rows)
+  }
+}
+
+/** Constant-time-ish password check via bcrypt. Returns false for OIDC users. */
+export async function verifyUserPassword(user: UserRecord, password: string): Promise<boolean> {
+  if (!user.passwordHash) return false
+  return bcrypt.compare(password, user.passwordHash)
+}
+
+/**
+ * Idempotent bootstrap: if no users exist and ADMIN_EMAIL/ADMIN_PASSWORD are set,
+ * create the first admin. Lets a fresh deployment log in without a manual seed.
+ */
+export async function ensureBootstrapAdmin(): Promise<void> {
+  const email = process.env.ADMIN_EMAIL
+  const password = process.env.ADMIN_PASSWORD
+  if (!email || !password) return
+  if ((await countUsers()) > 0) return
+  await createUser({
+    email,
+    name: process.env.ADMIN_NAME ?? 'Administrator',
+    role: 'admin',
+    password,
+    provider: 'local',
+  })
+  console.log(`[auth] bootstrapped initial admin user: ${normalizeEmail(email)}`)
+}

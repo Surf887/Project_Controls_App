@@ -1,106 +1,80 @@
 name: CI
 
-
-
 on:
-
   push:
-
     branches: [main, master]
-
   pull_request:
 
-
-
 jobs:
-
   client:
-
     runs-on: ubuntu-latest
-
     steps:
-
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-
         with:
-
           node-version: '22'
-
           cache: npm
-
       - run: npm ci
-
       - run: npm test
-
       - run: npm run build
 
-
-
   server:
-
     runs-on: ubuntu-latest
-
     steps:
-
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-
         with:
-
           node-version: '22'
-
           cache: npm
-
           cache-dependency-path: server/package-lock.json
-
+      - run: npm ci --prefix server
       - run: npm ci
-
-        working-directory: server
-
-      - run: npm ci
-
       - run: npm test --prefix server
         env:
           DEMO_AUTH: 'true'
-
       - run: npm run build --prefix server
-
       - run: npm run smoke --prefix server
         env:
           DEMO_AUTH: 'true'
 
-
-
   e2e:
-
     runs-on: ubuntu-latest
-
     steps:
-
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
-
         with:
-
           node-version: '22'
-
           cache: npm
-
       - run: npm ci
-
       - run: npm ci --prefix server
-
       - run: npx playwright install --with-deps chromium
-
       - run: npm run test:e2e
-
         env:
-
           CI: true
-
           DEMO_AUTH: 'true'
 
+  # Dependency vulnerability scan. Advisory (non-blocking) so a new upstream
+  # advisory doesn't block delivery, but surfaces in the run logs.
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: npm audit (root)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+      - name: npm audit (server)
+        run: npm audit --omit=dev --audit-level=high --prefix server
+        continue-on-error: true
+
+  # Verify the production image actually builds (client + server compile and the
+  # multi-stage Dockerfile is valid). This is the gate that was missing when the
+  # image silently never compiled the server.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t project-controls-app:ci .

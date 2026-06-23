@@ -1,6 +1,6 @@
 import { verifySessionToken } from '../auth/jwt.js'
 import { effectiveRole, getProjectRole, listProjectIdsForUser } from '../auth/projectRoles.js'
-import { canPerformAction, demoUserFromRole, hasRole, type AuthUser, type Role } from '../auth/rbac.js'
+import { canPerformAction, demoUserFromRole, DEMO_USERS, hasRole, isDemoAuthEnabled, type AuthUser, type Role } from '../auth/rbac.js'
 import { isBlockedClientAction, minimumRoleForAction } from '../auth/actionPolicy.js'
 import { findUserById } from '../auth/userStore.js'
 import { param } from '../utils/params.js'
@@ -41,6 +41,18 @@ export const attachUser: RequestHandler = async (req, _res, next) => {
     if (claims) {
       const record = await findUserById(claims.sub)
       if (!record || record.disabled) {
+        // Demo tokens (minted by /auth/token) reference synthetic demo users
+        // that aren't persisted in the user store. Honour them ONLY when demo
+        // auth is enabled (always false in production), so prod never trusts a
+        // token whose subject isn't a real, enabled account.
+        if (isDemoAuthEnabled()) {
+          const demo = DEMO_USERS.find((u) => u.id === claims.sub)
+          if (demo) {
+            req.user = demo
+            req.globalRole = demo.role
+            return next()
+          }
+        }
         req.user = null
         req.globalRole = undefined
         return next()

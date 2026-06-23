@@ -1,3 +1,5 @@
+import { useProjectStore } from '../store/projectStore'
+
 export type ProjectRole = 'viewer' | 'cost_controller' | 'approver' | 'admin'
 
 const ROLE_RANK: Record<ProjectRole, number> = {
@@ -7,19 +9,27 @@ const ROLE_RANK: Record<ProjectRole, number> = {
   admin: 4,
 }
 
-export function readProjectRole(): ProjectRole {
-  if (typeof localStorage === 'undefined') {
-    return 'cost_controller'
+/** Narrow an arbitrary role string from the session to a known ProjectRole. */
+function normalizeRole(role: string | undefined | null): ProjectRole {
+  if (role === 'viewer' || role === 'cost_controller' || role === 'approver' || role === 'admin') {
+    return role
   }
-  const stored = localStorage.getItem('pc-role')
-  if (stored === 'viewer' || stored === 'cost_controller' || stored === 'approver' || stored === 'admin') {
-    return stored
-  }
+  // Unknown/absent role -> least-privileged default that can still operate.
   return 'cost_controller'
 }
 
+/**
+ * Derive the active role from the *verified* auth session (currentUser) held in
+ * the project store, NOT from a writable `localStorage['pc-role']` key. The
+ * server role is set only by the real/demo auth flows in api/client.ts
+ * (loginWithPassword / loginWithOidc / signIn -> persistSession), so a user can
+ * no longer escalate by editing localStorage in devtools.
+ *
+ * Defense-in-depth only: the server remains the authoritative enforcement point.
+ */
 export function useProjectRole() {
-  const role = readProjectRole()
+  const { currentUser } = useProjectStore()
+  const role = normalizeRole(currentUser?.role)
   return {
     role,
     canEdit: role !== 'viewer',

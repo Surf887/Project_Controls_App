@@ -298,6 +298,8 @@ export interface ProjectState {
   values: ExtractedValue[]
   selectedValueId: string
   ingestionApplications?: IngestionApplySummary[]
+  /** Append-only ledger of extraction postings (active + reversed). */
+  ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
 }
 
 export type ProjectAction =

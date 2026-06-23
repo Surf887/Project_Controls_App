@@ -13,6 +13,21 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
+/**
+ * Escape user/state-derived values before interpolating them into the raw HTML
+ * string we hand to a new window via document.write. Without this, a project
+ * name or period containing markup (e.g. `<script>`) would be executed in the
+ * print window's context.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function downloadText(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime })
   const url = URL.createObjectURL(blob)
@@ -90,8 +105,8 @@ export function ExportCentreView() {
         th { background: #f4f4f4; }
         footer { margin-top: 2rem; font-size: 0.85rem; color: #666; }
       </style></head><body>
-      <h1>${state.meta.name} — Monthly Close Summary</h1>
-      <p class="meta">Period: ${summary.period} · Generated ${new Date().toLocaleString()}</p>
+      <h1>${escapeHtml(state.meta.name)} — Monthly Close Summary</h1>
+      <p class="meta">Period: ${escapeHtml(summary.period)} · Generated ${escapeHtml(new Date().toLocaleString())}</p>
       <table>
         <tr><th>Metric</th><th>Value (control accounts)</th></tr>
         <tr><td>BAC</td><td>${formatUsd(summary.bac)}</td></tr>

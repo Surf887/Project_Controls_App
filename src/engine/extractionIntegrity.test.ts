@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { ExtractedValue } from '../data/projectData'
-import { resetExtractionForCorrection, sanitizeExtractedValues } from './extractionIntegrity'
+import { createSeedState } from '../store/seedState'
+import { applyApprovedExtractions } from './applyExtractions'
+import { resetExtractionForCorrection, sanitizeExtractedValues, applyValuesUpdate } from './extractionIntegrity'
+import { controlAccountRows } from './costAggregation'
 
 function makeValue(partial: Partial<ExtractedValue> & { id: string }): ExtractedValue {
   return {
@@ -25,6 +28,7 @@ function makeValue(partial: Partial<ExtractedValue> & { id: string }): Extracted
     correctionHistory: partial.correctionHistory ?? [],
     applied: partial.applied,
     appliedAt: partial.appliedAt,
+    postingId: partial.postingId,
     sccs: partial.sccs,
   }
 }
@@ -46,9 +50,10 @@ describe('extractionIntegrity', () => {
         applied: true,
       }),
     ]
-    const next = sanitizeExtractedValues(prior, incoming)
-    expect(next[0]?.applied).toBeUndefined()
-    expect(next[0]?.sccs?.composite).toContain('.')
+    const { values, reverseValueIds } = sanitizeExtractedValues(prior, incoming)
+    expect(values[0]?.applied).toBeUndefined()
+    expect(reverseValueIds).toEqual(['v1'])
+    expect(values[0]?.sccs?.composite).toContain('.')
   })
 
   it('prevents clearing applied via SET_VALUES while still approved', () => {
@@ -60,9 +65,10 @@ describe('extractionIntegrity', () => {
       }),
     ]
     const incoming = [makeValue({ id: 'v1', applied: undefined })]
-    const next = sanitizeExtractedValues(prior, incoming)
-    expect(next[0]?.applied).toBe(true)
-    expect(next[0]?.appliedAt).toBe('2026-06-01T00:00:00.000Z')
+    const { values, reverseValueIds } = sanitizeExtractedValues(prior, incoming)
+    expect(values[0]?.applied).toBe(true)
+    expect(values[0]?.appliedAt).toBe('2026-06-01T00:00:00.000Z')
+    expect(reverseValueIds).toEqual([])
   })
 
   it('resetExtractionForCorrection clears posting lock', () => {
@@ -71,5 +77,24 @@ describe('extractionIntegrity', () => {
     )
     expect(corrected.applied).toBeUndefined()
     expect(corrected.reviewStatus).toBe('pending_review')
+  })
+
+  it('applyValuesUpdate reverses cost sheet when correction is dispatched', () => {
+    const base = createSeedState()
+    const account = controlAccountRows(base.costSheetRows).find((r) => r.wbs === 'A.01')!
+    const value = makeValue({
+      id: 'v-test',
+      category: 'forecast',
+      wbs: 'A.01',
+      normalizedValue: account.eac + 500_000,
+    })
+    let state = { ...base, values: [value] }
+    state = applyApprovedExtractions(state, 'Tester').state
+    const postedEac = controlAccountRows(state.costSheetRows).find((r) => r.wbs === 'A.01')!.eac
+    expect(postedEac).toBe(account.eac + 500_000)
+
+    state = applyValuesUpdate(state, [resetExtractionForCorrection(state.values[0]!)], 'Reviewer')
+    const restored = controlAccountRows(state.costSheetRows).find((r) => r.wbs === 'A.01')!.eac
+    expect(restored).toBeCloseTo(account.eac, 2)
   })
 })

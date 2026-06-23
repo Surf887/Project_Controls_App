@@ -10,9 +10,10 @@ import {
 } from '../engine/governance'
 import { reconcileContingencyInState } from '../engine/projectReconcile'
 import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
-import { applyApprovedExtractions } from '../engine/applyExtractions'
+import { applyApprovedExtractions } from '../engine/ingestionPosting'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
-import { sanitizeExtractedValues } from '../engine/extractionIntegrity'
+import { applyValuesUpdate } from '../engine/extractionIntegrity'
+import { validateProjectAction } from '../engine/actionValidation'
 import { enrichCostSheetRows } from '../engine/sccs'
 import type { ProjectAction, ProjectState } from './types'
 import { defaultFxSettings, defaultReportingPeriod } from './types'
@@ -29,13 +30,15 @@ function isPeriodLocked(state: ProjectState) {
 function normalizeState(state: ProjectState): ProjectState {
   const needsSettings = !state.settings.reportingPeriod || !state.settings.fx
   const needsSccs = state.costSheetRows.some((row) => row.parentId === null && !row.sccs?.composite)
+  const needsPostings = state.ingestionPostings == null
 
-  if (!needsSettings && !needsSccs) {
+  if (!needsSettings && !needsSccs && !needsPostings) {
     return state
   }
 
   return {
     ...state,
+    ...(needsPostings ? { ingestionPostings: [] } : {}),
     ...(needsSettings
       ? {
           settings: {
@@ -379,6 +382,9 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     case 'RECONCILE_CONTINGENCY':
       return applyContingencyIfNeeded(state)
     case 'SYNC_COMMITMENTS': {
+      if (isPeriodLocked(state)) {
+        return state
+      }
       const costSheetRows = syncCommitmentsToCostSheet(
         state.costSheetRows,
         state.purchaseOrders,
@@ -398,7 +404,12 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         }),
       }
     }
-    case 'LOCK_REPORTING_PERIOD':
+    case 'LOCK_REPORTING_PERIOD': {
+      try {
+        validateProjectAction(state, action)
+      } catch {
+        return state
+      }
       return {
         ...state,
         settings: {
@@ -419,6 +430,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           summary: `Locked reporting period ${action.payload.period} after month-end sign-off.`,
         }),
       }
+    }
     case 'UNLOCK_REPORTING_PERIOD':
       return {
         ...state,
@@ -482,7 +494,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     case 'SET_REPORTS':
       return { ...state, reports: action.payload }
     case 'SET_VALUES':
-      return { ...state, values: sanitizeExtractedValues(state.values, action.payload) }
+      return applyValuesUpdate(state, action.payload, 'Cost Controller')
     case 'SET_SELECTED_VALUE':
       return { ...state, selectedValueId: action.payload }
     default:

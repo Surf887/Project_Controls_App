@@ -39,7 +39,9 @@ export function syncCommitmentsToCostSheet(
     if (row.parentId !== null) {
       return row
     }
-    const commitments = commitmentForWbs(row.wbs, purchaseOrders, contracts, subcontracts)
+    const fromRegisters = commitmentForWbs(row.wbs, purchaseOrders, contracts, subcontracts)
+    // Preserve contractor-reported commitments from ingestion when higher than register roll-up.
+    const commitments = Math.max(fromRegisters, row.commitments)
     if (commitments === row.commitments) {
       return row
     }

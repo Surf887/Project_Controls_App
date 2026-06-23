@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   decisionRecords,
@@ -18,63 +18,128 @@ import {
 } from './utils/workflow'
 import { resetExtractionForCorrection } from './engine/extractionIntegrity'
 import { resolveSccsForExtraction } from './engine/sccs'
-import {
-  ControlsIntelligence,
-  EngineeringIntelligence,
-  Governance,
-  ModelIntelligence,
-  PredictiveIntelligence,
-  RealityIntelligence,
-} from './views/intelligence'
+// SCurveChart stays eager: it renders inside the always-mounted Dashboard hero,
+// so lazy-loading it would just add a flash with no real chunk-size benefit.
 import { SCurveChart } from './views/charts'
-import { CostSheetGrid } from './views/EditableGrid'
-import { ForecastWhatIf } from './views/forecast'
-import { ForecastEngineView } from './views/ForecastEngine'
-import { BasisOfEstimateView } from './views/basisOfEstimate'
-import {
-  CommissioningWorkspace,
-  ConstructionWorkspace,
-  EngineeringWorkspace,
-  ProcurementWorkspace,
-} from './views/phases'
-import {
-  ActionRegister,
-  ChangeRegister,
-  ClaimsRegister,
-  DecisionRegister,
-  IssueRegister,
-  LessonsLearnedRegister,
-  OpportunityRegister,
-  RiskOpportunityRegister,
-} from './views/registers'
 import { buildScurveFromCostSheet } from './engine/loading'
-import { ContingencyView } from './views/contingency'
-import { ForexView } from './views/forex'
-import { IntegrationsView } from './views/integrations'
-import { AccrualsView } from './views/accruals'
-import { AuditTrailView, TeamReportsView } from './views/teamReports'
-import { ForecastApprovalView } from './views/forecastApproval'
-import { PortfolioCompareView } from './views/portfolioCompare'
-import { CostStructureView } from './views/costStructure'
-import { SccsView } from './views/sccs'
-import { LongLeadView } from './views/longLead'
-import { RulesOfCreditView } from './views/rulesOfCredit'
-import { WbsManager } from './views/wbs'
 import type { NavView } from './data/navigationModel'
 import { monthlyClosePath, pathForView, viewFromPath } from './routes/viewPaths'
+// Core shell stays eagerly loaded for instant first paint.
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 import { MobileNav } from './components/MobileNav'
 import { AppSidebar } from './components/AppSidebar'
-import { MonthlyCloseWorkspace } from './views/monthlyClose'
 import { isCloseFlowRoute } from './data/monthlyCloseSteps'
 import { CloseFlowBar } from './components/CloseFlowBar'
-import { ExportCentreView } from './views/exports'
-import { AuditDrillDownPage, ItemDetailPage } from './views/itemDetail'
-import { PmoDashboardView } from './views/pmoDashboard'
-import { WorkflowAdminView } from './views/workflowAdmin'
-import { CostControlLogsView } from './views/costControlLogs'
 import { signIn } from './api/client'
 import { LoginScreen } from './views/login'
+
+// Route-level code splitting: each routed view is loaded on demand so the
+// initial bundle stays small. Named exports are adapted to the default export
+// that React.lazy expects via `.then(m => ({ default: m.Export }))`.
+const ControlsIntelligence = lazy(() =>
+  import('./views/intelligence').then((m) => ({ default: m.ControlsIntelligence })),
+)
+const EngineeringIntelligence = lazy(() =>
+  import('./views/intelligence').then((m) => ({ default: m.EngineeringIntelligence })),
+)
+const Governance = lazy(() => import('./views/intelligence').then((m) => ({ default: m.Governance })))
+const ModelIntelligence = lazy(() =>
+  import('./views/intelligence').then((m) => ({ default: m.ModelIntelligence })),
+)
+const PredictiveIntelligence = lazy(() =>
+  import('./views/intelligence').then((m) => ({ default: m.PredictiveIntelligence })),
+)
+const RealityIntelligence = lazy(() =>
+  import('./views/intelligence').then((m) => ({ default: m.RealityIntelligence })),
+)
+const CostSheetGrid = lazy(() =>
+  import('./views/EditableGrid').then((m) => ({ default: m.CostSheetGrid })),
+)
+const ForecastWhatIf = lazy(() => import('./views/forecast').then((m) => ({ default: m.ForecastWhatIf })))
+const ForecastEngineView = lazy(() =>
+  import('./views/ForecastEngine').then((m) => ({ default: m.ForecastEngineView })),
+)
+const BasisOfEstimateView = lazy(() =>
+  import('./views/basisOfEstimate').then((m) => ({ default: m.BasisOfEstimateView })),
+)
+const CommissioningWorkspace = lazy(() =>
+  import('./views/phases').then((m) => ({ default: m.CommissioningWorkspace })),
+)
+const ConstructionWorkspace = lazy(() =>
+  import('./views/phases').then((m) => ({ default: m.ConstructionWorkspace })),
+)
+const EngineeringWorkspace = lazy(() =>
+  import('./views/phases').then((m) => ({ default: m.EngineeringWorkspace })),
+)
+const ProcurementWorkspace = lazy(() =>
+  import('./views/phases').then((m) => ({ default: m.ProcurementWorkspace })),
+)
+const ActionRegister = lazy(() => import('./views/registers').then((m) => ({ default: m.ActionRegister })))
+const ChangeRegister = lazy(() => import('./views/registers').then((m) => ({ default: m.ChangeRegister })))
+const ClaimsRegister = lazy(() => import('./views/registers').then((m) => ({ default: m.ClaimsRegister })))
+const DecisionRegister = lazy(() =>
+  import('./views/registers').then((m) => ({ default: m.DecisionRegister })),
+)
+const IssueRegister = lazy(() => import('./views/registers').then((m) => ({ default: m.IssueRegister })))
+const LessonsLearnedRegister = lazy(() =>
+  import('./views/registers').then((m) => ({ default: m.LessonsLearnedRegister })),
+)
+const OpportunityRegister = lazy(() =>
+  import('./views/registers').then((m) => ({ default: m.OpportunityRegister })),
+)
+const RiskOpportunityRegister = lazy(() =>
+  import('./views/registers').then((m) => ({ default: m.RiskOpportunityRegister })),
+)
+const ContingencyView = lazy(() =>
+  import('./views/contingency').then((m) => ({ default: m.ContingencyView })),
+)
+const ForexView = lazy(() => import('./views/forex').then((m) => ({ default: m.ForexView })))
+const IntegrationsView = lazy(() =>
+  import('./views/integrations').then((m) => ({ default: m.IntegrationsView })),
+)
+const AccrualsView = lazy(() => import('./views/accruals').then((m) => ({ default: m.AccrualsView })))
+const AuditTrailView = lazy(() =>
+  import('./views/teamReports').then((m) => ({ default: m.AuditTrailView })),
+)
+const TeamReportsView = lazy(() =>
+  import('./views/teamReports').then((m) => ({ default: m.TeamReportsView })),
+)
+const ForecastApprovalView = lazy(() =>
+  import('./views/forecastApproval').then((m) => ({ default: m.ForecastApprovalView })),
+)
+const PortfolioCompareView = lazy(() =>
+  import('./views/portfolioCompare').then((m) => ({ default: m.PortfolioCompareView })),
+)
+const CostStructureView = lazy(() =>
+  import('./views/costStructure').then((m) => ({ default: m.CostStructureView })),
+)
+const SccsView = lazy(() => import('./views/sccs').then((m) => ({ default: m.SccsView })))
+const LongLeadView = lazy(() => import('./views/longLead').then((m) => ({ default: m.LongLeadView })))
+const RulesOfCreditView = lazy(() =>
+  import('./views/rulesOfCredit').then((m) => ({ default: m.RulesOfCreditView })),
+)
+const WbsManager = lazy(() => import('./views/wbs').then((m) => ({ default: m.WbsManager })))
+const MonthlyCloseWorkspace = lazy(() =>
+  import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
+)
+const ExportCentreView = lazy(() =>
+  import('./views/exports').then((m) => ({ default: m.ExportCentreView })),
+)
+const AuditDrillDownPage = lazy(() =>
+  import('./views/itemDetail').then((m) => ({ default: m.AuditDrillDownPage })),
+)
+const ItemDetailPage = lazy(() =>
+  import('./views/itemDetail').then((m) => ({ default: m.ItemDetailPage })),
+)
+const PmoDashboardView = lazy(() =>
+  import('./views/pmoDashboard').then((m) => ({ default: m.PmoDashboardView })),
+)
+const WorkflowAdminView = lazy(() =>
+  import('./views/workflowAdmin').then((m) => ({ default: m.WorkflowAdminView })),
+)
+const CostControlLogsView = lazy(() =>
+  import('./views/costControlLogs').then((m) => ({ default: m.CostControlLogsView })),
+)
 
 type View = NavView
 
@@ -531,6 +596,10 @@ function App() {
 
         {closeFocus && location.pathname !== monthlyClosePath && <CloseFlowBar />}
 
+        {/* Routed views are code-split; show a lightweight fallback while a
+            view chunk loads. */}
+        <Suspense fallback={<p className="muted" style={{ padding: '1.5rem' }}>Loading view…</p>}>
+
         {location.pathname === monthlyClosePath && <MonthlyCloseWorkspace />}
 
         {location.pathname === '/exports' && <ExportCentreView />}
@@ -663,6 +732,7 @@ function App() {
         {activeView === 'governance' && <Governance />}
 
         {activeView === 'decisions' && <Decisions />}
+        </Suspense>
       </section>
 
       <MobileNav />

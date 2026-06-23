@@ -67,6 +67,8 @@ export interface ExtractedValue {
   /** Set once the approved value has been posted into the cost model. */
   applied?: boolean
   appliedAt?: string
+  /** Active ledger entry when posted (see ingestionPostings). */
+  postingId?: string
 }
 
 export interface ValidationRule {

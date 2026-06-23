@@ -77,6 +77,8 @@ export function MonthlyCloseWorkspace() {
   }
 
   const continuePath = pathForView(close.currentStep.view)
+  const pendingApply = pendingApplyCount(state.values)
+  const periodLocked = state.settings.reportingPeriod.locked
 
   return (
     <div className="view-stack monthly-close" data-testid="monthly-close-workspace">
@@ -132,15 +134,15 @@ export function MonthlyCloseWorkspace() {
             <span className="eyebrow">Ingestion → forecast</span>
             <h3>Approved contractor data → live EAC</h3>
             <p className="muted">
-              {pendingApplyCount(state.values) > 0
-                ? `${pendingApplyCount(state.values)} approved extraction${pendingApplyCount(state.values) === 1 ? '' : 's'} ready to post to the cost model.`
+              {pendingApply > 0
+                ? `${pendingApply} approved extraction${pendingApply === 1 ? '' : 's'} ready to post to the cost model.`
                 : 'No approved extractions waiting. Approve values in the review queue to post them into the forecast.'}
             </p>
           </div>
           <button
             className="primary-button"
             type="button"
-            disabled={pendingApplyCount(state.values) === 0 || state.settings.reportingPeriod.locked}
+            disabled={pendingApply === 0 || periodLocked}
             onClick={() =>
               dispatch({
                 type: 'APPLY_APPROVED_EXTRACTIONS',
@@ -238,14 +240,22 @@ export function MonthlyCloseWorkspace() {
           <button
             className="ghost-button"
             type="button"
+            disabled={periodLocked}
+            title={periodLocked ? 'Period is locked — unlock before syncing commitments' : undefined}
             onClick={() => dispatch({ type: 'SYNC_COMMITMENTS' })}
           >
             Sync commitments
           </button>
-          {canApprove && !state.settings.reportingPeriod.locked && close.percentComplete >= 7 && (
+          {canApprove && !periodLocked && close.percentComplete >= 7 && (
             <button
               className="primary-button"
               type="button"
+              disabled={pendingApply > 0}
+              title={
+                pendingApply > 0
+                  ? `Apply or send back ${pendingApply} approved extraction(s) before locking the period`
+                  : undefined
+              }
               onClick={() =>
                 dispatch({
                   type: 'LOCK_REPORTING_PERIOD',
@@ -256,7 +266,7 @@ export function MonthlyCloseWorkspace() {
               Lock {state.settings.reportingPeriod.period}
             </button>
           )}
-          {state.settings.reportingPeriod.locked && (
+          {periodLocked && (
             <span className="badge badge-good">Period locked</span>
           )}
         </div>

@@ -44,11 +44,34 @@ function persistSession(data: AuthSession) {
     localStorage.setItem('pc-token', data.token)
     localStorage.setItem('pc-role', data.user.role)
     localStorage.setItem('pc-user', JSON.stringify(data.user))
+    // Persist an absolute expiry (ms epoch) derived from expiresIn (seconds) so
+    // the client can proactively detect expiry. No backend refresh endpoint
+    // exists, so detection is purely client-side.
+    if (typeof data.expiresIn === 'number' && data.expiresIn > 0) {
+      localStorage.setItem('pc-expires-at', String(Date.now() + data.expiresIn * 1000))
+    } else {
+      localStorage.removeItem('pc-expires-at')
+    }
   }
 }
 
 export function hasToken(): boolean {
   return typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('pc-token'))
+}
+
+/** Absolute session expiry as ms-epoch, or null if unknown/not set. */
+export function getSessionExpiry(): number | null {
+  if (typeof localStorage === 'undefined') return null
+  const raw = localStorage.getItem('pc-expires-at')
+  if (!raw) return null
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : null
+}
+
+/** True when we have an expiry timestamp and it is in the past. */
+export function isSessionExpired(): boolean {
+  const expiry = getSessionExpiry()
+  return expiry !== null && Date.now() >= expiry
 }
 
 function authHeaders(): Record<string, string> {
@@ -114,6 +137,7 @@ export function clearAuthSession() {
     localStorage.removeItem('pc-token')
     localStorage.removeItem('pc-role')
     localStorage.removeItem('pc-user')
+    localStorage.removeItem('pc-expires-at')
   }
 }
 

@@ -63,6 +63,42 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
   const actionSeqRef = useRef(0)
   const stateRef = useRef(state)
   stateRef.current = state
+  // Timer that proactively expires the session at the token's expiry.
+  const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clear the local session and route the user back to the login screen. Used
+  // both for proactive expiry (timer) and for the expired-before-action check.
+  const expireSession = useCallback(() => {
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current)
+      expiryTimerRef.current = null
+    }
+    api.clearAuthSession()
+    backendRef.current = false
+    setBackendEnabled(false)
+    setCurrentUser(null)
+    setAuthRequired(true)
+    setError('Your session has expired — please sign in again.')
+  }, [])
+
+  // Arm a one-shot timer to proactively clear the session at (or just before)
+  // expiry, so the next action shows a clear "session expired" prompt rather
+  // than a silent 401. No backend refresh endpoint exists, so we only detect.
+  const scheduleExpiry = useCallback(() => {
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current)
+      expiryTimerRef.current = null
+    }
+    const expiry = api.getSessionExpiry()
+    if (expiry === null) return
+    // Fire ~5s early (clamped to >= 0) to avoid racing an in-flight request.
+    const delay = Math.max(0, expiry - Date.now() - 5000)
+    expiryTimerRef.current = setTimeout(() => {
+      if (backendRef.current) {
+        expireSession()
+      }
+    }, delay)
+  }, [expireSession])
 
   const hydrate = useCallback((next: ProjectState) => {
     baseDispatch({ type: 'HYDRATE', payload: next })
@@ -100,6 +136,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
       setCurrentUser(api.getStoredUser())
       setAuthRequired(false)
       setError(null)
+      scheduleExpiry()
     } catch (loadError) {
       if (loadError instanceof api.ApiError && loadError.status === 401) {
         api.clearAuthSession()
@@ -110,7 +147,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
       }
       throw loadError
     }
-  }, [hydrate])
+  }, [hydrate, scheduleExpiry])
 
   useEffect(() => {
     let cancelled = false
@@ -163,6 +200,16 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
     saveProjectState(state)
   }, [ready, state])
 
+  // Clear any pending expiry timer when the provider unmounts.
+  useEffect(() => {
+    return () => {
+      if (expiryTimerRef.current) {
+        clearTimeout(expiryTimerRef.current)
+        expiryTimerRef.current = null
+      }
+    }
+  }, [])
+
   const dispatch = useCallback(
     (action: ProjectAction) => {
       if (action.type === 'HYDRATE') {
@@ -172,6 +219,13 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
 
       if (!backendRef.current) {
         baseDispatch(action)
+        return
+      }
+
+      // If the session has already expired, don't fire an action that would come
+      // back as a silent 401 — clear the session and prompt re-login up front.
+      if (api.isSessionExpired()) {
+        expireSession()
         return
       }
 
@@ -199,7 +253,19 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
               setError('Session expired — please sign in again.')
               return
             }
-            setError(dispatchError instanceof Error ? dispatchError.message : 'Sync failed — refresh or retry.')
+            // 409 = optimistic-concurrency conflict: the project changed on the
+            // server since we last loaded it, so our edit was rejected (not
+            // applied). Surface a distinct message and reload the latest version
+            // so the user knows to re-apply their change, rather than treating it
+            // like a generic transient sync failure.
+            const isConflict = dispatchError instanceof api.ApiError && dispatchError.status === 409
+            setError(
+              isConflict
+                ? 'This project changed elsewhere — reloaded the latest version; please re-apply your edit.'
+                : dispatchError instanceof Error
+                  ? dispatchError.message
+                  : 'Sync failed — refresh or retry.',
+            )
             try {
               const fresh = await api.getProject(stateRef.current.meta.id)
               if (seq === actionSeqRef.current) {
@@ -216,7 +282,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => undefined)
     },
-    [hydrate],
+    [hydrate, expireSession],
   )
 
   const resetProject = useCallback(async () => {
@@ -290,6 +356,10 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current)
+      expiryTimerRef.current = null
+    }
     api.clearAuthSession()
     backendRef.current = false
     setBackendEnabled(false)

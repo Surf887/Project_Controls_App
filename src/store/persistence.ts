@@ -3,6 +3,20 @@ import type { ProjectState } from './types'
 
 export const projectStorageKey = 'project-controls-platform-v2'
 
+/**
+ * Bump this whenever the persisted ProjectState shape changes in a way that
+ * makes old saved payloads unsafe to shallow-merge. On load we discard any
+ * payload whose embedded schemaVersion is missing or different, rather than
+ * merging stale shapes onto the current seed.
+ */
+export const schemaVersion = 2
+
+/** Envelope persisted to localStorage: state plus the schema it was saved under. */
+interface PersistedEnvelope {
+  schemaVersion: number
+  state: Partial<ProjectState>
+}
+
 export function loadProjectState(): ProjectState {
   const fallback = createSeedState()
 
@@ -16,7 +30,14 @@ export function loadProjectState(): ProjectState {
       return fallback
     }
 
-    const parsed = JSON.parse(raw) as Partial<ProjectState>
+    const envelope = JSON.parse(raw) as Partial<PersistedEnvelope>
+    // Discard persisted state when the schema is missing or mismatched instead
+    // of merging an out-of-date shape onto the current seed state.
+    if (envelope.schemaVersion !== schemaVersion || !envelope.state) {
+      return fallback
+    }
+
+    const parsed = envelope.state
     if (!parsed.meta || !Array.isArray(parsed.costSheetRows)) {
       return fallback
     }
@@ -78,7 +99,14 @@ export function saveProjectState(state: ProjectState) {
     return
   }
 
-  window.localStorage.setItem(projectStorageKey, JSON.stringify(state))
+  const envelope: PersistedEnvelope = { schemaVersion, state }
+  try {
+    window.localStorage.setItem(projectStorageKey, JSON.stringify(envelope))
+  } catch (error) {
+    // QuotaExceededError (or storage being unavailable) must not crash the app.
+    // Surface it for diagnostics; the in-memory state remains the source of truth.
+    console.error('Failed to persist project state to localStorage:', error)
+  }
 }
 
 export function clearProjectState() {

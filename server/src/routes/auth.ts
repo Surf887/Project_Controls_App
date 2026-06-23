@@ -10,7 +10,7 @@ import {
   toPublicUser,
   verifyUserPassword,
 } from '../auth/userStore.js'
-import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser } from '../auth/oidc.js'
+import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
 import { loginSchema, oidcLoginSchema, registerUserSchema } from '../validation/schemas.js'
 
 export const authRouter = Router()
@@ -71,7 +71,16 @@ authRouter.post('/oidc', loginLimiter, async (req, res) => {
     res.status(401).json({ error: 'OIDC token verification failed' })
     return
   }
-  const user = await findOrProvisionOidcUser(profile)
+  let user
+  try {
+    user = await findOrProvisionOidcUser(profile)
+  } catch (error) {
+    if (error instanceof OidcAccountError) {
+      res.status(409).json({ error: error.message })
+      return
+    }
+    throw error
+  }
   if (user.disabled) {
     res.status(403).json({ error: 'Account disabled' })
     return

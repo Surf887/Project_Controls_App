@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import request from 'supertest'
+import { pendingApplyCount } from '@pc/engine/applyExtractionsCore.js'
 import { createApp } from '../app.js'
 import { closeDatabase, initDatabase } from '../db/database.js'
 import { runMigrations } from '../db/migrate.js'
@@ -124,6 +125,30 @@ describe('API routes', () => {
       .set('x-pc-role', 'viewer')
       .send({ type: 'APPLY_APPROVED_EXTRACTIONS', payload: { actor: 'Viewer' } })
     expect(res.status).toBe(403)
+  })
+
+  it('LOCK_REPORTING_PERIOD rejects when approved extractions are pending apply', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'admin')
+    const projectId = active.body.state.meta.id as string
+    const period = active.body.state.settings.reportingPeriod.period as string
+    const values = active.body.state.values.map((value: { id: string }) =>
+      value.id === 'val-003'
+        ? { ...value, reviewStatus: 'approved', approvalStatus: 'approved', applied: undefined }
+        : value,
+    )
+    const setRes = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'admin')
+      .send({ type: 'SET_VALUES', payload: values })
+    expect(setRes.status).toBe(200)
+    expect(pendingApplyCount(setRes.body.state.values)).toBeGreaterThan(0)
+
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'approver')
+      .send({ type: 'LOCK_REPORTING_PERIOD', payload: { actor: 'PM', period } })
+    expect(res.status).toBe(400)
+    expect(String(res.body.error)).toMatch(/approved extraction/i)
   })
 
   it('GET close-pack PDF returns application/pdf', async () => {

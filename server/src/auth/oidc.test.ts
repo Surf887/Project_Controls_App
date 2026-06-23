@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { SignJWT, generateKeyPair, exportJWK, type KeyLike } from 'jose'
+import { randomUUID } from 'node:crypto'
+import { createUser } from './userStore.js'
 
 process.env.OIDC_ISSUER = 'https://idp.example.com'
 process.env.OIDC_CLIENT_ID = 'pc-app-client'
@@ -47,5 +49,25 @@ describe('OIDC verification', () => {
   it('rejects a token with the wrong issuer', async () => {
     const token = await makeIdToken({ iss: 'https://evil.example.com' })
     expect(await oidc.verifyOidcIdToken(token, publicKey)).toBeNull()
+  })
+})
+
+describe('OIDC account linking', () => {
+  it('does not hijack a local password account by email alone', async () => {
+    const email = `local-only-${randomUUID()}@example.com`
+    await createUser({
+      email,
+      name: 'Local User',
+      role: 'viewer',
+      provider: 'local',
+      password: 'password-123',
+    })
+    await expect(
+      oidc.findOrProvisionOidcUser({
+        subject: 'oidc-sub-new',
+        email,
+        name: 'Attacker',
+      }),
+    ).rejects.toMatchObject({ name: 'OidcAccountError' })
   })
 })

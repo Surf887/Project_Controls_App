@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { listProjectRoles, setProjectRole } from '../auth/projectRoles.js'
-import { requireAdmin, requireRole } from '../middleware/auth.js'
+import { attachProjectRole, requireAdmin, requireRole } from '../middleware/auth.js'
+import { requireWebhookSignature } from '../integrations/webhookAuth.js'
 import { projectRoleSchema } from '../validation/schemas.js'
 import { deleteFilter, listFilters, saveFilter } from '../services/filterService.js'
 import { createExportJob, listExportJobs } from '../services/exportScheduler.js'
@@ -20,6 +21,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const delegationsPath = path.resolve(__dirname, '../../data/workflow_delegations.json')
 
 export const platformRouter = Router()
+
+// Project-scoped platform routes (roles, export jobs) must enforce per-project
+// membership, not just the global role.
+platformRouter.use('/projects/:projectId', attachProjectRole)
 
 platformRouter.get('/filters', requireRole('viewer'), async (req, res) => {
   const scope = req.query.scope?.toString()
@@ -132,7 +137,7 @@ platformRouter.get('/integrations/adapters', requireRole('viewer'), (req, res) =
   res.json({ adapters: listAdaptersByDomain(domain) })
 })
 
-platformRouter.post('/webhooks/:connectorId', async (req, res) => {
+platformRouter.post('/webhooks/:connectorId', requireWebhookSignature, async (req, res) => {
   const result = await handleWebhook(param(req.params.connectorId), req.body)
   res.status(result.ok ? 200 : 422).json(result)
 })

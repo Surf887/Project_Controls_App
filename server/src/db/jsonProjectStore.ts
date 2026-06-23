@@ -77,7 +77,17 @@ export class JsonProjectStore implements ProjectStoreAdapter {
 
   private writeDb(db: DatabaseFile) {
     this.ensureDataDir()
-    fs.writeFileSync(dbPath, JSON.stringify(db, null, 2), 'utf8')
+    // Atomic, durable write: write to a temp file, fsync, then rename over the
+    // target. A crash mid-write can no longer truncate the database file.
+    const tmpPath = `${dbPath}.tmp-${process.pid}-${Date.now()}`
+    const fd = fs.openSync(tmpPath, 'w')
+    try {
+      fs.writeFileSync(fd, JSON.stringify(db, null, 2), 'utf8')
+      fs.fsyncSync(fd)
+    } finally {
+      fs.closeSync(fd)
+    }
+    fs.renameSync(tmpPath, dbPath)
     this.cache = db
   }
 

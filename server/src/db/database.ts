@@ -1,5 +1,6 @@
 import type { ProjectAction, ProjectState } from '@pc/store/types.js'
 import { applyProjectAction } from '@pc/store/projectReducer.js'
+import { validateProjectAction } from '@pc/engine/actionValidation.js'
 import type { AuthUser } from '../auth/rbac.js'
 import { appendImmutableAudit } from '../services/auditService.js'
 import {
@@ -33,6 +34,8 @@ function auditHook(projectId: string, actor: AuthUser, action: ProjectAction, ve
 }
 
 function validateWorkflowGate(current: ProjectState, action: ProjectAction, actor?: AuthUser): void {
+  validateProjectAction(current, action)
+
   if (!actor) return
 
   if (action.type === 'SUBMIT_FORECAST') {

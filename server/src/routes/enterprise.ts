@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getActiveProject, getProjectById } from '../db/database.js'
-import { requireRole } from '../middleware/auth.js'
+import { attachProjectRole, requireRole } from '../middleware/auth.js'
 import { listImmutableAudit, verifyAuditChain } from '../services/auditService.js'
 import {
   createBaselineSnapshot,
@@ -13,6 +13,11 @@ import { generateClosePackPdfAsync } from '../services/pdfExport.js'
 import { param } from '../utils/params.js'
 
 export const enterpriseRouter = Router({ mergeParams: true })
+
+// Mounted separately from projectsRouter on /api/projects/:projectId, so it must
+// run the project-role/membership guard itself (otherwise audit/baselines/exports
+// would enforce only the global role — an IDOR across projects).
+enterpriseRouter.use(attachProjectRole)
 
 enterpriseRouter.get('/audit', requireRole('viewer'), (req, res) => {
   try {

@@ -1,41 +1,52 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: pc
-      POSTGRES_PASSWORD: pc
-      POSTGRES_DB: project_controls
-    ports:
-      - '5432:5432'
+      POSTGRES_USER: ${POSTGRES_USER:-pc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your .env}
+      POSTGRES_DB: ${POSTGRES_DB:-project_controls}
+    # Not published to the host by default — only reachable on the compose network.
+    expose:
+      - '5432'
     volumes:
       - pc_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U pc -d project_controls']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-pc} -d ${POSTGRES_DB:-project_controls}']
       interval: 5s
       timeout: 5s
       retries: 5
 
-  api:
+  app:
     build: .
+    restart: unless-stopped
     ports:
-      - '3001:3001'
+      - '${APP_PORT:-3001}:3001'
     environment:
+      NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgres://pc:pc@postgres:5432/project_controls
+      DATABASE_URL: postgres://${POSTGRES_USER:-pc}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-project_controls}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your .env}
+      JWT_ISSUER: ${JWT_ISSUER:-project-controls}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      ENFORCE_PROJECT_MEMBERSHIP: ${ENFORCE_PROJECT_MEMBERSHIP:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
+      AUDIT_HMAC_SECRET: ${AUDIT_HMAC_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
-    command: npm run start --prefix server
-
-  web:
-    build: .
-    ports:
-      - '5173:5173'
-    environment:
-      VITE_API_BASE: http://localhost:3001/api
-    command: npm run preview -- --host 0.0.0.0 --port 5173
-    depends_on:
-      - api
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   pc_postgres_data:

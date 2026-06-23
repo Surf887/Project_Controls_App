@@ -136,10 +136,19 @@ describe('project membership enforcement (IDOR)', () => {
   it('denies a non-member viewer when enforcement is on', async () => {
     process.env.ENFORCE_PROJECT_MEMBERSHIP = 'true'
     const app = mod.app.createApp()
-    const token = await mod.jwt.signSessionToken({ id: 'stranger', name: 'S', role: 'viewer' })
+    const adminLogin = await request(app)
+      .post('/api/platform/auth/login')
+      .send({ email: 'admin@example.com', password: 'admin-password-123' })
+    await request(app)
+      .post('/api/platform/auth/register')
+      .set('Authorization', `Bearer ${adminLogin.body.token}`)
+      .send({ email: 'stranger@example.com', name: 'Stranger', role: 'viewer', password: 'password-1234' })
+    const login = await request(app)
+      .post('/api/platform/auth/login')
+      .send({ email: 'stranger@example.com', password: 'password-1234' })
     const res = await request(app)
       .get('/api/projects/some-project-id')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${login.body.token}`)
     expect(res.status).toBe(403)
     delete process.env.ENFORCE_PROJECT_MEMBERSHIP
   })

@@ -212,28 +212,60 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
     validate: (state: ProjectState, action: ProjectAction, actor?: AuthUser) => void,
     onAudit: (projectId: string, actor: AuthUser, action: ProjectAction, version: number) => void,
   ) {
-    const entry = await this.getProjectRecordAsync(projectId)
-    if (expectedVersion != null && entry.version !== expectedVersion) {
-      throw new VersionConflictError(
-        `Project was updated elsewhere (v${entry.version}, you had v${expectedVersion})`,
-        entry.version,
+    // Serialize concurrent writers and make the read-check-write atomic: take a
+    // row lock (FOR UPDATE) inside a transaction and write with a version-
+    // conditional UPDATE. This closes the lost-update race the If-Match check
+    // alone could not prevent.
+    const client = await this.pool.connect()
+    try {
+      await client.query('BEGIN')
+      const current = await client.query(
+        `SELECT state, version FROM project_state WHERE project_id = $1 FOR UPDATE`,
+        [projectId],
       )
-    }
+      if (current.rowCount === 0) throw new Error(`Project not found: ${projectId}`)
+      const currentState = current.rows[0]!.state as ProjectState
+      const currentVersion = current.rows[0]!.version as number
 
-    validate(entry.state, action, actor)
-    const next = applyReducer(entry.state, action)
-    const record: ProjectRecord = {
-      state: next,
-      updatedAt: new Date().toISOString(),
-      version: entry.version + 1,
-    }
-    await this.saveRecord(projectId, record)
+      if (expectedVersion != null && currentVersion !== expectedVersion) {
+        throw new VersionConflictError(
+          `Project was updated elsewhere (v${currentVersion}, you had v${expectedVersion})`,
+          currentVersion,
+        )
+      }
 
-    if (actor && action.type !== 'HYDRATE') {
-      onAudit(projectId, actor, action, record.version)
-    }
+      validate(currentState, action, actor)
+      const next = applyReducer(currentState, action)
+      const nextVersion = currentVersion + 1
+      const updatedAt = new Date().toISOString()
 
-    return { state: next, version: record.version }
+      const updated = await client.query(
+        `UPDATE project_state SET state = $1::jsonb, version = $2, updated_at = $3
+         WHERE project_id = $4 AND version = $5`,
+        [JSON.stringify(next), nextVersion, updatedAt, projectId, currentVersion],
+      )
+      if (updated.rowCount === 0) {
+        throw new VersionConflictError('Project was updated concurrently', currentVersion)
+      }
+      await client.query(`UPDATE projects SET name = $1, baseline_label = $2, updated_at = $3 WHERE id = $4`, [
+        next.meta.name,
+        next.meta.baselineLabel,
+        updatedAt,
+        projectId,
+      ])
+      await client.query('COMMIT')
+
+      if (actor && action.type !== 'HYDRATE') {
+        onAudit(projectId, actor, action, nextVersion)
+      }
+
+      return { state: next, version: nextVersion }
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {})
+      throw error
+    } finally {
+      client.release()
+    }
   }
 }
 

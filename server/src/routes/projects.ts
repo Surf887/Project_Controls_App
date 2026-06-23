@@ -38,7 +38,7 @@ projectsRouter.get('/:projectId', requireRole('viewer'), async (req, res) => {
   }
 })
 
-projectsRouter.post('/:projectId/activate', async (req, res) => {
+projectsRouter.post('/:projectId/activate', requireRole('cost_controller'), async (req, res) => {
   try {
     const record = await setActiveProject(param(req.params.projectId))
     res.json({ state: record.state, version: record.version })
@@ -79,7 +79,11 @@ projectsRouter.post('/:projectId/reset', requireAdmin, async (req, res) => {
 
 export const computeRouter = Router({ mergeParams: true })
 
-computeRouter.get('/forecast', async (req, res) => {
+// Compute routes are mounted separately from projectsRouter, so they must run
+// the same project-role/membership guard to avoid an IDOR (reading any project).
+computeRouter.use(attachProjectRole)
+
+computeRouter.get('/forecast', requireRole('viewer'), async (req, res) => {
   try {
     const projectId = param((req.params as { projectId?: string }).projectId)
     const state = await getProjectById(projectId)
@@ -90,7 +94,7 @@ computeRouter.get('/forecast', async (req, res) => {
   }
 })
 
-computeRouter.get('/evm', async (req, res) => {
+computeRouter.get('/evm', requireRole('viewer'), async (req, res) => {
   try {
     const projectId = param((req.params as { projectId?: string }).projectId)
     const state = await getProjectById(projectId)

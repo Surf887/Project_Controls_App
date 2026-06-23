@@ -3,6 +3,9 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import { randomUUID } from 'node:crypto'
+import path from 'node:path'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { computeRouter, projectsRouter } from './routes/projects.js'
 import { enterpriseRouter } from './routes/enterprise.js'
 import { platformRouter } from './routes/platform.js'
@@ -31,7 +34,16 @@ export function createApp() {
 
   app.use(helmet())
   app.use(cors(corsOptions()))
-  app.use(express.json({ limit: process.env.JSON_LIMIT ?? '10mb' }))
+  app.use(
+    express.json({
+      limit: process.env.JSON_LIMIT ?? '1mb',
+      // Capture the raw body so webhook HMAC signatures can be verified against
+      // the exact bytes received (re-serializing JSON is not signature-stable).
+      verify: (req, _res, buf) => {
+        ;(req as unknown as { rawBody?: Buffer }).rawBody = buf
+      },
+    }),
+  )
 
   // Baseline rate limit across the API (auth routes add a stricter limiter).
   app.use(
@@ -56,6 +68,19 @@ export function createApp() {
   app.use('/api/projects', projectsRouter)
   app.use('/api/projects/:projectId/compute', computeRouter)
   app.use('/api/projects/:projectId', enterpriseRouter)
+
+  // In production the API also serves the built client from the same container
+  // (single deployable). Disable with SERVE_CLIENT=false when fronted separately.
+  if (process.env.NODE_ENV === 'production' && process.env.SERVE_CLIENT !== 'false') {
+    const clientDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../dist')
+    if (fs.existsSync(clientDir)) {
+      app.use(express.static(clientDir))
+      // SPA fallback for any non-API GET route.
+      app.get(/^(?!\/api\/).*/, (_req, res) => {
+        res.sendFile(path.join(clientDir, 'index.html'))
+      })
+    }
+  }
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found' })

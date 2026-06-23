@@ -2,7 +2,8 @@ import { verifySessionToken } from '../auth/jwt.js'
 import { effectiveRole, getProjectRole } from '../auth/projectRoles.js'
 import { canPerformAction, demoUserFromRole, hasRole, type AuthUser, type Role } from '../auth/rbac.js'
 import { isBlockedClientAction, minimumRoleForAction } from '../auth/actionPolicy.js'
-import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser } from '../auth/oidc.js'
+import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
+import { findUserById } from '../auth/userStore.js'
 import { param } from '../utils/params.js'
 import type { RequestHandler } from 'express'
 
@@ -38,17 +39,34 @@ export const attachUser: RequestHandler = async (req, _res, next) => {
 
     const claims = await verifySessionToken(token)
     if (claims) {
-      req.user = { id: claims.sub, name: claims.name, role: claims.role, email: claims.email }
-      req.globalRole = claims.role
+      const record = await findUserById(claims.sub)
+      if (!record || record.disabled) {
+        req.user = null
+        req.globalRole = undefined
+        return next()
+      }
+      req.user = {
+        id: record.id,
+        name: record.name,
+        role: record.role,
+        email: record.email,
+      }
+      req.globalRole = record.role
       return next()
     }
 
     if (isOidcEnabled()) {
       const profile = await verifyOidcIdToken(token)
       if (profile) {
-        const user = await findOrProvisionOidcUser(profile)
-        req.user = user.disabled ? null : { id: user.id, name: user.name, role: user.role, email: user.email }
-        req.globalRole = req.user?.role
+        try {
+          const user = await findOrProvisionOidcUser(profile)
+          req.user = user.disabled ? null : { id: user.id, name: user.name, role: user.role, email: user.email }
+          req.globalRole = req.user?.role
+        } catch (error) {
+          if (!(error instanceof OidcAccountError)) throw error
+          req.user = null
+          req.globalRole = undefined
+        }
         return next()
       }
     }

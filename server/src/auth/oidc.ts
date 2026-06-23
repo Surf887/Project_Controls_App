@@ -7,6 +7,14 @@ import {
   type UserRecord,
 } from './userStore.js'
 
+/** Public: SSO login blocked when email/identity cannot be linked safely. */
+export class OidcAccountError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'OidcAccountError'
+  }
+}
+
 /** OIDC is active only when both an issuer and a client id (audience) are set. */
 export function isOidcEnabled(): boolean {
   return Boolean(process.env.OIDC_ISSUER && process.env.OIDC_CLIENT_ID)
@@ -33,11 +41,6 @@ export interface OidcProfile {
   name: string
 }
 
-/**
- * Verify an OIDC ID token against the configured provider's JWKS.
- * `keyInput` is injectable so the verification path can be unit-tested with a
- * locally generated key pair; in production it defaults to the remote JWKS.
- */
 export async function verifyOidcIdToken(
   idToken: string,
   keyInput?: JWTVerifyGetKey | KeyLike | Uint8Array,
@@ -45,10 +48,16 @@ export async function verifyOidcIdToken(
   if (!isOidcEnabled()) return null
   try {
     const key = keyInput ?? getJwks()
-    const { payload } = await jwtVerify(idToken, key as Parameters<typeof jwtVerify>[1], {
+    const options = {
       issuer: process.env.OIDC_ISSUER,
       audience: process.env.OIDC_CLIENT_ID,
-    })
+    }
+    // jose exposes two jwtVerify overloads (static key vs. JWKS getter function);
+    // branch so the union type resolves to a single overload.
+    const { payload } =
+      typeof key === 'function'
+        ? await jwtVerify(idToken, key as JWTVerifyGetKey, options)
+        : await jwtVerify(idToken, key, options)
     if (typeof payload.sub !== 'string') return null
     const email = typeof payload.email === 'string' ? payload.email : ''
     const name = typeof payload.name === 'string' ? payload.name : email || payload.sub
@@ -60,8 +69,7 @@ export async function verifyOidcIdToken(
 
 /**
  * Map a verified OIDC profile to a local user, creating one on first login.
- * Linking precedence: existing OIDC subject -> existing email -> new user.
- * New users get the default (least-privileged) role; admins elevate explicitly.
+ * Does not hijack existing password accounts by email alone.
  */
 export async function findOrProvisionOidcUser(profile: OidcProfile): Promise<UserRecord> {
   const bySubject = await findUserByOidcSubject(profile.subject)
@@ -69,7 +77,17 @@ export async function findOrProvisionOidcUser(profile: OidcProfile): Promise<Use
 
   if (profile.email) {
     const byEmail = await findUserByEmail(profile.email)
-    if (byEmail) return byEmail
+    if (byEmail) {
+      if (byEmail.oidcSubject && byEmail.oidcSubject !== profile.subject) {
+        throw new OidcAccountError('This email is linked to a different SSO identity.')
+      }
+      if (byEmail.provider === 'local' && !byEmail.oidcSubject) {
+        throw new OidcAccountError(
+          'An account with this email uses password login. Sign in with password or ask an admin to link SSO.',
+        )
+      }
+      return byEmail
+    }
   }
 
   return createUser({

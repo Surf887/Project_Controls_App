@@ -1,4 +1,6 @@
 import type { ExtractedValue, ReportDocument, ValidationIssue } from '../data/projectData'
+import { buildSccsAssignment } from '../data/sccsMappings'
+import type { SccsAssignment } from '../data/sccs'
 
 export interface StoredAppState {
   reports: ReportDocument[]
@@ -93,7 +95,27 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
     const category = inferCategory(readCell(row, ['category', 'type']) || field)
     const wbs = readCell(row, ['wbs', 'workbreakdownstructure', 'workpackage']) || 'UNMAPPED-WBS'
     const cbs = readCell(row, ['cbs', 'costcode', 'costaccount']) || 'UNMAPPED-CBS'
+    const pbsOverride = readCell(row, ['pbs'])
+    const sabOverride = readCell(row, ['sab'])
+    const corOverride = readCell(row, ['cor'])
     const issues = generateValidationIssues({ field, unit, confidence, normalizedValue, wbs, cbs })
+
+    let sccs: SccsAssignment | undefined
+    if (pbsOverride || sabOverride || corOverride) {
+      sccs = buildSccsAssignment({
+        wbs,
+        cbs,
+        category,
+        manual: {
+          pbs: pbsOverride || undefined,
+          sab: sabOverride || undefined,
+          cor: corOverride || undefined,
+        },
+        source: 'import',
+      })
+    } else {
+      sccs = buildSccsAssignment({ wbs, cbs, category, source: 'mapped' })
+    }
 
     return {
       id: `${importId}-val-${index + 1}`,
@@ -106,6 +128,7 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
       period: readCell(row, ['period', 'reportingperiod', 'week', 'month']) || 'Imported period',
       wbs,
       cbs,
+      sccs,
       standardMapping:
         readCell(row, ['standardmapping', 'mapping', 'standard', 'reference']) || 'Client-specific mapping pending',
       confidence,

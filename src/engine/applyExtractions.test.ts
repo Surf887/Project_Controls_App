@@ -64,6 +64,7 @@ describe('applyApprovedExtractions', () => {
     ])
     const { state: next, summary } = applyApprovedExtractions(state, 'Tester')
     expect(summary.lines[0]?.targetControlAccountWbs).toBe('P.04')
+    expect(summary.lines[0]?.sccsComposite).toMatch(/^[A-Z0-9]+\.[A-Z0-9]+\.[A-Z0-9]+/)
     expect(controlAccount(next, 'P.04').eac).toBe(100_000_000)
   })
 

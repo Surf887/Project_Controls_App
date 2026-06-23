@@ -2,6 +2,7 @@ import { buildRow, type CostRow } from '../data/costSheet'
 import type { ChangeItem } from '../data/registers'
 import type { ExtractedValue } from '../data/projectData'
 import { controlAccountRows, sumCostSheetMetric } from './costAggregation'
+import { resolveSccsForExtraction } from './sccs'
 import type { AppliedExtractionLine, IngestionApplySummary, ProjectState } from '../store/types'
 
 /** Categories that carry a direct financial posting into the cost model. */
@@ -120,6 +121,7 @@ export function applyApprovedExtractions(
       category: value.category,
       sourceWbs: value.wbs,
       targetControlAccountWbs: target.wbs,
+      sccsComposite: resolveSccsForExtraction(value).composite,
       amountUsd: value.normalizedValue,
       effect: value.category === 'cost' ? 'commitments' : value.category === 'forecast' ? 'eac' : 'eac_via_change',
     })

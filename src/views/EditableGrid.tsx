@@ -9,6 +9,7 @@ import {
 } from '../data/costSheet'
 import { syncCostSheetFromRegisters } from '../engine/costSheetSync'
 import { rowCostMeta } from '../engine/costStructure'
+import { resolveSccsForCostRow } from '../engine/sccs'
 import { loadingMethodLabels, type LoadingMethod } from '../engine/loading'
 import { useProjectStore } from '../store/projectStore'
 import type { EacScenarioField } from '../engine/costSheetSync'
@@ -518,6 +519,7 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
               <th className="cs-th">Discipline</th>
               <th className="cs-th">Cost type</th>
               <th className="cs-th">Phase</th>
+              <th className="cs-th">SCCS</th>
               <th className="cs-th">Nature</th>
               <th className="cs-th">TEC</th>
               <th className="cs-th cs-num">Orig. Budget</th>
@@ -584,6 +586,13 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
                   ))}
                   <td className="cs-td">{row.costType}</td>
                   <td className="cs-td">{row.phase}</td>
+                  <td className="cs-td cs-sccs-cell" title={resolveSccsForCostRow(row).composite}>
+                    {row.parentId === null ? (
+                      <code className="sccs-inline-code">{resolveSccsForCostRow(row).composite}</code>
+                    ) : (
+                      '–'
+                    )}
+                  </td>
                   <td className="cs-td">{rowCostMeta(row, state.cbsNodes).costNature}</td>
                   <td className="cs-td">{rowCostMeta(row, state.cbsNodes).tecCategory}</td>
 

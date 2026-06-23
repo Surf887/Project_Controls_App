@@ -27,6 +27,7 @@ import { seedManualAccruals } from '../data/accruals'
 import { vendorMaster } from '../data/vendors'
 import { buildAccrualRegister } from '../engine/accruals'
 import { reconcileContingencyDraws, applyContingencyDrawsToCostSheet } from '../engine/contingency'
+import { enrichCostSheetRows, enrichExtractedValues } from '../engine/sccs'
 import { initialCostSheet } from '../data/costSheet'
 import {
   extractedValues as seededExtractedValues,
@@ -83,7 +84,7 @@ export function createSeedState(): ProjectState {
     settings: defaultProjectSettings,
     basisOfEstimate: defaultBasisOfEstimate,
     wbsNodes: wbsFromCostSheet(),
-    costSheetRows: initialCostSheet,
+    costSheetRows: enrichCostSheetRows(initialCostSheet),
     deliverables: seedDeliverables,
     changes: changeRegister.map((change) => ({
       ...change,
@@ -125,7 +126,7 @@ export function createSeedState(): ProjectState {
     auditLog: seedAuditLog,
     generatedTeamReports: [],
     reports: seededReportDocuments,
-    values: seededExtractedValues,
+    values: enrichExtractedValues(seededExtractedValues),
     selectedValueId: seededExtractedValues[0]?.id ?? '',
   }
 

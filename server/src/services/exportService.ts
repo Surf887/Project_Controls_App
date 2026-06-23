@@ -26,6 +26,7 @@ export function generateClosePack(state: ProjectState, generatedBy: string): Clo
   const invoiceReport = teamReportTemplates.find((template) => template.template === 'invoice_status')
   const accrualReport = teamReportTemplates.find((template) => template.template === 'accrual_report')
   const contingencyReport = teamReportTemplates.find((template) => template.template === 'contingency_report')
+  const sccsReport = teamReportTemplates.find((template) => template.template === 'sccs_rollup')
 
   const files: ClosePackFile[] = []
 
@@ -60,6 +61,10 @@ export function generateClosePack(state: ProjectState, generatedBy: string): Clo
   if (contingencyReport) {
     const report = generateTeamReportCsv(contingencyReport, state, generatedBy)
     files.push({ name: report.name, mimeType: 'text/csv', content: report.content })
+  }
+  if (sccsReport) {
+    const report = generateTeamReportCsv(sccsReport, state, generatedBy)
+    files.push({ name: 'iso-19008-sccs-rollup.csv', mimeType: 'text/csv', content: report.content })
   }
 
   const executiveSummary = [

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { evaluateMonthlyClose, type CloseStepProgress } from '../engine/monthlyCloseProgress'
 import { sumBac, sumCostSheetMetric } from '../engine/costAggregation'
 import { pendingApplyCount } from '../engine/applyExtractions'
+import { enrichCostSheetRows, rollupCostSheetBySccs } from '../engine/sccs'
 import { projectIncurredTotals } from '../engine/incurredCost'
 import { useProjectRole } from '../hooks/useProjectRole'
 import { pathForView } from '../routes/viewPaths'
@@ -37,6 +38,10 @@ export function MonthlyCloseWorkspace() {
   const { canApprove } = useProjectRole()
   const navigate = useNavigate()
   const close = useMemo(() => evaluateMonthlyClose(state), [state])
+  const sccsRollup = useMemo(
+    () => rollupCostSheetBySccs(enrichCostSheetRows(state.costSheetRows)).slice(0, 4),
+    [state.costSheetRows],
+  )
 
   const metrics = useMemo(() => {
     const incurred = projectIncurredTotals(state.costSheetRows, state.costAccruals)
@@ -161,7 +166,7 @@ export function MonthlyCloseWorkspace() {
             <ul className="ingestion-apply-lines">
               {state.ingestionApplications[0].lines.slice(0, 5).map((line) => (
                 <li key={line.valueId}>
-                  {line.field} → {line.targetControlAccountWbs} (
+                  {line.field} → {line.targetControlAccountWbs} · <code>{line.sccsComposite}</code> (
                   {line.effect === 'commitments' ? 'committed' : 'forecast'} {formatUsd(line.amountUsd)})
                 </li>
               ))}
@@ -175,6 +180,29 @@ export function MonthlyCloseWorkspace() {
           </div>
         )}
       </section>
+
+      {sccsRollup.length > 0 && (
+        <section className="panel sccs-close-panel" data-testid="close-sccs-rollup">
+          <div className="ingestion-apply-head">
+            <div>
+              <span className="eyebrow">ISO 19008 SCCS</span>
+              <h3>Cost exposure by standard composite code</h3>
+              <p className="muted">Top SCCS rollups from the live cost sheet — for benchmarking and close-pack exchange.</p>
+            </div>
+            <Link className="ghost-button" to="/cost-structure/sccs">
+              Open SCCS workspace
+            </Link>
+          </div>
+          <ul className="ingestion-apply-lines">
+            {sccsRollup.map((line) => (
+              <li key={line.composite}>
+                <code>{line.composite}</code> — {formatUsd(line.eacUsd)} EAC ({line.rowCount} control account
+                {line.rowCount === 1 ? '' : 's'})
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {close.globalBlockers.length > 0 && (
         <section className="panel close-blockers-panel" data-testid="close-blockers">

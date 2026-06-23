@@ -38,6 +38,7 @@ export type NavView =
   | 'audit-trail'
   | 'accruals'
   | 'cost-structure'
+  | 'sccs'
   | 'rules-of-credit'
   | 'long-lead'
   | 'ingestion'
@@ -81,6 +82,7 @@ export const navGroups: NavGroup[] = [
       { id: 'basis', label: 'Basis of Estimate', eyebrow: 'AACE 34R-05 · scope & class' },
       { id: 'wbs', label: 'WBS Manager', eyebrow: 'Control accounts · CapEx tags' },
       { id: 'cost-structure', label: 'Cost Structure', eyebrow: 'CBS · TECOP/NTR · burden' },
+      { id: 'sccs', label: 'ISO 19008 SCCS', eyebrow: 'PBS · SAB · COR · mapping' },
     ],
   },
   {

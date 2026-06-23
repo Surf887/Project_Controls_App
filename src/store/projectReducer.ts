@@ -12,6 +12,8 @@ import { reconcileContingencyInState } from '../engine/projectReconcile'
 import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
 import { applyApprovedExtractions } from '../engine/applyExtractions'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
+import { sanitizeExtractedValues } from '../engine/extractionIntegrity'
+import { enrichCostSheetRows } from '../engine/sccs'
 import type { ProjectAction, ProjectState } from './types'
 import { defaultFxSettings, defaultReportingPeriod } from './types'
 
@@ -25,17 +27,25 @@ function isPeriodLocked(state: ProjectState) {
  * on a missing setting. Cheap and idempotent.
  */
 function normalizeState(state: ProjectState): ProjectState {
-  // Preserve the reference when nothing is missing (callers rely on identity).
-  if (state.settings.reportingPeriod && state.settings.fx) {
+  const needsSettings = !state.settings.reportingPeriod || !state.settings.fx
+  const needsSccs = state.costSheetRows.some((row) => row.parentId === null && !row.sccs?.composite)
+
+  if (!needsSettings && !needsSccs) {
     return state
   }
+
   return {
     ...state,
-    settings: {
-      ...state.settings,
-      reportingPeriod: state.settings.reportingPeriod ?? defaultReportingPeriod,
-      fx: state.settings.fx ?? defaultFxSettings,
-    },
+    ...(needsSettings
+      ? {
+          settings: {
+            ...state.settings,
+            reportingPeriod: state.settings.reportingPeriod ?? defaultReportingPeriod,
+            fx: state.settings.fx ?? defaultFxSettings,
+          },
+        }
+      : {}),
+    ...(needsSccs ? { costSheetRows: enrichCostSheetRows(state.costSheetRows) } : {}),
   }
 }
 
@@ -102,7 +112,10 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         return state
       }
 
-      const next = applyContingencyIfNeeded({ ...state, costSheetRows: action.payload })
+      const next = applyContingencyIfNeeded({
+        ...state,
+        costSheetRows: enrichCostSheetRows(action.payload),
+      })
       if (
         JSON.stringify(state.costSheetRows) === JSON.stringify(next.costSheetRows) &&
         JSON.stringify(state.contingencyDraws) === JSON.stringify(next.contingencyDraws)
@@ -469,7 +482,7 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     case 'SET_REPORTS':
       return { ...state, reports: action.payload }
     case 'SET_VALUES':
-      return { ...state, values: action.payload }
+      return { ...state, values: sanitizeExtractedValues(state.values, action.payload) }
     case 'SET_SELECTED_VALUE':
       return { ...state, selectedValueId: action.payload }
     default:

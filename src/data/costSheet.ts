@@ -4,6 +4,7 @@
 //   Budget | Commitments | Actuals (by period) | EAC | Forecast-to-Complete | VAC | Notes
 
 import type { CostType, ProjectPhase } from '../store/types'
+import type { SccsAssignment } from './sccs'
 
 export type RowType = 'header' | 'control_account' | 'work_package' | 'cost_element'
 export type CellLock = 'locked' | 'editable' | 'formula'
@@ -43,6 +44,8 @@ export interface CostRow {
   lastModifiedAt: string
   isDirty: boolean
   isExpanded: boolean
+  /** ISO 19008 SCCS composite (PBS · SAB · COR) — mapped from WBS/CBS/phase. */
+  sccs?: SccsAssignment
 }
 
 export const PERIODS = [

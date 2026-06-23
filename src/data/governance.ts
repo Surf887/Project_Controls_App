@@ -62,6 +62,7 @@ export interface TeamReportTemplate {
     | 'invoice_status'
     | 'accrual_report'
     | 'contingency_report'
+    | 'sccs_rollup'
 }
 
 export interface GeneratedTeamReport {
@@ -156,6 +157,13 @@ export const teamReportTemplates: TeamReportTemplate[] = [
     audience: 'Project leadership',
     description: 'Reserve balance, draws, and pending approvals',
     template: 'contingency_report',
+  },
+  {
+    id: 'rpt-sccs',
+    name: 'ISO 19008 SCCS rollup',
+    audience: 'Benchmarking / portfolio',
+    description: 'Cost sheet rolled up by PBS·SAB·COR composite for cross-project exchange',
+    template: 'sccs_rollup',
   },
 ]
 

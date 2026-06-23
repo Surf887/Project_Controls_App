@@ -16,6 +16,8 @@ import {
   clearStoredState,
   sampleCsvContent,
 } from './utils/workflow'
+import { resetExtractionForCorrection } from './engine/extractionIntegrity'
+import { resolveSccsForExtraction } from './engine/sccs'
 import {
   ControlsIntelligence,
   EngineeringIntelligence,
@@ -54,6 +56,7 @@ import { AuditTrailView, TeamReportsView } from './views/teamReports'
 import { ForecastApprovalView } from './views/forecastApproval'
 import { PortfolioCompareView } from './views/portfolioCompare'
 import { CostStructureView } from './views/costStructure'
+import { SccsView } from './views/sccs'
 import { LongLeadView } from './views/longLead'
 import { RulesOfCreditView } from './views/rulesOfCredit'
 import { WbsManager } from './views/wbs'
@@ -247,10 +250,9 @@ function App() {
       current.map((value) =>
         value.id === id
           ? {
-              ...value,
+              ...resetExtractionForCorrection(value),
               normalizedValue: parsed,
-              reviewStatus: 'pending_review',
-              approvalStatus: 'unapproved',
+              sccs: resolveSccsForExtraction(value),
             }
           : value,
       ),
@@ -262,9 +264,7 @@ function App() {
       current.map((value) =>
         value.id === id
           ? {
-              ...value,
-              reviewStatus: 'pending_review',
-              approvalStatus: 'unapproved',
+              ...resetExtractionForCorrection(value),
               reviewer: 'You',
               correctionHistory: [
                 {
@@ -605,6 +605,8 @@ function App() {
         {activeView === 'basis' && <BasisOfEstimateView />}
 
         {activeView === 'cost-structure' && <CostStructureView />}
+
+        {activeView === 'sccs' && <SccsView />}
 
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 
@@ -1022,6 +1024,7 @@ function ReviewDesk({
                 <th>Field</th>
                 <th>Normalized value</th>
                 <th>Mapping</th>
+                <th>SCCS</th>
                 <th>Confidence</th>
                 <th>Review</th>
                 <th>Approval</th>
@@ -1031,7 +1034,7 @@ function ReviewDesk({
             <tbody>
               {filteredValues.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <p className="empty-state">No extracted values match the current filters.</p>
                   </td>
                 </tr>
@@ -1059,7 +1062,11 @@ function ReviewDesk({
                       </td>
                       <td>
                         <strong>{value.wbs}</strong>
-                        <small>{value.standardMapping}</small>
+                        <small>{value.cbs} · {value.standardMapping}</small>
+                      </td>
+                      <td>
+                        <code className="sccs-inline-code">{value.sccs?.composite ?? resolveSccsForExtraction(value).composite}</code>
+                        {value.applied && <small className="muted"> · posted</small>}
                       </td>
                       <td>
                         <div className="confidence">

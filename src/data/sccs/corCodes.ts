@@ -1,0 +1,30 @@
+import type { SccsCodeEntry } from '../sccs'
+
+/** ISO 19008 Annex C — Code of Resources. */
+export const corCodes: SccsCodeEntry[] = [
+  { facet: 'cor', code: 'A', level: 1, parentCode: null, name: 'General costs', description: 'Overheads, temporary works, general services' },
+  { facet: 'cor', code: 'AA', level: 2, parentCode: 'A', name: 'Temporary facilities', description: 'Site offices, camps, temporary utilities' },
+  { facet: 'cor', code: 'AB', level: 2, parentCode: 'A', name: 'Construction overhead', description: 'General construction indirects' },
+  { facet: 'cor', code: 'B', level: 1, parentCode: null, name: 'Bulk materials', description: 'Piping, steel, bulk commodities' },
+  { facet: 'cor', code: 'BP', level: 2, parentCode: 'B', name: 'Piping bulk', description: 'Pipe, fittings, valves (bulk)' },
+  { facet: 'cor', code: 'BS', level: 2, parentCode: 'B', name: 'Structural steel', description: 'Structural steel bulk' },
+  { facet: 'cor', code: 'BC', level: 2, parentCode: 'B', name: 'Concrete and civil bulk', description: 'Concrete, rebar, civil bulk' },
+  { facet: 'cor', code: 'E', level: 1, parentCode: null, name: 'Equipment', description: 'Tagged equipment and packages' },
+  { facet: 'cor', code: 'ER', level: 2, parentCode: 'E', name: 'Mechanical equipment', description: 'Rotating and static mechanical equipment' },
+  { facet: 'cor', code: 'ERP', level: 3, parentCode: 'ER', name: 'Pumps', description: 'Centrifugal and positive displacement pumps' },
+  { facet: 'cor', code: 'ERV', level: 3, parentCode: 'ER', name: 'Vessels and columns', description: 'Pressure vessels, columns, drums' },
+  { facet: 'cor', code: 'ERC', level: 3, parentCode: 'ER', name: 'Compressors', description: 'Compressors and turbo machinery' },
+  { facet: 'cor', code: 'EE', level: 2, parentCode: 'E', name: 'Electrical equipment', description: 'MCC, transformers, switchgear' },
+  { facet: 'cor', code: 'EI', level: 2, parentCode: 'E', name: 'Instrumentation', description: 'Instruments, control valves, analyzers' },
+  { facet: 'cor', code: 'ET', level: 2, parentCode: 'E', name: 'Telecom / ICT', description: 'Telecom and information systems' },
+  { facet: 'cor', code: 'H', level: 1, parentCode: null, name: 'Company personnel', description: 'Direct and indirect labour' },
+  { facet: 'cor', code: 'HT', level: 2, parentCode: 'H', name: 'Technical personnel', description: 'Field technical and craft labour' },
+  { facet: 'cor', code: 'HM', level: 2, parentCode: 'H', name: 'Management personnel', description: 'Supervision and management labour' },
+  { facet: 'cor', code: 'K', level: 1, parentCode: null, name: 'Engineering personnel', description: 'Home office and discipline engineering hours' },
+  { facet: 'cor', code: 'KE', level: 2, parentCode: 'K', name: 'Discipline engineering', description: 'Mechanical, piping, electrical, I&C hours' },
+  { facet: 'cor', code: 'S', level: 1, parentCode: null, name: 'Subcontracts', description: 'Subcontracted scope packages' },
+  { facet: 'cor', code: 'SC', level: 2, parentCode: 'S', name: 'Construction subcontract', description: 'Construction and installation subcontracts' },
+  { facet: 'cor', code: 'X', level: 1, parentCode: null, name: 'Marine and logistics', description: 'Marine spread, freight, logistics' },
+  { facet: 'cor', code: 'XM', level: 2, parentCode: 'X', name: 'Marine spread', description: 'Vessels, barges, marine equipment' },
+  { facet: 'cor', code: 'XF', level: 2, parentCode: 'X', name: 'Freight and logistics', description: 'Shipping, customs, inland transport' },
+]

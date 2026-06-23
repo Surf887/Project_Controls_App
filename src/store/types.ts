@@ -374,6 +374,7 @@ export interface AppliedExtractionLine {
   category: 'cost' | 'progress' | 'change' | 'procurement' | 'forecast'
   sourceWbs: string
   targetControlAccountWbs: string
+  sccsComposite: string
   amountUsd: number
   effect: 'commitments' | 'eac' | 'eac_via_change'
 }

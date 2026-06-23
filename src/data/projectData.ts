@@ -54,6 +54,8 @@ export interface ExtractedValue {
   wbs: string
   cbs: string
   standardMapping: string
+  /** ISO 19008 SCCS composite — mapped from WBS/CBS/category or imported from CSV. */
+  sccs?: import('./sccs').SccsAssignment
   confidence: number
   reviewStatus: ReviewStatus
   approvalStatus: ApprovalStatus

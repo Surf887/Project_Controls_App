@@ -19,6 +19,7 @@ import { syncCommitmentsToCostSheet } from './commitmentSync'
 import { computeReserveSnapshots, totalContingencyExposure } from './contingency'
 import { accrualTotals } from './accruals'
 import { invoicePipeline, subcontractMetrics } from './procurementReconcile'
+import { enrichCostSheetRows, lookupLabels, rollupCostSheetBySccs } from './sccs'
 
 export function createAuditEntry(
   partial: Omit<AuditLogEntry, 'id' | 'at'> & { at?: string },
@@ -414,6 +415,29 @@ export function generateTeamReportCsv(
         ]),
       ]
       rows.push(['', '', '', 'Posted total', String(exposure.posted), 'Pending', String(exposure.pending)])
+      break
+    }
+    case 'sccs_rollup': {
+      const enriched = enrichCostSheetRows(state.costSheetRows)
+      const rollup = rollupCostSheetBySccs(enriched)
+      rows = [
+        ['Composite', 'PBS', 'PBS name', 'SAB', 'SAB name', 'COR', 'COR name', 'Control accounts', 'Budget USD', 'EAC USD'],
+        ...rollup.map((line) => {
+          const labels = lookupLabels(line)
+          return [
+            line.composite,
+            line.pbs,
+            labels.pbs,
+            line.sab,
+            labels.sab,
+            line.cor,
+            labels.cor,
+            String(line.rowCount),
+            String(line.budgetUsd),
+            String(line.eacUsd),
+          ]
+        }),
+      ]
       break
     }
   }

@@ -1,4 +1,5 @@
 import { createApp } from './app.js'
+import { validateEnv } from './config/env.js'
 import { closeDatabase, getProjectById, initDatabase, isUsingPostgres } from './db/database.js'
 import { closePool } from './db/postgres.js'
 import { runMigrations } from './db/migrate.js'
@@ -9,13 +10,8 @@ import { ensureBootstrapAdmin } from './auth/userStore.js'
 
 const port = Number(process.env.PORT ?? 3001)
 
-// Fail fast at boot if the signing secret is misconfigured (throws in prod when
-// JWT_SECRET is unset) rather than discovering it on the first request.
+validateEnv()
 getJwtSecret()
-
-if (process.env.NODE_ENV === 'production' && process.env.DEMO_AUTH === 'true') {
-  throw new Error('DEMO_AUTH must not be enabled in production')
-}
 
 await runMigrations()
 await initDatabase()
@@ -33,19 +29,29 @@ async function runScheduledExports() {
 }
 
 void runScheduledExports()
-setInterval(() => void runScheduledExports(), 60 * 60 * 1000)
+const exportInterval = setInterval(() => void runScheduledExports(), 60 * 60 * 1000)
 
 const app = createApp()
 const server = app.listen(port, () => {
   console.log(`Project Controls API listening on http://localhost:${port} (${isUsingPostgres() ? 'postgres' : 'json'})`)
 })
 
-function shutdown() {
-  server.close()
-  closeDatabase()
-  void closePool()
-  process.exit(0)
+let shuttingDown = false
+
+function shutdown(signal: string) {
+  if (shuttingDown) return
+  shuttingDown = true
+  console.log(`[shutdown] ${signal} received, draining connections`)
+  clearInterval(exportInterval)
+  server.close(() => {
+    closeDatabase()
+    void closePool().finally(() => process.exit(0))
+  })
+  setTimeout(() => {
+    console.error('[shutdown] forced exit after timeout')
+    process.exit(1)
+  }, 10_000).unref()
 }
 
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
+process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('SIGTERM', () => shutdown('SIGTERM'))

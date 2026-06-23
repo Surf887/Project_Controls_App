@@ -63,6 +63,17 @@ export async function listProjectRoles(projectId: string): Promise<ProjectRoleAs
   return readJsonRoles().filter((row) => row.projectId === projectId)
 }
 
+export async function listProjectIdsForUser(userId: string): Promise<string[]> {
+  if (isPostgresEnabled()) {
+    const result = await query<{ project_id: string }>(
+      'SELECT project_id FROM user_project_roles WHERE user_id = $1',
+      [userId],
+    )
+    return result.rows.map((row) => row.project_id)
+  }
+  return readJsonRoles().filter((row) => row.userId === userId).map((row) => row.projectId)
+}
+
 /**
  * A project-scoped role assignment is authoritative for that project: it can
  * grant MORE access (a viewer who is approver on one project) or LESS (scoping

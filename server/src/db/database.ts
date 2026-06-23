@@ -68,6 +68,9 @@ export async function initDatabase() {
     postgresMode = true
     console.log('[database] using Postgres')
   } else {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('DATABASE_URL is required in production')
+    }
     store = new JsonProjectStore()
     store.init()
     postgresMode = false
@@ -145,6 +148,12 @@ export async function applyAction(
 export async function resetProject(projectId: string): Promise<ProjectRecord> {
   if (isPostgresStore(store)) return store.resetProjectAsync(projectId)
   return store.resetProject(projectId)
+}
+
+export async function pingDatabase(): Promise<void> {
+  if (!isPostgresStore(store)) return
+  const { query } = await import('./postgres.js')
+  await query('SELECT 1')
 }
 
 export function closeDatabase() {

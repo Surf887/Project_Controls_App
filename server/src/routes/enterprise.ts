@@ -11,12 +11,11 @@ import {
 import { generateClosePack } from '../services/exportService.js'
 import { generateClosePackPdfAsync } from '../services/pdfExport.js'
 import { param } from '../utils/params.js'
+import { sendRouteError } from '../utils/routeError.js'
+import { createBaselineSchema } from '../validation/schemas.js'
 
 export const enterpriseRouter = Router({ mergeParams: true })
 
-// Mounted separately from projectsRouter on /api/projects/:projectId, so it must
-// run the project-role/membership guard itself (otherwise audit/baselines/exports
-// would enforce only the global role — an IDOR across projects).
 enterpriseRouter.use(attachProjectRole)
 
 enterpriseRouter.get('/audit', requireRole('viewer'), (req, res) => {
@@ -26,7 +25,7 @@ enterpriseRouter.get('/audit', requireRole('viewer'), (req, res) => {
     const integrity = verifyAuditChain(projectId)
     res.json({ events, integrity })
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Audit read failed' })
+    sendRouteError(res, error, 500, 'Audit read failed')
   }
 })
 
@@ -34,7 +33,7 @@ enterpriseRouter.get('/baselines', requireRole('viewer'), (req, res) => {
   try {
     res.json({ snapshots: listBaselineSnapshots(param(req.params.projectId)) })
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Baseline list failed' })
+    sendRouteError(res, error, 500, 'Baseline list failed')
   }
 })
 
@@ -47,29 +46,33 @@ enterpriseRouter.get('/baselines/:snapshotId', requireRole('viewer'), (req, res)
     }
     res.json({ snapshot })
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Baseline read failed' })
+    sendRouteError(res, error, 500, 'Baseline read failed')
   }
 })
 
 enterpriseRouter.post('/baselines', requireRole('approver'), async (req, res) => {
   try {
+    const parsed = createBaselineSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid baseline payload', issues: parsed.error.flatten() })
+      return
+    }
     const projectId = param(req.params.projectId)
     const state = await getProjectById(projectId)
-    const body = req.body as { label?: string; notes?: string }
     const snapshot = createBaselineSnapshot({
       projectId,
-      label: body.label ?? `Baseline ${new Date().toISOString().slice(0, 10)}`,
+      label: parsed.data.label ?? `Baseline ${new Date().toISOString().slice(0, 10)}`,
       createdBy: req.user?.name ?? 'System',
       createdById: req.user?.id ?? 'system',
       costSheetRows: state.costSheetRows,
       wbsNodes: state.wbsNodes,
       basisOfEstimate: state.basisOfEstimate,
-      notes: body.notes,
+      notes: parsed.data.notes,
       status: 'sanctioned',
     })
     res.status(201).json({ snapshot })
   } catch (error) {
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Baseline create failed' })
+    sendRouteError(res, error, 400, 'Baseline create failed')
   }
 })
 
@@ -82,7 +85,7 @@ enterpriseRouter.post('/baselines/:snapshotId/lock', requireRole('admin'), (req,
     }
     res.json({ snapshot })
   } catch (error) {
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Baseline lock failed' })
+    sendRouteError(res, error, 400, 'Baseline lock failed')
   }
 })
 
@@ -92,7 +95,7 @@ enterpriseRouter.get('/exports/close-pack', requireRole('viewer'), async (req, r
     const pack = generateClosePack(state, req.user?.name ?? 'System')
     res.json(pack)
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Export failed' })
+    sendRouteError(res, error, 500, 'Export failed')
   }
 })
 
@@ -105,7 +108,7 @@ enterpriseRouter.get('/exports/close-pack.pdf', requireRole('viewer'), async (re
     res.setHeader('Content-Disposition', `attachment; filename="close-pack-${projectId}.pdf"`)
     res.send(pdf)
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'PDF export failed' })
+    sendRouteError(res, error, 500, 'PDF export failed')
   }
 })
 
@@ -114,6 +117,6 @@ enterpriseRouter.get('/portfolio/rollup', requireRole('viewer'), async (_req, re
     await getActiveProject()
     res.json({ note: 'Use /api/platform/portfolio/governance for PMO rollup' })
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Portfolio rollup failed' })
+    sendRouteError(res, error, 500, 'Portfolio rollup failed')
   }
 })

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
+import { rateLimitDisabled } from '../config/env.js'
 import { signSessionToken } from '../auth/jwt.js'
 import { DEMO_USERS, isDemoAuthEnabled, type Role } from '../auth/rbac.js'
 import { requireAdmin, requireRole } from '../middleware/auth.js'
@@ -32,7 +33,7 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true',
+  skip: () => rateLimitDisabled(),
   message: { error: 'Too many login attempts — try again later' },
 })
 

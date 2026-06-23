@@ -7,6 +7,8 @@ import {
   type UserRecord,
 } from './userStore.js'
 
+const VALID_OIDC_ROLES: Role[] = ['viewer', 'cost_controller', 'approver', 'admin']
+
 /** Public: SSO login blocked when email/identity cannot be linked safely. */
 export class OidcAccountError extends Error {
   constructor(message: string) {
@@ -22,6 +24,9 @@ export function isOidcEnabled(): boolean {
 
 export function defaultOidcRole(): Role {
   const role = process.env.OIDC_DEFAULT_ROLE as Role | undefined
+  if (role && !VALID_OIDC_ROLES.includes(role)) {
+    return 'viewer'
+  }
   return role ?? 'viewer'
 }
 

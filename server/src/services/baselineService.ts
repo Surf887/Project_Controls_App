@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { CostRow } from '@pc/data/costSheet.js'
 import type { BasisOfEstimate, WbsNode } from '@pc/store/types.js'
+import { assertSafeId, resolveUnderRoot } from '../utils/safePath.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const baselineRoot = path.resolve(__dirname, '../../data/baselines')
@@ -23,7 +24,11 @@ export interface BaselineSnapshot {
 }
 
 function projectDir(projectId: string): string {
-  return path.join(baselineRoot, projectId)
+  return resolveUnderRoot(baselineRoot, assertSafeId(projectId, 'projectId'))
+}
+
+function snapshotPath(projectId: string, snapshotId: string): string {
+  return resolveUnderRoot(projectDir(projectId), `${assertSafeId(snapshotId, 'snapshotId')}.json`)
 }
 
 function ensureDir(projectId: string) {
@@ -62,7 +67,7 @@ export function createBaselineSnapshot(input: {
     notes: input.notes,
   }
 
-  fs.writeFileSync(path.join(projectDir(input.projectId), `${id}.json`), JSON.stringify(snapshot, null, 2), 'utf8')
+  fs.writeFileSync(snapshotPath(input.projectId, id), JSON.stringify(snapshot, null, 2), 'utf8')
   return snapshot
 }
 
@@ -79,7 +84,7 @@ export function listBaselineSnapshots(projectId: string): BaselineSnapshot[] {
 }
 
 export function getBaselineSnapshot(projectId: string, snapshotId: string): BaselineSnapshot | null {
-  const file = path.join(projectDir(projectId), `${snapshotId}.json`)
+  const file = snapshotPath(projectId, snapshotId)
   if (!fs.existsSync(file)) {
     return null
   }
@@ -92,6 +97,6 @@ export function lockBaselineSnapshot(projectId: string, snapshotId: string): Bas
     return snapshot
   }
   snapshot.status = 'locked'
-  fs.writeFileSync(path.join(projectDir(projectId), `${snapshotId}.json`), JSON.stringify(snapshot, null, 2), 'utf8')
+  fs.writeFileSync(snapshotPath(projectId, snapshotId), JSON.stringify(snapshot, null, 2), 'utf8')
   return snapshot
 }

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { listProjectRoles, setProjectRole } from '../auth/projectRoles.js'
 import { attachProjectRole, requireAdmin, requireRole } from '../middleware/auth.js'
 import { requireWebhookSignature } from '../integrations/webhookAuth.js'
-import { projectRoleSchema } from '../validation/schemas.js'
+import { projectRoleSchema, saveFilterSchema, workflowDelegationSchema, exportJobSchema, integrationSyncSchema, connectorOAuthSchema } from '../validation/schemas.js'
 import { deleteFilter, listFilters, saveFilter } from '../services/filterService.js'
 import { createExportJob, listExportJobs } from '../services/exportScheduler.js'
 import { enterpriseWorkflows } from '@pc/data/workflowConfig.js'
@@ -15,6 +15,7 @@ import { getActiveProject } from '../db/database.js'
 import { defaultPortfolioPolicy, rollupPortfolio } from '../services/portfolioService.js'
 import { handleWebhook, listAdaptersByDomain, saveConnectorOAuth, runSyncJob } from '../integrations/connectorRegistry.js'
 import type { IntegrationDomain } from '../integrations/connectorRegistry.js'
+import { sendRouteError } from '../utils/routeError.js'
 import { param } from '../utils/params.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -33,13 +34,17 @@ platformRouter.get('/filters', requireRole('viewer'), async (req, res) => {
 })
 
 platformRouter.post('/filters', requireRole('viewer'), async (req, res) => {
-  const body = req.body as { name: string; scope: string; payload: Record<string, string>; shared?: boolean }
+  const parsed = saveFilterSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid filter payload', issues: parsed.error.flatten() })
+    return
+  }
   const filter = await saveFilter({
     userId: req.user!.id,
-    name: body.name,
-    scope: body.scope,
-    payload: body.payload,
-    shared: body.shared ?? false,
+    name: parsed.data.name,
+    scope: parsed.data.scope,
+    payload: parsed.data.payload,
+    shared: parsed.data.shared ?? false,
   })
   res.status(201).json({ filter })
 })
@@ -71,13 +76,12 @@ platformRouter.get('/workflows/delegations', requireRole('viewer'), async (_req,
 })
 
 platformRouter.post('/workflows/delegations', requireAdmin, async (req, res) => {
-  const body = req.body as {
-    workflowId: string
-    projectId?: string
-    fromUserId: string
-    toUserId: string
-    until: string
+  const parsed = workflowDelegationSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid delegation payload', issues: parsed.error.flatten() })
+    return
   }
+  const body = parsed.data
   const record = { id: randomUUID(), ...body, createdAt: new Date().toISOString() }
 
   if (isPostgresEnabled()) {
@@ -97,8 +101,12 @@ platformRouter.post('/workflows/delegations', requireAdmin, async (req, res) => 
 })
 
 platformRouter.get('/portfolio/governance', requireRole('viewer'), async (_req, res) => {
-  const state = await getActiveProject()
-  res.json({ policy: defaultPortfolioPolicy, rollup: rollupPortfolio(state) })
+  try {
+    const state = await getActiveProject()
+    res.json({ policy: defaultPortfolioPolicy, rollup: rollupPortfolio(state) })
+  } catch (error) {
+    sendRouteError(res, error, 503, 'Portfolio rollup unavailable')
+  }
 })
 
 platformRouter.get('/projects/:projectId/roles', requireAdmin, async (req, res) => {
@@ -116,18 +124,26 @@ platformRouter.post('/projects/:projectId/roles', requireAdmin, async (req, res)
 })
 
 platformRouter.post('/integrations/oauth/:connectorId', requireAdmin, async (req, res) => {
-  const tokens = req.body as Record<string, string>
-  await saveConnectorOAuth(param(req.params.connectorId), tokens)
+  const parsed = connectorOAuthSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid OAuth payload' })
+    return
+  }
+  await saveConnectorOAuth(param(req.params.connectorId), parsed.data)
   res.json({ ok: true, connectorId: param(req.params.connectorId) })
 })
 
 platformRouter.post('/integrations/sync', requireAdmin, async (req, res) => {
-  const body = req.body as { connectorId: string; domain: IntegrationDomain; projectId?: string }
+  const parsed = integrationSyncSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid sync payload', issues: parsed.error.flatten() })
+    return
+  }
   const job = await runSyncJob({
-    connectorId: body.connectorId,
-    domain: body.domain,
+    connectorId: parsed.data.connectorId,
+    domain: parsed.data.domain,
     direction: 'inbound',
-    projectId: body.projectId,
+    projectId: parsed.data.projectId,
   })
   res.json({ job })
 })
@@ -147,10 +163,15 @@ platformRouter.get('/projects/:projectId/export-jobs', requireRole('viewer'), as
 })
 
 platformRouter.post('/projects/:projectId/export-jobs', requireRole('cost_controller'), async (req, res) => {
+  const parsed = exportJobSchema.safeParse(req.body ?? {})
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid export job payload', issues: parsed.error.flatten() })
+    return
+  }
   const job = await createExportJob({
     projectId: param(req.params.projectId),
     createdBy: req.user!.name,
-    scheduleCron: req.body?.scheduleCron,
+    scheduleCron: parsed.data.scheduleCron,
   })
   res.status(201).json({ job })
 })

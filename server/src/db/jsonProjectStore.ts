@@ -72,6 +72,21 @@ export class JsonProjectStore implements ProjectStoreAdapter {
     Object.values(this.cache.projects).forEach((entry) => {
       if (entry.version == null) entry.version = 1
     })
+
+    const empty =
+      !this.cache.activeProjectId ||
+      Object.keys(this.cache.projects).length === 0 ||
+      !this.cache.projects[this.cache.activeProjectId]
+
+    if (empty) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Project database is empty — restore from backup or run initial seed')
+      }
+      console.warn('[database] projects.json empty or corrupt — re-seeding from defaults')
+      this.cache = this.seedDatabase()
+      this.writeDb(this.cache)
+    }
+
     return this.cache
   }
 

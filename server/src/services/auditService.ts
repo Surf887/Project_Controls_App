@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { assertSafeId, resolveUnderRoot } from '../utils/safePath.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 function resolveAuditDir(): string {
@@ -9,7 +10,8 @@ function resolveAuditDir(): string {
 }
 
 function auditPath(projectId: string): string {
-  return path.join(resolveAuditDir(), `${projectId}.jsonl`)
+  const safeId = assertSafeId(projectId, 'projectId')
+  return resolveUnderRoot(resolveAuditDir(), `${safeId}.jsonl`)
 }
 
 function ensureAuditDir() {

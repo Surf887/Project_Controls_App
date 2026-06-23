@@ -10,20 +10,45 @@ import {
   VersionConflictError,
 } from '../db/database.js'
 import type { ProjectAction } from '@pc/store/types.js'
-import { attachProjectRole, guardProjectAction, requireAdmin, requireRole } from '../middleware/auth.js'
+import {
+  attachProjectRole,
+  enforceProjectMembership,
+  guardProjectAction,
+  requireAdmin,
+  requireRole,
+  userCanAccessProject,
+} from '../middleware/auth.js'
+import { listProjectIdsForUser } from '../auth/projectRoles.js'
 import { parseProjectAction } from '../validation/schemas.js'
+import { ActionValidationError } from '@pc/engine/actionValidation.js'
 import { computeProjectEvm, computeProjectForecast } from '../services/computeService.js'
 import { param } from '../utils/params.js'
+import { publicErrorMessage, sendRouteError } from '../utils/routeError.js'
 
 export const projectsRouter = Router()
 
-projectsRouter.get('/', requireRole('viewer'), async (_req, res) => {
-  res.json({ projects: await listProjects() })
+projectsRouter.get('/', requireRole('viewer'), async (req, res) => {
+  let projects = await listProjects()
+  const user = req.user!
+  if (user.role !== 'admin' && enforceProjectMembership()) {
+    const allowed = new Set(await listProjectIdsForUser(user.id))
+    projects = projects.filter((project) => allowed.has(project.id))
+  }
+  res.json({ projects })
 })
 
-projectsRouter.get('/active', requireRole('viewer'), async (_req, res) => {
-  const record = await getActiveProjectRecord()
-  res.json({ state: record.state, version: record.version })
+projectsRouter.get('/active', requireRole('viewer'), async (req, res) => {
+  try {
+    const record = await getActiveProjectRecord()
+    const user = req.user!
+    if (!(await userCanAccessProject(user, record.state.meta.id))) {
+      res.status(403).json({ error: 'You do not have access to the active project' })
+      return
+    }
+    res.json({ state: record.state, version: record.version })
+  } catch (error) {
+    sendRouteError(res, error, 404, 'Active project not found')
+  }
 })
 
 projectsRouter.use('/:projectId', attachProjectRole)
@@ -34,7 +59,7 @@ projectsRouter.get('/:projectId', requireRole('viewer'), async (req, res) => {
     const record = await getProjectRecord(projectId)
     res.json({ state: record.state, version: record.version })
   } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'Not found' })
+    sendRouteError(res, error, 404, 'Project not found')
   }
 })
 
@@ -43,7 +68,7 @@ projectsRouter.post('/:projectId/activate', requireRole('cost_controller'), asyn
     const record = await setActiveProject(param(req.params.projectId))
     res.json({ state: record.state, version: record.version })
   } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'Not found' })
+    sendRouteError(res, error, 404, 'Project not found')
   }
 })
 
@@ -61,10 +86,17 @@ projectsRouter.post('/:projectId/actions', guardProjectAction, async (req, res) 
     res.json({ state: result.state, version: result.version })
   } catch (error) {
     if (error instanceof VersionConflictError) {
-      res.status(409).json({ error: error.message, version: error.currentVersion })
+      res.status(409).json({
+        error: publicErrorMessage(error, 'Version conflict — refresh and retry'),
+        version: error.currentVersion,
+      })
       return
     }
-    res.status(400).json({ error: error instanceof Error ? error.message : 'Action failed' })
+    if (error instanceof ActionValidationError) {
+      res.status(400).json({ error: error.message })
+      return
+    }
+    sendRouteError(res, error, 400, 'Action failed')
   }
 })
 
@@ -73,14 +105,12 @@ projectsRouter.post('/:projectId/reset', requireAdmin, async (req, res) => {
     const record = await resetProject(param(req.params.projectId))
     res.json({ state: record.state, version: record.version })
   } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'Reset failed' })
+    sendRouteError(res, error, 404, 'Reset failed')
   }
 })
 
 export const computeRouter = Router({ mergeParams: true })
 
-// Compute routes are mounted separately from projectsRouter, so they must run
-// the same project-role/membership guard to avoid an IDOR (reading any project).
 computeRouter.use(attachProjectRole)
 
 computeRouter.get('/forecast', requireRole('viewer'), async (req, res) => {
@@ -90,7 +120,7 @@ computeRouter.get('/forecast', requireRole('viewer'), async (req, res) => {
     const { snapshots, totals } = computeProjectForecast(state)
     res.json({ totals, rows: snapshots.length })
   } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'Compute failed' })
+    sendRouteError(res, error, 404, 'Compute failed')
   }
 })
 
@@ -100,6 +130,6 @@ computeRouter.get('/evm', requireRole('viewer'), async (req, res) => {
     const state = await getProjectById(projectId)
     res.json(computeProjectEvm(state))
   } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'Compute failed' })
+    sendRouteError(res, error, 404, 'Compute failed')
   }
 })

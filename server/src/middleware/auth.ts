@@ -1,10 +1,10 @@
 import { verifySessionToken } from '../auth/jwt.js'
-import { effectiveRole, getProjectRole } from '../auth/projectRoles.js'
+import { effectiveRole, getProjectRole, listProjectIdsForUser } from '../auth/projectRoles.js'
 import { canPerformAction, demoUserFromRole, hasRole, type AuthUser, type Role } from '../auth/rbac.js'
 import { isBlockedClientAction, minimumRoleForAction } from '../auth/actionPolicy.js'
-import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
 import { findUserById } from '../auth/userStore.js'
 import { param } from '../utils/params.js'
+import { assertSafeId } from '../utils/safePath.js'
 import type { RequestHandler } from 'express'
 
 declare module 'express-serve-static-core' {
@@ -28,8 +28,8 @@ export function enforceProjectMembership(): boolean {
 /**
  * Establish req.user from, in order:
  *   1. A Bearer session token we signed (verified HMAC, not just decoded).
- *   2. If OIDC is configured, a Bearer ID token verified against the provider.
- *   3. The demo `x-pc-role` header — ONLY when DEMO_AUTH is on (never in prod).
+ *   2. The demo `x-pc-role` header — ONLY when DEMO_AUTH is on (never in prod).
+ * OIDC ID tokens are exchanged for session tokens at POST /api/platform/auth/oidc only.
  * Anything else leaves the request unauthenticated.
  */
 export const attachUser: RequestHandler = async (req, _res, next) => {
@@ -55,22 +55,6 @@ export const attachUser: RequestHandler = async (req, _res, next) => {
       return next()
     }
 
-    if (isOidcEnabled()) {
-      const profile = await verifyOidcIdToken(token)
-      if (profile) {
-        try {
-          const user = await findOrProvisionOidcUser(profile)
-          req.user = user.disabled ? null : { id: user.id, name: user.name, role: user.role, email: user.email }
-          req.globalRole = req.user?.role
-        } catch (error) {
-          if (!(error instanceof OidcAccountError)) throw error
-          req.user = null
-          req.globalRole = undefined
-        }
-        return next()
-      }
-    }
-
     // Token present but invalid — do NOT fall back to any privileged identity.
     req.user = null
     req.globalRole = undefined
@@ -88,9 +72,17 @@ export const attachUser: RequestHandler = async (req, _res, next) => {
  * membership. Global admins bypass membership checks.
  */
 export const attachProjectRole: RequestHandler = async (req, res, next) => {
-  const projectId = param(req.params.projectId)
-  if (!req.user || !projectId) {
+  const rawProjectId = param(req.params.projectId)
+  if (!req.user || !rawProjectId) {
     next()
+    return
+  }
+
+  let projectId: string
+  try {
+    projectId = assertSafeId(rawProjectId, 'projectId')
+  } catch {
+    res.status(400).json({ error: 'Invalid project id' })
     return
   }
 
@@ -111,6 +103,17 @@ export const attachProjectRole: RequestHandler = async (req, res, next) => {
   req.user = { ...req.user, role: effectiveRole(globalRole, projectRole) }
   next()
 }
+
+/** Returns true when the user may access the given project (admin bypass). */
+export async function userCanAccessProject(user: AuthUser, projectId: string): Promise<boolean> {
+  if (user.role === 'admin' || !enforceProjectMembership()) {
+    return true
+  }
+  const role = await getProjectRole(user.id, projectId)
+  return role != null
+}
+
+export { listProjectIdsForUser }
 
 export function requireRole(minimum: Role): RequestHandler {
   return (req, res, next) => {

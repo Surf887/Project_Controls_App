@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { rateLimitDisabled, trustProxySetting } from './config/env.js'
 import { computeRouter, projectsRouter } from './routes/projects.js'
 import { enterpriseRouter } from './routes/enterprise.js'
 import { platformRouter } from './routes/platform.js'
@@ -32,35 +33,61 @@ export function createApp() {
   const app = express()
   app.disable('x-powered-by')
 
+  const trustProxy = trustProxySetting()
+  if (trustProxy != null) {
+    app.set('trust proxy', trustProxy)
+  }
+
   app.use(helmet())
   app.use(cors(corsOptions()))
   app.use(
     express.json({
       limit: process.env.JSON_LIMIT ?? '1mb',
-      // Capture the raw body so webhook HMAC signatures can be verified against
-      // the exact bytes received (re-serializing JSON is not signature-stable).
       verify: (req, _res, buf) => {
         ;(req as unknown as { rawBody?: Buffer }).rawBody = buf
       },
     }),
   )
 
-  // Baseline rate limit across the API (auth routes add a stricter limiter).
   app.use(
     rateLimit({
       windowMs: 60 * 1000,
       max: Number(process.env.RATE_LIMIT_PER_MIN ?? 300),
       standardHeaders: true,
       legacyHeaders: false,
-      skip: () => process.env.NODE_ENV === 'test' || process.env.DISABLE_RATE_LIMIT === 'true',
+      skip: () => rateLimitDisabled(),
     }),
   )
 
   app.use(attachUser)
 
+  app.get('/api/health/live', (_req, res) => {
+    res.json({ ok: true, service: 'project-controls-api' })
+  })
+
+  app.get('/api/health/ready', async (_req, res) => {
+    try {
+      const { isUsingPostgres, pingDatabase } = await import('./db/database.js')
+      if (isUsingPostgres()) {
+        await pingDatabase()
+      }
+      res.json({ ok: true, postgres: isUsingPostgres() })
+    } catch (error) {
+      console.error('[health/ready]', error)
+      res.status(503).json({ ok: false, error: 'Not ready' })
+    }
+  })
+
   app.get('/api/health', async (_req, res) => {
-    const { isUsingPostgres } = await import('./db/database.js')
-    res.json({ ok: true, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
+    const { isUsingPostgres, pingDatabase } = await import('./db/database.js')
+    try {
+      if (isUsingPostgres()) {
+        await pingDatabase()
+      }
+      res.json({ ok: true, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
+    } catch {
+      res.status(503).json({ ok: false, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
+    }
   })
 
   app.use('/api/platform/auth', authRouter)
@@ -69,13 +96,10 @@ export function createApp() {
   app.use('/api/projects/:projectId/compute', computeRouter)
   app.use('/api/projects/:projectId', enterpriseRouter)
 
-  // In production the API also serves the built client from the same container
-  // (single deployable). Disable with SERVE_CLIENT=false when fronted separately.
   if (process.env.NODE_ENV === 'production' && process.env.SERVE_CLIENT !== 'false') {
     const clientDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../dist')
     if (fs.existsSync(clientDir)) {
       app.use(express.static(clientDir))
-      // SPA fallback for any non-API GET route.
       app.get(/^(?!\/api\/).*/, (_req, res) => {
         res.sendFile(path.join(clientDir, 'index.html'))
       })
@@ -86,8 +110,6 @@ export function createApp() {
     res.status(404).json({ error: 'Not found' })
   })
 
-  // Don't leak internal error messages to clients in production — log with an
-  // id the operator can correlate, return a generic message.
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const errorId = randomUUID()
     console.error(`[error ${errorId}]`, error)

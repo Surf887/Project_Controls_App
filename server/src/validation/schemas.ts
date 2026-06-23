@@ -176,9 +176,44 @@ export const registerUserSchema = z.object({
 })
 
 export const projectRoleSchema = z.object({
-  userId: z.string().min(1),
+  userId: z.string().min(1).max(128),
   role: roleSchema,
 })
+
+export const saveFilterSchema = z.object({
+  name: z.string().min(1).max(200),
+  scope: z.string().min(1).max(100),
+  payload: z.record(z.string(), z.string()).refine((obj) => Object.keys(obj).length <= 50, 'Too many filter keys'),
+  shared: z.boolean().optional(),
+})
+
+export const workflowDelegationSchema = z.object({
+  workflowId: z.string().min(1).max(128),
+  projectId: z.string().min(1).max(128).optional(),
+  fromUserId: z.string().min(1).max(128),
+  toUserId: z.string().min(1).max(128),
+  until: z.string().datetime(),
+})
+
+export const createBaselineSchema = z.object({
+  label: z.string().min(1).max(200).optional(),
+  notes: z.string().max(2000).optional(),
+})
+
+export const exportJobSchema = z.object({
+  scheduleCron: z.string().max(100).optional(),
+})
+
+export const integrationSyncSchema = z.object({
+  connectorId: z.string().min(1).max(128),
+  domain: z.enum(['erp', 'schedule', 'contracts', 'procurement', 'document_control']),
+  projectId: z.string().min(1).max(128).optional(),
+})
+
+export const connectorOAuthSchema = z.record(z.string().max(128), z.string().max(4096)).refine(
+  (obj) => Object.keys(obj).length <= 20,
+  'Too many OAuth fields',
+)
 
 export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterUserInput = z.infer<typeof registerUserSchema>

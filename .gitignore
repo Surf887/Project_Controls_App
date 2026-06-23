@@ -1,11 +1,9 @@
 node_modules/
 dist/
 server/dist/
-server/data/projects.json
-server/data/users.json
-server/data/export_jobs.json
-server/data/audit/
-server/data/.migrations.json
+# Runtime data + secrets — never commit. Keep the directory via .gitkeep.
+server/data/*
+!server/data/.gitkeep
 test-results/
 *.log
 .env

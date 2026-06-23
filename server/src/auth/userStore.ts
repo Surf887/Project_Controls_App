@@ -235,6 +235,9 @@ export async function ensureBootstrapAdmin(): Promise<void> {
   const email = process.env.ADMIN_EMAIL
   const password = process.env.ADMIN_PASSWORD
   if (!email || !password) return
+  if (process.env.NODE_ENV === 'production' && password.length < 12) {
+    throw new Error('ADMIN_PASSWORD must be at least 12 characters in production')
+  }
   if ((await countUsers()) > 0) return
   await createUser({
     email,

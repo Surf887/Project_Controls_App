@@ -31,7 +31,7 @@ describe('API routes', () => {
   })
 
   it('GET /api/projects/active returns state', async () => {
-    const res = await request(app).get('/api/projects/active')
+    const res = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     expect(res.status).toBe(200)
     expect(res.body.state).toBeDefined()
     expect(res.body.state.costSheetRows).toBeDefined()
@@ -131,11 +131,30 @@ describe('API routes', () => {
     const active = await request(app).get('/api/projects/active').set('x-pc-role', 'admin')
     const projectId = active.body.state.meta.id as string
     const period = active.body.state.settings.reportingPeriod.period as string
-    const values = active.body.state.values.map((value: { id: string }) =>
-      value.id === 'val-003'
-        ? { ...value, reviewStatus: 'approved', approvalStatus: 'approved', applied: undefined }
-        : value,
-    )
+    const values = [
+      ...active.body.state.values,
+      {
+        id: 'v-lock-guard-test',
+        reportId: 'rpt-lock-test',
+        field: 'Pending forecast',
+        category: 'forecast',
+        rawValue: '50000000',
+        normalizedValue: 50_000_000,
+        unit: 'USD',
+        period: '2026-W23',
+        wbs: 'A.02',
+        cbs: 'C-1000',
+        standardMapping: '',
+        confidence: 0.9,
+        reviewStatus: 'approved',
+        approvalStatus: 'approved',
+        reviewer: 'Tester',
+        owner: 'Cost Control',
+        source: { document: 'd', table: 't', row: '1', column: 'c', anchor: 'a' },
+        validationIssues: [],
+        correctionHistory: [],
+      },
+    ]
     const setRes = await request(app)
       .post(`/api/projects/${projectId}/actions`)
       .set('x-pc-role', 'admin')

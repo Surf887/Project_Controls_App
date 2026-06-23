@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { isPostgresEnabled, query } from '../db/postgres.js'
+import { encryptConnectorTokens, decryptConnectorTokens } from './connectorCrypto.js'
 
 export type IntegrationDomain = 'erp' | 'schedule' | 'contracts' | 'procurement' | 'document_control'
 
@@ -63,11 +64,36 @@ export async function saveConnectorOAuth(connectorId: string, tokens: Record<str
     return
   }
   const rows = fs.existsSync(credsPath)
-    ? (JSON.parse(fs.readFileSync(credsPath, 'utf8')) as Record<string, unknown>)
+    ? (JSON.parse(fs.readFileSync(credsPath, 'utf8')) as Record<string, { oauth_tokens_enc?: string; oauth_tokens?: Record<string, string>; configured: boolean; updated_at?: string }>)
     : {}
-  rows[connectorId] = { oauth_tokens: tokens, configured: true, updated_at: new Date().toISOString() }
+  rows[connectorId] = {
+    oauth_tokens_enc: encryptConnectorTokens(tokens),
+    configured: true,
+    updated_at: new Date().toISOString(),
+  }
   fs.mkdirSync(path.dirname(credsPath), { recursive: true })
   fs.writeFileSync(credsPath, JSON.stringify(rows, null, 2), 'utf8')
+}
+
+export async function getConnectorOAuth(connectorId: string): Promise<Record<string, string> | null> {
+  if (isPostgresEnabled()) {
+    const result = await query<{ oauth_tokens: Record<string, string> | null }>(
+      'SELECT oauth_tokens FROM connector_credentials WHERE connector_id = $1',
+      [connectorId],
+    )
+    return result.rows[0]?.oauth_tokens ?? null
+  }
+  if (!fs.existsSync(credsPath)) return null
+  const rows = JSON.parse(fs.readFileSync(credsPath, 'utf8')) as Record<
+    string,
+    { oauth_tokens_enc?: string; oauth_tokens?: Record<string, string> }
+  >
+  const entry = rows[connectorId]
+  if (!entry) return null
+  if (entry.oauth_tokens_enc) {
+    return decryptConnectorTokens(entry.oauth_tokens_enc)
+  }
+  return entry.oauth_tokens ?? null
 }
 
 /** Validate partial ERP load — reject silent overwrite of unmatched WBS. */

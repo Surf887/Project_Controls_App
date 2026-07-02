@@ -26,3 +26,12 @@ export function loadRootEnvFile(): void {
     }
   }
 }
+
+// Execute at module scope. ES module imports are hoisted and evaluated before
+// the importing module's body runs, so calling loadRootEnvFile() from index.ts
+// ran AFTER modules like jsonProjectStore/userStore had already captured their
+// module-level `process.env.*` constants (DATABASE_PATH, USERS_PATH, ...),
+// silently ignoring those .env values. Importing this module first
+// (`import './config/loadEnv.js'`) guarantees the env is populated before any
+// other module evaluates.
+loadRootEnvFile()

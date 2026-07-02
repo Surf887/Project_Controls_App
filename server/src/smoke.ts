@@ -1,3 +1,5 @@
+// Must be first so .env values are visible to module-level env reads.
+import './config/loadEnv.js'
 import { createApp } from './app.js'
 import { initDatabase } from './db/database.js'
 import { listProjects } from './db/database.js'

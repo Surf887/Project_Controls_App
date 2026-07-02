@@ -78,6 +78,11 @@ function pickReserveForChange(
   return null
 }
 
+/** Auto-draws are created with this deterministic id scheme (`CD-<changeId>`). */
+function isAutoDrawFor(draw: ContingencyDrawEntry, changeId: string): boolean {
+  return draw.changeId === changeId && draw.id === `CD-${changeId}`
+}
+
 export function reconcileContingencyDraws(
   changes: ChangeItem[],
   existingDraws: ContingencyDrawEntry[],
@@ -88,8 +93,22 @@ export function reconcileContingencyDraws(
     return existingDraws
   }
 
-  const snapshots = computeReserveSnapshots(rows, existingDraws)
-  const nextDraws = existingDraws.filter((draw) => draw.status !== 'pending')
+  const approvedIds = new Set(
+    changes.filter((change) => change.status === 'approved').map((change) => change.id),
+  )
+
+  // Keep every existing draw except pending AUTO draws whose source change is
+  // no longer approved (stale). Pending draws for still-approved changes are
+  // preserved as-is — the previous implementation dropped ALL pending draws and
+  // recreated them, wiping submitted-for-approval workflow state and any manual
+  // edits on every reconcile pass.
+  const nextDraws = existingDraws.filter((draw) => {
+    if (draw.status !== 'pending') return true
+    if (!draw.changeId || !isAutoDrawFor(draw, draw.changeId)) return true
+    return approvedIds.has(draw.changeId)
+  })
+
+  const snapshots = computeReserveSnapshots(rows, nextDraws)
 
   changes.forEach((change) => {
     if (change.status !== 'approved') {
@@ -100,9 +119,9 @@ export function reconcileContingencyDraws(
       return
     }
 
-    const alreadyDrawn = nextDraws.some(
-      (draw) => draw.changeId === change.id && draw.status === 'posted',
-    )
+    // Any surviving draw for this change — pending, submitted, or posted —
+    // means it is already accounted for; never create a duplicate.
+    const alreadyDrawn = nextDraws.some((draw) => draw.changeId === change.id)
     if (alreadyDrawn) {
       return
     }

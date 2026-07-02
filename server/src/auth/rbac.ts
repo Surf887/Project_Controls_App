@@ -33,12 +33,15 @@ export function isDemoAuthEnabled(): boolean {
  * Resolve a demo user from an `x-pc-role` header value. ONLY works when
  * DEMO_AUTH is explicitly enabled (and never in production). This is the local
  * convenience path; production identity comes from real session/OIDC tokens.
+ *
+ * The header is required: a request with no credentials at all stays
+ * unauthenticated. Demo mode previously auto-assigned `cost_controller` to
+ * every anonymous request, which silently gave write access to anyone who
+ * could reach a shared demo/staging host.
  */
 export function demoUserFromRole(role: string | undefined): AuthUser | null {
   if (!isDemoAuthEnabled()) return null
-  if (!role) {
-    return DEMO_USERS.find((u) => u.role === 'cost_controller') ?? null
-  }
+  if (!role) return null
   return DEMO_USERS.find((u) => u.id === role || u.role === role) ?? null
 }
 

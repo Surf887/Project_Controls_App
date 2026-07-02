@@ -29,6 +29,7 @@ export function computeProjectEvm(state: ProjectState) {
   const accounts = costSheetToEvmAccounts(state.costSheetRows, {
     templates: state.ruleOfCreditTemplates,
     progressCredits: state.progressCredits,
+    currentPeriod: state.settings.reportingPeriod.period,
   }).map((account) =>
     computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
   )

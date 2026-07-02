@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { BufferedNumberInput } from '../components/BufferedInput'
 import {
   computeReserveSnapshots,
   totalContingencyExposure,
@@ -71,7 +72,13 @@ export function ContingencyView() {
             <span className="eyebrow">Draw rules</span>
             <h3>Contingency engine configuration</h3>
           </div>
-          <button type="button" className="btn-secondary" onClick={() => dispatch({ type: 'RECONCILE_CONTINGENCY' })}>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={!canEdit}
+            title={canEdit ? undefined : 'Requires cost controller role'}
+            onClick={() => dispatch({ type: 'RECONCILE_CONTINGENCY' })}
+          >
             Reconcile now
           </button>
         </div>
@@ -81,6 +88,7 @@ export function ContingencyView() {
             <input
               type="checkbox"
               checked={rules.autoDrawOnApprovedChange}
+              disabled={!canEdit}
               onChange={(event) => updateRules({ autoDrawOnApprovedChange: event.target.checked })}
             />
           </label>
@@ -89,29 +97,28 @@ export function ContingencyView() {
             <input
               type="checkbox"
               checked={rules.drawPositiveChangesOnly}
+              disabled={!canEdit}
               onChange={(event) => updateRules({ drawPositiveChangesOnly: event.target.checked })}
             />
           </label>
           <label className="field">
             <span>Max draw % of reserve</span>
-            <input
-              type="number"
+            <BufferedNumberInput
               min={0}
               max={100}
+              disabled={!canEdit}
               value={rules.maxDrawPctOfReserve}
-              onChange={(event) => updateRules({ maxDrawPctOfReserve: Number(event.target.value) })}
+              onCommit={(next) => updateRules({ maxDrawPctOfReserve: next })}
             />
           </label>
           <label className="field">
             <span>Route to MR above (USD)</span>
-            <input
-              type="number"
+            <BufferedNumberInput
               min={0}
               step={100000}
+              disabled={!canEdit}
               value={rules.requireManagementReserveForChangesOver}
-              onChange={(event) =>
-                updateRules({ requireManagementReserveForChangesOver: Number(event.target.value) })
-              }
+              onCommit={(next) => updateRules({ requireManagementReserveForChangesOver: next })}
             />
           </label>
         </div>

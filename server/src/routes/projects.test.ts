@@ -25,9 +25,14 @@ describe('API routes', () => {
   })
 
   it('GET /api/projects lists projects', async () => {
-    const res = await request(app).get('/api/projects')
+    const res = await request(app).get('/api/projects').set('x-pc-role', 'viewer')
     expect(res.status).toBe(200)
     expect(Array.isArray(res.body.projects)).toBe(true)
+  })
+
+  it('rejects requests with no credentials even when demo auth is enabled', async () => {
+    const res = await request(app).get('/api/projects')
+    expect(res.status).toBe(401)
   })
 
   it('GET /api/projects/active returns state', async () => {
@@ -38,18 +43,49 @@ describe('API routes', () => {
   })
 
   it('POST /api/projects/:id/actions rejects invalid payload', async () => {
-    const active = await request(app).get('/api/projects/active')
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     const projectId = active.body.state.meta.id as string
-    const res = await request(app).post(`/api/projects/${projectId}/actions`).send({})
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .send({})
     expect(res.status).toBe(400)
   })
 
   it('GET compute forecast uses control-account totals', async () => {
-    const active = await request(app).get('/api/projects/active')
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     const projectId = active.body.state.meta.id as string
-    const res = await request(app).get(`/api/projects/${projectId}/compute/forecast`)
+    const res = await request(app)
+      .get(`/api/projects/${projectId}/compute/forecast`)
+      .set('x-pc-role', 'viewer')
     expect(res.status).toBe(200)
     expect(res.body.totals.eacMostLikely).toBeGreaterThan(0)
+  })
+
+  it('POST actions requires a valid If-Match version header', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+    const projectId = active.body.state.meta.id as string
+
+    const missing = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .send({ type: 'APPLY_APPROVED_EXTRACTIONS', payload: { actor: 'Cost Controller' } })
+    expect(missing.status).toBe(428)
+
+    const malformed = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .set('If-Match', 'not-a-number')
+      .send({ type: 'APPLY_APPROVED_EXTRACTIONS', payload: { actor: 'Cost Controller' } })
+    expect(malformed.status).toBe(400)
+
+    const stale = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .set('If-Match', '999999')
+      .send({ type: 'APPLY_APPROVED_EXTRACTIONS', payload: { actor: 'Cost Controller' } })
+    expect(stale.status).toBe(409)
+    expect(stale.body.version).toBeGreaterThan(0)
   })
 
   it('GET /api/projects/:id/audit returns immutable log', async () => {
@@ -113,6 +149,7 @@ describe('API routes', () => {
     const res = await request(app)
       .post(`/api/projects/${projectId}/actions`)
       .set('x-pc-role', 'cost_controller')
+      .set('If-Match', String(active.body.version))
       .send({ type: 'APPLY_APPROVED_EXTRACTIONS', payload: { actor: 'Cost Controller' } })
     expect(res.status).toBe(200)
   })
@@ -158,6 +195,7 @@ describe('API routes', () => {
     const setRes = await request(app)
       .post(`/api/projects/${projectId}/actions`)
       .set('x-pc-role', 'admin')
+      .set('If-Match', String(active.body.version))
       .send({ type: 'SET_VALUES', payload: values })
     expect(setRes.status).toBe(200)
     expect(pendingApplyCount(setRes.body.state.values)).toBeGreaterThan(0)
@@ -165,6 +203,7 @@ describe('API routes', () => {
     const res = await request(app)
       .post(`/api/projects/${projectId}/actions`)
       .set('x-pc-role', 'approver')
+      .set('If-Match', String(setRes.body.version))
       .send({ type: 'LOCK_REPORTING_PERIOD', payload: { actor: 'PM', period } })
     expect(res.status).toBe(400)
     expect(String(res.body.error)).toMatch(/approved extraction/i)

@@ -80,7 +80,22 @@ projectsRouter.post('/:projectId/actions', guardProjectAction, async (req, res) 
       return
     }
     const action = parsed.data as ProjectAction
-    const expectedVersion = req.headers['if-match'] ? Number(req.headers['if-match']) : undefined
+
+    // Optimistic concurrency is mandatory: without If-Match a write silently
+    // overwrites whatever version is current (blind last-writer-wins).
+    const rawIfMatch = req.headers['if-match']?.toString().trim()
+    if (!rawIfMatch) {
+      res.status(428).json({ error: 'If-Match header (current state version) is required' })
+      return
+    }
+    const expectedVersion = Number(rawIfMatch)
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+      // Previously `Number('abc')` produced NaN, which failed the version
+      // equality check and returned an unrecoverable 409 on every retry.
+      res.status(400).json({ error: 'If-Match must be a positive integer state version' })
+      return
+    }
+
     const result = await applyAction(param(req.params.projectId), action, req.user ?? undefined, expectedVersion)
     res.setHeader('X-State-Version', String(result.version))
     res.json({ state: result.state, version: result.version })

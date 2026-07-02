@@ -208,6 +208,20 @@ export async function setUserRole(id: string, role: Role): Promise<void> {
   }
 }
 
+/** Persist the IdP subject on first SSO link so later logins match by subject. */
+export async function setUserOidcSubject(id: string, subject: string): Promise<void> {
+  if (isPostgresEnabled()) {
+    await query('UPDATE users SET oidc_subject = $2, updated_at = NOW() WHERE id = $1', [id, subject])
+    return
+  }
+  const rows = readJsonUsers()
+  const user = rows.find((u) => u.id === id)
+  if (user) {
+    user.oidcSubject = subject
+    writeJsonUsers(rows)
+  }
+}
+
 export async function setUserDisabled(id: string, disabled: boolean): Promise<void> {
   if (isPostgresEnabled()) {
     await query('UPDATE users SET disabled = $2, updated_at = NOW() WHERE id = $1', [id, disabled])

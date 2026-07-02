@@ -125,12 +125,35 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
   const [isEditing, setIsEditing] = useState(false)
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set())
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [remoteNotice, setRemoteNotice] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const dirtyIdsRef = useRef(dirtyIds)
+  dirtyIdsRef.current = dirtyIds
 
+  // Adopt server updates without destroying unsaved work: previously any
+  // hydrate (409 reload, project switch, another user's save) replaced local
+  // rows wholesale and silently discarded every dirty edit. Clean rows now
+  // take the incoming values while dirty rows keep the local draft until the
+  // user saves or discards.
   useEffect(() => {
-    setRows(state.costSheetRows)
-    setDirtyIds(new Set())
-    setSavedAt(null)
+    const dirty = dirtyIdsRef.current
+    if (dirty.size === 0) {
+      setRows(state.costSheetRows)
+      setSavedAt(null)
+      setRemoteNotice(null)
+      return
+    }
+
+    setRows((current) => {
+      const localById = new Map(current.map((row) => [row.id, row]))
+      return state.costSheetRows.map((incoming) => {
+        const local = localById.get(incoming.id)
+        return local && dirty.has(incoming.id) ? local : incoming
+      })
+    })
+    setRemoteNotice(
+      'Cost sheet was updated remotely — unsaved rows kept your local edits. Save to apply them or Discard to load the server version.',
+    )
   }, [state.costSheetRows])
 
   const displayRows = useMemo(
@@ -347,12 +370,14 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
     dispatch({ type: 'SET_COST_SHEET', payload })
     setDirtyIds(new Set())
     setSavedAt(new Date().toLocaleString())
+    setRemoteNotice(null)
   }
 
   function revertAll() {
     setRows(state.costSheetRows)
     setDirtyIds(new Set())
     setSavedAt(null)
+    setRemoteNotice(null)
     setActive(null)
     setIsEditing(false)
   }
@@ -474,6 +499,15 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
           <button className="primary-button" disabled={dirtyIds.size === 0} onClick={saveAll} type="button">Save changes</button>
         </div>
       </div>
+
+      {remoteNotice && (
+        <div className="notice-card risk" role="alert">
+          {remoteNotice}{' '}
+          <button className="ghost-button" onClick={revertAll} type="button">
+            Discard my edits
+          </button>
+        </div>
+      )}
 
       {/* Mobile note — the full grid is a desktop/tablet workbench */}
       <p className="cs-mobile-note">

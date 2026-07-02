@@ -12,6 +12,7 @@ describe('validateEnv', () => {
     delete process.env.OIDC_DEFAULT_ROLE
     delete process.env.ADMIN_PASSWORD
     delete process.env.USERS_PATH
+    delete process.env.AUDIT_HMAC_SECRET
   })
 
   afterEach(() => {
@@ -25,6 +26,18 @@ describe('validateEnv', () => {
   it('requires DATABASE_URL in production', () => {
     process.env.NODE_ENV = 'production'
     expect(() => validateEnv()).toThrow(/DATABASE_URL/)
+  })
+
+  it('requires a strong AUDIT_HMAC_SECRET in production', () => {
+    process.env.NODE_ENV = 'production'
+    process.env.DATABASE_URL = 'postgres://localhost/test'
+    expect(() => validateEnv()).toThrow(/AUDIT_HMAC_SECRET/)
+
+    process.env.AUDIT_HMAC_SECRET = 'short'
+    expect(() => validateEnv()).toThrow(/AUDIT_HMAC_SECRET/)
+
+    process.env.AUDIT_HMAC_SECRET = 'a-sufficiently-long-audit-secret'
+    expect(() => validateEnv()).not.toThrow()
   })
 
   it('rejects DEMO_AUTH in production', () => {

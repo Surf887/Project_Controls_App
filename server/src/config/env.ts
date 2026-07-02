@@ -27,6 +27,9 @@ export function validateEnv(): void {
     if (process.env.USERS_PATH) {
       throw new Error('USERS_PATH must not be set in production — use Postgres users table')
     }
+    if (!process.env.AUDIT_HMAC_SECRET || process.env.AUDIT_HMAC_SECRET.length < 16) {
+      throw new Error('AUDIT_HMAC_SECRET (≥16 chars) is required in production — it keys the tamper-evident audit chain')
+    }
   }
 
   if (process.env.OIDC_DEFAULT_ROLE && !VALID_ROLES.includes(process.env.OIDC_DEFAULT_ROLE as Role)) {

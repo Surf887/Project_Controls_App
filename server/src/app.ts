@@ -12,6 +12,39 @@ import { enterpriseRouter } from './routes/enterprise.js'
 import { platformRouter } from './routes/platform.js'
 import { authRouter } from './routes/auth.js'
 import { attachUser } from './middleware/auth.js'
+import { logger } from './utils/logger.js'
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    requestId?: string
+  }
+}
+
+/**
+ * Assign a request id (honouring a well-formed inbound `x-request-id` so ids
+ * correlate across proxies), echo it on the response, and emit one structured
+ * log line per completed request.
+ */
+const requestLogging: express.RequestHandler = (req, res, next) => {
+  const inbound = req.headers['x-request-id']?.toString() ?? ''
+  const requestId = /^[A-Za-z0-9_-]{8,64}$/.test(inbound) ? inbound : randomUUID()
+  req.requestId = requestId
+  res.setHeader('x-request-id', requestId)
+
+  const startedAt = process.hrtime.bigint()
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6
+    logger.info('request', {
+      requestId,
+      method: req.method,
+      path: req.originalUrl.split('?')[0],
+      status: res.statusCode,
+      durationMs: Math.round(durationMs * 10) / 10,
+      userId: req.user?.id,
+    })
+  })
+  next()
+}
 
 /**
  * CORS origins come from CORS_ORIGIN (comma-separated allowlist). In production
@@ -38,6 +71,7 @@ export function createApp() {
     app.set('trust proxy', trustProxy)
   }
 
+  app.use(requestLogging)
   app.use(helmet())
   app.use(cors(corsOptions()))
   app.use(
@@ -73,7 +107,9 @@ export function createApp() {
       }
       res.json({ ok: true, postgres: isUsingPostgres() })
     } catch (error) {
-      console.error('[health/ready]', error)
+      logger.error('health/ready check failed', {
+        message: error instanceof Error ? error.message : String(error),
+      })
       res.status(503).json({ ok: false, error: 'Not ready' })
     }
   })
@@ -110,9 +146,16 @@ export function createApp() {
     res.status(404).json({ error: 'Not found' })
   })
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const errorId = randomUUID()
-    console.error(`[error ${errorId}]`, error)
+    logger.error('unhandled route error', {
+      errorId,
+      requestId: req.requestId,
+      method: req.method,
+      path: req.originalUrl.split('?')[0],
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
     if (process.env.NODE_ENV === 'production') {
       res.status(500).json({ error: 'Internal server error', errorId })
       return

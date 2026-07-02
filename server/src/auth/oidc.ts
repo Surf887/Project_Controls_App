@@ -4,6 +4,7 @@ import {
   createUser,
   findUserByEmail,
   findUserByOidcSubject,
+  setUserOidcSubject,
   type UserRecord,
 } from './userStore.js'
 
@@ -64,7 +65,11 @@ export async function verifyOidcIdToken(
         ? await jwtVerify(idToken, key as JWTVerifyGetKey, options)
         : await jwtVerify(idToken, key, options)
     if (typeof payload.sub !== 'string') return null
-    const email = typeof payload.email === 'string' ? payload.email : ''
+    // Only trust the email claim for account linking/provisioning when the IdP
+    // did not explicitly mark it unverified. An attacker-controlled IdP account
+    // with an unverified email must not be able to link to an existing user.
+    const rawEmail = typeof payload.email === 'string' ? payload.email : ''
+    const email = payload.email_verified === false ? '' : rawEmail
     const name = typeof payload.name === 'string' ? payload.name : email || payload.sub
     return { subject: payload.sub, email, name }
   } catch {
@@ -90,6 +95,13 @@ export async function findOrProvisionOidcUser(profile: OidcProfile): Promise<Use
         throw new OidcAccountError(
           'An account with this email uses password login. Sign in with password or ask an admin to link SSO.',
         )
+      }
+      if (!byEmail.oidcSubject) {
+        // First SSO login for an OIDC-provisioned account that predates subject
+        // storage: persist the subject so future logins match by subject and a
+        // different identity with the same email can no longer take it over.
+        await setUserOidcSubject(byEmail.id, profile.subject)
+        return { ...byEmail, oidcSubject: profile.subject }
       }
       return byEmail
     }

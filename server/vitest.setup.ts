@@ -18,3 +18,4 @@ import path from 'node:path'
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-server-test-'))
 process.env.DATABASE_PATH = path.join(dir, 'projects.json')
 process.env.AUDIT_DIR = path.join(dir, 'audit')
+process.env.USERS_PATH = path.join(dir, 'users.json')

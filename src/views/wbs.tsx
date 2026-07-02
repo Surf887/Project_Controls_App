@@ -65,6 +65,16 @@ export function WbsManager({ onImportComplete }: WbsManagerProps) {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Project structure</span>
+          <h1>WBS manager</h1>
+          <p className="muted">
+            Import a work breakdown structure and tag cost type, phase, and discipline for every node.
+          </p>
+        </div>
+      </div>
+
       <section className="metric-grid">
         <MetricTile label="WBS nodes" value={totals.nodes.toString()} detail="Hierarchy loaded in project store" />
         <MetricTile label="Original budget" value={formatUsd(totals.budget)} detail="Sum of WBS original budgets" />

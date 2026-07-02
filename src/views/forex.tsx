@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { BufferedNumberInput } from '../components/BufferedInput'
 import { buildPoExposures, computeFxRiskUsd } from '../engine/forex'
 import { useProjectStore } from '../store/projectStore'
 import type { FxRate, FxSettings, SupportedCurrency } from '../store/types'
@@ -104,11 +105,10 @@ export function ForexView() {
                   <td><strong>{rate.from}</strong></td>
                   <td>{rate.to}</td>
                   <td>
-                    <input
-                      type="number"
-                      step="0.0001"
+                    <BufferedNumberInput
+                      step={0.0001}
                       value={rate.rate}
-                      onChange={(event) => updateRate(rate.id, Number(event.target.value))}
+                      onCommit={(next) => updateRate(rate.id, next)}
                       style={{ width: '8rem' }}
                     />
                   </td>
@@ -149,13 +149,12 @@ export function ForexView() {
           </label>
           <label className="field">
             <span>Adverse move % (stress)</span>
-            <input
-              type="number"
+            <BufferedNumberInput
               min={0}
               max={25}
               step={0.5}
               value={fx.adverseMovePct}
-              onChange={(event) => updateFxSettings({ adverseMovePct: Number(event.target.value) })}
+              onCommit={(next) => updateFxSettings({ adverseMovePct: next })}
             />
           </label>
         </div>

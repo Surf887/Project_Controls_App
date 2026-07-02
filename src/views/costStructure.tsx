@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { BufferedNumberInput } from '../components/BufferedInput'
 import {
   directIndirectTotals,
   enrichedRowBudget,
@@ -134,13 +135,12 @@ export function CostStructureView() {
                   </td>
                   <td>{node.tecCategory}</td>
                   <td>
-                    <input
-                      type="number"
+                    <BufferedNumberInput
                       min={0}
                       max={50}
                       step={0.5}
                       value={node.defaultBurdenPct}
-                      onChange={(event) => updateCbsNode(node.id, { defaultBurdenPct: Number(event.target.value) })}
+                      onCommit={(next) => updateCbsNode(node.id, { defaultBurdenPct: next })}
                       style={{ width: '5rem' }}
                     />
                   </td>
@@ -174,13 +174,12 @@ export function CostStructureView() {
                   <td><strong>{rule.name}</strong></td>
                   <td>{rule.appliesToTec.join(', ')}</td>
                   <td>
-                    <input
-                      type="number"
+                    <BufferedNumberInput
                       min={0}
                       max={50}
                       step={0.5}
                       value={rule.burdenPct}
-                      onChange={(event) => updateBurdenRule(rule.id, { burdenPct: Number(event.target.value) })}
+                      onCommit={(next) => updateBurdenRule(rule.id, { burdenPct: next })}
                       style={{ width: '5rem' }}
                     />
                   </td>

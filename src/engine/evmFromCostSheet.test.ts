@@ -35,7 +35,7 @@ const rocTemplate: RuleOfCreditTemplate = {
   id: 'roc-1',
   name: 'Piping install',
   discipline: 'Piping',
-  appliesTo: 'wbs',
+  appliesTo: 'construction',
   steps: [
     { id: 's1', sequence: 1, name: 'Fit-up', creditPercent: 40 },
     { id: 's2', sequence: 2, name: 'Weld-out', creditPercent: 60 },

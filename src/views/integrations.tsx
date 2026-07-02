@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BufferedTextInput } from '../components/BufferedInput'
 import {
   connectorLabels,
   runConnectorSync,
@@ -132,26 +133,23 @@ export function IntegrationsView() {
             </label>
             <label className="field field-wide">
               <span>Endpoint</span>
-              <input
-                type="text"
+              <BufferedTextInput
                 value={connector.endpoint}
-                onChange={(event) => updateConnector(connector.id, { endpoint: event.target.value })}
+                onCommit={(next) => updateConnector(connector.id, { endpoint: next })}
               />
             </label>
             <label className="field">
               <span>Tenant / account ID</span>
-              <input
-                type="text"
+              <BufferedTextInput
                 value={connector.tenantId}
-                onChange={(event) => updateConnector(connector.id, { tenantId: event.target.value })}
+                onCommit={(next) => updateConnector(connector.id, { tenantId: next })}
               />
             </label>
             <label className="field">
               <span>Client / user ID</span>
-              <input
-                type="text"
+              <BufferedTextInput
                 value={connector.clientId}
-                onChange={(event) => updateConnector(connector.id, { clientId: event.target.value })}
+                onCommit={(next) => updateConnector(connector.id, { clientId: next })}
               />
             </label>
           </div>

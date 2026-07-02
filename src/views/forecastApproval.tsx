@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { buildDraftForecastPackage } from '../engine/governance'
+import { useProjectRole } from '../hooks/useProjectRole'
 import { useProjectStore } from '../store/projectStore'
 
 function formatUsd(value: number) {
@@ -8,6 +9,7 @@ function formatUsd(value: number) {
 
 export function ForecastApprovalView() {
   const { state, dispatch } = useProjectStore()
+  const { canEdit, canApprove } = useProjectRole()
   const current = useMemo(() => {
     const existing =
       state.forecastApprovals.find((p) => p.status === 'under_review') ??
@@ -44,12 +46,36 @@ export function ForecastApprovalView() {
           </div>
           <div className="panel-header-actions">
             {current.status !== 'approved' && current.status !== 'under_review' && (
-              <button type="button" className="primary-button" onClick={submit}>Submit for approval</button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={!canEdit}
+                title={canEdit ? undefined : 'Requires cost controller role'}
+                onClick={submit}
+              >
+                Submit for approval
+              </button>
             )}
             {current.status === 'under_review' && (
               <>
-                <button type="button" className="primary-button" onClick={() => dispatch({ type: 'APPROVE_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Forecast approved.' } })}>Approve</button>
-                <button type="button" className="ghost-button" onClick={() => dispatch({ type: 'REJECT_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Return for rework.' } })}>Reject</button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={!canApprove}
+                  title={canApprove ? undefined : 'Requires approver role'}
+                  onClick={() => dispatch({ type: 'APPROVE_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Forecast approved.' } })}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={!canApprove}
+                  title={canApprove ? undefined : 'Requires approver role'}
+                  onClick={() => dispatch({ type: 'REJECT_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Return for rework.' } })}
+                >
+                  Reject
+                </button>
               </>
             )}
           </div>

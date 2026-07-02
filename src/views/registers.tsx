@@ -12,6 +12,7 @@ import {
   type RiskItem,
 } from '../data/registers'
 import { createChangeRequest } from '../engine/governance'
+import { useProjectRole } from '../hooks/useProjectRole'
 import { useProjectStore } from '../store/projectStore'
 
 function formatUsd(value: number) {
@@ -361,6 +362,7 @@ export function IssueRegister() {
 
 export function ChangeRegister() {
   const { state, dispatch } = useProjectStore()
+  const { canEdit, canApprove } = useProjectRole()
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -464,7 +466,13 @@ export function ChangeRegister() {
             <span className="eyebrow">New change request</span>
             <h3>Raise and submit for approval</h3>
           </div>
-          <button type="button" className="ghost-button" onClick={() => setShowForm((v) => !v)}>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={!canEdit}
+            title={canEdit ? undefined : 'Requires cost controller role'}
+            onClick={() => setShowForm((v) => !v)}
+          >
             {showForm ? 'Cancel' : 'New change request'}
           </button>
         </div>
@@ -531,12 +539,36 @@ export function ChangeRegister() {
                   <td>
                     <div className="panel-actions">
                       {['draft', 'submitted', 'under_review', 'pending'].includes(c.status) && (
-                        <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'SUBMIT_CHANGE', payload: { changeId: c.id, actor: 'You', role: 'Change control' } }) }}>Submit</button>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          disabled={!canEdit}
+                          title={canEdit ? undefined : 'Requires cost controller role'}
+                          onClick={(e) => { e.stopPropagation(); dispatch({ type: 'SUBMIT_CHANGE', payload: { changeId: c.id, actor: 'You', role: 'Change control' } }) }}
+                        >
+                          Submit
+                        </button>
                       )}
                       {['submitted', 'under_review', 'pending'].includes(c.status) && (
                         <>
-                          <button type="button" className="primary-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'approved', actor: c.approver, role: 'Approver' } }) }}>Approve</button>
-                          <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'rejected', actor: c.approver, role: 'Approver' } }) }}>Reject</button>
+                          <button
+                            type="button"
+                            className="primary-button"
+                            disabled={!canApprove}
+                            title={canApprove ? undefined : 'Requires approver role'}
+                            onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'approved', actor: c.approver, role: 'Approver' } }) }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button"
+                            disabled={!canApprove}
+                            title={canApprove ? undefined : 'Requires approver role'}
+                            onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'rejected', actor: c.approver, role: 'Approver' } }) }}
+                          >
+                            Reject
+                          </button>
                         </>
                       )}
                     </div>

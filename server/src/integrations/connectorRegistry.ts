@@ -55,11 +55,13 @@ async function isConfigured(connectorId: string): Promise<boolean> {
 
 export async function saveConnectorOAuth(connectorId: string, tokens: Record<string, string>): Promise<void> {
   if (isPostgresEnabled()) {
+    // Encrypt at rest: store the AES-256-GCM envelope as a JSON string in the
+    // jsonb column (mirrors the file store). Never persist raw OAuth tokens.
     await query(
       `INSERT INTO connector_credentials (connector_id, oauth_tokens, configured, updated_at)
        VALUES ($1, $2::jsonb, TRUE, NOW())
        ON CONFLICT (connector_id) DO UPDATE SET oauth_tokens = EXCLUDED.oauth_tokens, configured = TRUE, updated_at = NOW()`,
-      [connectorId, JSON.stringify(tokens)],
+      [connectorId, JSON.stringify(encryptConnectorTokens(tokens))],
     )
     return
   }
@@ -77,11 +79,18 @@ export async function saveConnectorOAuth(connectorId: string, tokens: Record<str
 
 export async function getConnectorOAuth(connectorId: string): Promise<Record<string, string> | null> {
   if (isPostgresEnabled()) {
-    const result = await query<{ oauth_tokens: Record<string, string> | null }>(
+    const result = await query<{ oauth_tokens: unknown }>(
       'SELECT oauth_tokens FROM connector_credentials WHERE connector_id = $1',
       [connectorId],
     )
-    return result.rows[0]?.oauth_tokens ?? null
+    const stored = result.rows[0]?.oauth_tokens
+    if (stored == null) return null
+    // New rows store the encrypted envelope as a JSON string; legacy rows
+    // stored the plaintext token object directly. Handle both.
+    if (typeof stored === 'string') {
+      return decryptConnectorTokens(stored)
+    }
+    return stored as Record<string, string>
   }
   if (!fs.existsSync(credsPath)) return null
   const rows = JSON.parse(fs.readFileSync(credsPath, 'utf8')) as Record<

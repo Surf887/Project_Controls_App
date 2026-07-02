@@ -48,7 +48,18 @@ function readLastEvent(projectId: string): ImmutableAuditEvent | null {
   if (lines.length === 0) {
     return null
   }
-  return JSON.parse(lines[lines.length - 1]!) as ImmutableAuditEvent
+  // A corrupt/partially-written trailing line must not throw here: this runs
+  // inside the audit hook, which fires after the project write has already been
+  // committed. Throwing would surface a false 500 and prompt the client to
+  // retry an action that actually succeeded. Walk back to the last valid line.
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      return JSON.parse(lines[i]!) as ImmutableAuditEvent
+    } catch {
+      // skip corrupt line and try the previous one
+    }
+  }
+  return null
 }
 
 export function appendImmutableAudit(
@@ -95,7 +106,13 @@ export function listImmutableAudit(projectId: string, limit = 200): ImmutableAud
   const lines = fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean)
   return lines
     .slice(-limit)
-    .map((line) => JSON.parse(line) as ImmutableAuditEvent)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line) as ImmutableAuditEvent]
+      } catch {
+        return []
+      }
+    })
     .reverse()
 }
 
@@ -110,7 +127,13 @@ export function verifyAuditChain(projectId: string): { ok: boolean; errors: stri
   let prevHash = 'GENESIS'
 
   lines.forEach((line, index) => {
-    const event = JSON.parse(line) as ImmutableAuditEvent
+    let event: ImmutableAuditEvent
+    try {
+      event = JSON.parse(line) as ImmutableAuditEvent
+    } catch {
+      errors.push(`Line ${index + 1}: unparseable audit record`)
+      return
+    }
     if (event.prevHash !== prevHash) {
       errors.push(`Line ${index + 1}: prevHash mismatch`)
     }

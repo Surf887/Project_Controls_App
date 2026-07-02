@@ -112,13 +112,13 @@ export function accrualTotals(entries: CostAccrualEntry[]) {
 }
 
 export function accruedCostForWbs(entries: CostAccrualEntry[], wbs: string): number {
+  // Roll up the queried account and its descendants only. The previous
+  // bidirectional match also pulled in ancestor accruals (entries booked on a
+  // parent WBS), so a parent-level entry — e.g. the PO accruals booked to
+  // 'P.04' — was attributed in full to every child, double-counting it across
+  // sibling subtrees.
   return entries
-    .filter(
-      (entry) =>
-        entry.wbs === wbs ||
-        wbs.startsWith(`${entry.wbs}.`) ||
-        entry.wbs.startsWith(`${wbs}.`),
-    )
+    .filter((entry) => entry.wbs === wbs || entry.wbs.startsWith(`${wbs}.`))
     .filter((entry) => entry.status === 'reviewed' || entry.status === 'posted')
     .reduce((sum, entry) => sum + entry.accrualUsd, 0)
 }

@@ -38,14 +38,14 @@ function FacetPanel({ facet, title }: { facet: SccsFacet; title: string }) {
   const codes = facetTree(facet)
   return (
     <article className="panel sccs-facet-panel">
-      <header className="panel-header">
+      <div className="panel-header">
         <div>
-          <p className="eyebrow">{facet.toUpperCase()}</p>
+          <span className="eyebrow">{facet.toUpperCase()}</span>
           <h3>{title}</h3>
         </div>
-      </header>
-      <div className="table-scroll">
-        <table className="data-table compact-table">
+      </div>
+      <div className="table-wrap">
+        <table>
           <thead>
             <tr>
               <th>Code</th>
@@ -90,9 +90,9 @@ export function SccsView() {
 
   return (
     <div className="view-stack sccs-view" data-testid="sccs-view">
-      <header className="panel-header">
+      <div className="topbar">
         <div>
-          <p className="eyebrow">{SCCS_STANDARD} · Standard Cost Coding System</p>
+          <span className="eyebrow">{SCCS_STANDARD} · Standard Cost Coding System</span>
           <h1>SCCS structure</h1>
           <p className="muted">
             Three ISO facets — PBS ({codeCounts.pbs} codes), SAB ({codeCounts.sab} codes), COR ({codeCounts.cor} codes)
@@ -100,7 +100,7 @@ export function SccsView() {
             cross-operator benchmarking and data exchange.
           </p>
         </div>
-        <div className="hero-actions">
+        <div className="topbar-actions">
           <button
             className="ghost-button"
             type="button"
@@ -113,7 +113,7 @@ export function SccsView() {
             Re-apply mappings
           </button>
         </div>
-      </header>
+      </div>
 
       <section className="callout sccs-diagram">
         <strong>Composite code</strong> = PBS · SAB · COR — e.g.{' '}
@@ -127,7 +127,12 @@ export function SccsView() {
       </div>
 
       <section className="panel">
-        <h3>Mapping rules (project → ISO)</h3>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">ISO 19008 SCCS</span>
+            <h3>Mapping rules (project → ISO)</h3>
+          </div>
+        </div>
         <div className="sccs-mapping-grid">
           <div>
             <h4>WBS → PBS</h4>
@@ -164,9 +169,14 @@ export function SccsView() {
       </section>
 
       <section className="panel">
-        <h3>Live rollup — cost sheet by SCCS composite</h3>
-        <div className="table-scroll">
-          <table className="data-table" data-testid="sccs-rollup-table">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Live rollup</span>
+            <h3>Cost sheet by SCCS composite</h3>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table data-testid="sccs-rollup-table">
             <thead>
               <tr>
                 <th>Composite</th>
@@ -207,9 +217,14 @@ export function SccsView() {
       </section>
 
       <section className="panel">
-        <h3>Cost sheet control accounts — resolved SCCS</h3>
-        <div className="table-scroll">
-          <table className="data-table compact-table">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Control accounts</span>
+            <h3>Cost sheet rows — resolved SCCS codes</h3>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
             <thead>
               <tr>
                 <th>WBS</th>
@@ -243,9 +258,14 @@ export function SccsView() {
 
       {mappedValues.length > 0 && (
         <section className="panel">
-          <h3>Ingestion queue — extracted values with SCCS</h3>
-          <div className="table-scroll">
-            <table className="data-table compact-table">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Ingestion queue</span>
+              <h3>Extracted values with SCCS codes</h3>
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table>
               <thead>
                 <tr>
                   <th>Field</th>

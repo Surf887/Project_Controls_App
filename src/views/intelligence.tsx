@@ -41,6 +41,12 @@ function statusLabel(status: string) {
 export function EngineeringIntelligence() {
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Engineering intelligence</span>
+          <h1>Tag register &amp; line list</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -153,6 +159,12 @@ export function EngineeringIntelligence() {
 export function ModelIntelligence() {
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Model intelligence</span>
+          <h1>IFC objects &amp; WBS mapping</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -197,6 +209,12 @@ export function ModelIntelligence() {
 export function RealityIntelligence() {
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Reality intelligence</span>
+          <h1>Captured progress vs planned</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -289,6 +307,12 @@ export function ControlsIntelligence() {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Controls intelligence</span>
+          <h1>Earned value &amp; cost performance</h1>
+        </div>
+      </div>
       <section className="metric-grid">
         <MetricTile label="Current budget" value={formatUsd(currentBudget)} detail="Control-account BAC" />
         <MetricTile label="Commitments" value={formatUsd(commitments)} detail="PO / contract exposure on sheet" />
@@ -387,13 +411,19 @@ export function PredictiveIntelligence() {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Predictive intelligence</span>
+          <h1>Rules-based risk signals</h1>
+        </div>
+        <span className="badge badge-watch">{signals.length} active signals</span>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Predictive intelligence</span>
+            <span className="eyebrow">Signal analysis</span>
             <h3>Rules-based risk signals before ML</h3>
           </div>
-          <span className="badge badge-watch">{signals.length} active signals</span>
         </div>
         <p className="empty-state">
           These signals are deterministic thresholds on earned-value and reconciliation data. ML prediction graduates
@@ -423,6 +453,12 @@ export function PredictiveIntelligence() {
 export function Governance() {
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Governance &amp; audit</span>
+          <h1>Approval matrix &amp; controls posture</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>

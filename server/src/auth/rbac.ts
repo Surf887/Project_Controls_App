@@ -20,7 +20,13 @@ export const DEMO_USERS: AuthUser[] = [
 
 export function isDemoAuthEnabled(): boolean {
   if (process.env.NODE_ENV === 'production') return false
-  return process.env.DEMO_AUTH === 'true'
+  if (process.env.DEMO_AUTH === 'true') return true
+  if (process.env.DEMO_AUTH === 'false') return false
+  // No explicit DEMO_AUTH setting: enable ONLY in local development. Staging,
+  // test, and any unrecognized NODE_ENV default OFF so credential-free demo
+  // identities (x-pc-role header, /auth/token minting) can never leak into a
+  // non-development deployment that forgot to set DEMO_AUTH=false.
+  return process.env.NODE_ENV === 'development'
 }
 
 /**

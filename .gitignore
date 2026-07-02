@@ -8,3 +8,7 @@ test-results/
 *.log
 .env
 .env.local
+# Local Claude Code harness state (worktrees, local settings) — never commit.
+.claude/
+# Design review source archive; contents live in design-handoff/.
+App design review.zip

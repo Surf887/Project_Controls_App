@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#d8d4cc;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="accruals" stage="1" hint-size="288px,100%"></dc-import>
+
+  <!-- ─── WORKSPACE ───────────────────────────────────── -->
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Monthly control cycle · Step 1 of 5 · Posted</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Accruals</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border-radius:8px; font-size:12.5px; font-weight:600; background:#e3f3ea; color:#1f7a4d;"><span style="width:7px; height:7px; border-radius:50%; background:#1f7a4d;"></span>Period locked · Jun-26</span>
+        <button type="button" style="padding:9px 14px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">Recalculate</button>
+        <button type="button" style="padding:9px 15px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">+ Add accrual</button>
+      </div>
+    </header>
+
+    <!-- KPI grid -->
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+      <article style="padding:18px 20px; border:1px solid #f1d9c4; border-radius:10px; background:#fdf8f1; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Open accruals</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px; color:#9a5a0c;">$8.6M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Period Jun-26 · 11 entries</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Posted accruals</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px;">$12.4M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Prior period postings</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Cost sheet actuals</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px;">$498.0M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Posted AP / ERP actuals</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Economic actuals</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px; color:var(--ac,#2d5bd7);">$506.6M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Actuals + open accruals · VOWD</div>
+      </article>
+    </div>
+
+    <!-- accrual methods -->
+    <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px;">
+        <div>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Accrual methods</span>
+          <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">How period-end cost is calculated</h3>
+        </div>
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#6b6862;">Open total · <strong style="color:#9a5a0c;">$8.6M</strong></span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+        <article style="padding:15px 16px; border:1px solid #e7e4dd; border-radius:9px; background:#faf9f6;">
+          <span style="font-size:12.5px; font-weight:600;">Subcontract</span>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; margin:6px 0 4px;">$4.2M</div>
+          <p style="margin:0; font-size:12px; color:#6b6862; line-height:1.45;">Earned progress not yet invoiced</p>
+        </article>
+        <article style="padding:15px 16px; border:1px solid #e7e4dd; border-radius:9px; background:#faf9f6;">
+          <span style="font-size:12.5px; font-weight:600;">PO commitment</span>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; margin:6px 0 4px;">$2.8M</div>
+          <p style="margin:0; font-size:12px; color:#6b6862; line-height:1.45;">Committed minus invoiced on PO</p>
+        </article>
+        <article style="padding:15px 16px; border:1px solid #e7e4dd; border-radius:9px; background:#faf9f6;">
+          <span style="font-size:12.5px; font-weight:600;">Pending invoice</span>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; margin:6px 0 4px;">$1.0M</div>
+          <p style="margin:0; font-size:12px; color:#6b6862; line-height:1.45;">Approved invoice not in actuals</p>
+        </article>
+        <article style="padding:15px 16px; border:1px solid #e7e4dd; border-radius:9px; background:#faf9f6;">
+          <span style="font-size:12.5px; font-weight:600;">Manual / timesheet</span>
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; margin:6px 0 4px;">$0.6M</div>
+          <p style="margin:0; font-size:12px; color:#6b6862; line-height:1.45;">Field tickets and payroll lag</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- accrual register -->
+    <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px;">
+        <div>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Accrual register</span>
+          <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Period-end unbilled cost by source</h3>
+        </div>
+        <span style="display:inline-flex; align-items:center; padding:4px 9px; border-radius:99px; font-size:11.5px; font-weight:600; background:#f0eee9; color:#6b6862;">11 entries</span>
+      </div>
+      <div style="overflow-x:auto; margin:0 -4px;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px; min-width:760px;">
+          <thead>
+            <tr style="text-align:left;">
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">WBS</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Description</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Source</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Basis</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Accrual</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ accruals }}" as="a" hint-placeholder-count="7">
+              <tr style="border-bottom:1px solid #f0eee9;">
+                <td style="padding:11px 10px;"><strong style="font-family:'IBM Plex Mono',monospace; font-weight:600;">{{ a.wbs }}</strong></td>
+                <td style="padding:11px 10px;"><div style="font-weight:500;">{{ a.description }}</div><div style="font-size:11.5px; color:#97938b;">{{ a.method }}</div></td>
+                <td style="padding:11px 10px; color:#6b6862;">{{ a.source }}</td>
+                <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; color:#6b6862;">{{ a.basis }}</td>
+                <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:600;">{{ a.accrual }}</td>
+                <td style="padding:11px 10px;"><span style="display:inline-flex; align-items:center; padding:3px 10px; border-radius:99px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:{{ a.stBg }}; color:{{ a.stColor }};">{{ a.status }}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- WBS rollup -->
+    <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+      <div style="margin-bottom:16px;">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">WBS rollup</span>
+        <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Posted actuals vs accrued cost by control account</h3>
+      </div>
+      <div style="overflow-x:auto; margin:0 -4px;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="text-align:left;">
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">WBS</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Control account</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Posted actuals</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Open accrual</th>
+              <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Economic actuals</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ rollup }}" as="r" hint-placeholder-count="5">
+              <tr style="border-bottom:1px solid #f0eee9;">
+                <td style="padding:11px 10px;"><strong style="font-family:'IBM Plex Mono',monospace; font-weight:600;">{{ r.wbs }}</strong></td>
+                <td style="padding:11px 10px;">{{ r.desc }}</td>
+                <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right;">{{ r.posted }}</td>
+                <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; color:{{ r.accColor }};">{{ r.accrued }}</td>
+                <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:600;">{{ r.economic }}</td>
+              </tr>
+            </sc-for>
+            <tr style="border-top:2px solid #e7e4dd;">
+              <td style="padding:11px 10px; font-weight:700;" colspan="2">Total · Marlin LNG Train 2</td>
+              <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700;">$498.0M</td>
+              <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700; color:#9a5a0c;">$8.6M</td>
+              <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700; color:var(--ac,#2d5bd7);">$506.6M</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Comfortable';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+
+    const stMap = {
+      posted: { bg: '#e3f3ea', color: '#1f7a4d' },
+      reviewed: { bg: 'color-mix(in srgb,' + ac + ' 14%, transparent)', color: ac },
+      draft: { bg: '#f0eee9', color: '#6b6862' },
+      reversed: { bg: '#fae3e0', color: '#c0392b' },
+    };
+    const raw = [
+      { wbs: 'C.01.03', description: 'EPC mechanical subcontract — earned not invoiced', method: 'Earned % × contract − certified invoices', source: 'Subcontract', basis: '$2.40M', accrual: '$2.40M', status: 'posted' },
+      { wbs: 'C.02.01', description: 'Structural steel erection — progress claim lag', method: 'Earned % × contract − certified invoices', source: 'Subcontract', basis: '$1.80M', accrual: '$1.80M', status: 'reviewed' },
+      { wbs: 'P.03.02', description: 'Compressor PO-2231 — committed less invoiced', method: 'PO commitment − invoiced to date', source: 'PO commitment', basis: '$1.90M', accrual: '$1.90M', status: 'posted' },
+      { wbs: 'P.01.04', description: 'Valves & specialties PO-2188', method: 'PO commitment − invoiced to date', source: 'PO commitment', basis: '$0.90M', accrual: '$0.90M', status: 'reviewed' },
+      { wbs: 'E.02.01', description: 'Switchgear invoice INV-4471 — approved, unposted', method: 'Approved invoice not yet in AP/ERP', source: 'Pending invoice', basis: '$1.00M', accrual: '$1.00M', status: 'reviewed' },
+      { wbs: 'A.02.02', description: 'Piping labour — w/e 7 Jun (timesheet lag)', method: 'Approved timesheets not yet in AP/ERP', source: 'Manual / timesheet', basis: '$0.42M', accrual: '$0.42M', status: 'reviewed' },
+      { wbs: 'U.02', description: 'Civil concrete pour — material ticket accrual', method: 'Material delivery tickets w/o vendor invoice', source: 'Manual / timesheet', basis: '$0.18M', accrual: '$0.18M', status: 'draft' },
+    ];
+    const accruals = raw.map((a) => { const s = stMap[a.status] || stMap.draft; return { ...a, stBg: s.bg, stColor: s.color }; });
+
+    const rawRollup = [
+      { wbs: 'A.00', desc: 'Civil & structural', posted: '$96.4M', accrued: '$1.98M' },
+      { wbs: 'C.00', desc: 'Mechanical & subcontracts', posted: '$182.1M', accrued: '$4.20M' },
+      { wbs: 'P.00', desc: 'Procurement & POs', posted: '$143.7M', accrued: '$2.80M' },
+      { wbs: 'E.00', desc: 'Electrical & I&C', posted: '$54.2M', accrued: '$1.00M' },
+      { wbs: 'U.00', desc: 'Utilities & balance of plant', posted: '$21.6M', accrued: '$0.18M' },
+    ];
+    const econ = { 'A.00': '$98.4M', 'C.00': '$186.3M', 'P.00': '$146.5M', 'E.00': '$55.2M', 'U.00': '$21.8M' };
+    const rollup = rawRollup.map((r) => ({ ...r, economic: econ[r.wbs], accColor: r.accrued === '$0.00M' ? '#aaa49a' : '#9a5a0c' }));
+
+    return { ac, side, gap, cardPad, accruals, rollup };
+  }
+}
+</script>
+</body>
+</html>

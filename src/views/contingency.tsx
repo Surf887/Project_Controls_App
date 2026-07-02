@@ -244,11 +244,12 @@ function MetricTile({
   detail: string
   tone?: 'default' | 'watch' | 'risk'
 }) {
+  const cls = ['metric-card', tone !== 'default' ? tone : ''].filter(Boolean).join(' ')
   return (
-    <article className={`metric-tile ${tone !== 'default' ? `tone-${tone}` : ''}`}>
-      <span className="eyebrow">{label}</span>
-      <strong className="metric-value">{value}</strong>
-      <p className="muted">{detail}</p>
+    <article className={cls}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <p>{detail}</p>
     </article>
   )
 }

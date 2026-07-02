@@ -3,7 +3,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 interface LoginScreenProps {
   onLogin: (email: string, password: string) => Promise<void>
   onSso: (idToken: string) => Promise<void>
+  onDemoLogin?: (role: string) => Promise<void>
   oidcEnabled?: boolean
+  demoAuthEnabled?: boolean
   globalError?: string | null
 }
 
@@ -11,9 +13,17 @@ interface LoginScreenProps {
 // id_token in the URL fragment, the app will pick it up automatically on load.
 const SSO_LOGIN_URL = import.meta.env.VITE_OIDC_LOGIN_URL as string | undefined
 
-export function LoginScreen({ onLogin, onSso, oidcEnabled, globalError }: LoginScreenProps) {
+export function LoginScreen({
+  onLogin,
+  onSso,
+  onDemoLogin,
+  oidcEnabled,
+  demoAuthEnabled,
+  globalError,
+}: LoginScreenProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [demoRole, setDemoRole] = useState('cost_controller')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,6 +50,19 @@ export function LoginScreen({ onLogin, onSso, oidcEnabled, globalError }: LoginS
       await onLogin(email.trim(), password)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function submitDemo() {
+    if (!onDemoLogin) return
+    setBusy(true)
+    setError(null)
+    try {
+      await onDemoLogin(demoRole)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Demo sign-in failed')
     } finally {
       setBusy(false)
     }
@@ -79,7 +102,7 @@ export function LoginScreen({ onLogin, onSso, oidcEnabled, globalError }: LoginS
           </label>
 
           {(error || globalError) && (
-            <p className="muted" role="alert" style={{ color: 'var(--danger, #c0392b)' }}>
+            <p className="login-error" role="alert">
               {error ?? globalError}
             </p>
           )}
@@ -106,6 +129,38 @@ export function LoginScreen({ onLogin, onSso, oidcEnabled, globalError }: LoginS
           <p className="muted" style={{ marginTop: 12, fontSize: 12 }}>
             SSO is available — set VITE_OIDC_LOGIN_URL to enable the SSO button.
           </p>
+        )}
+
+        {demoAuthEnabled && onDemoLogin && (
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border, #e8e4dc)' }}>
+            <p className="muted" style={{ marginBottom: 12 }}>
+              Explore the workspace without credentials.
+            </p>
+            <label className="filter-inline" style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+              <span>Demo role</span>
+              <select
+                className="select-input"
+                value={demoRole}
+                onChange={(e) => setDemoRole(e.target.value)}
+                disabled={busy}
+              >
+                <option value="viewer">Viewer</option>
+                <option value="cost_controller">Cost controller</option>
+                <option value="approver">Approver</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <button
+              className="ghost-button"
+              type="button"
+              style={{ width: '100%' }}
+              disabled={busy}
+              data-testid="demo-mode-button"
+              onClick={() => void submitDemo()}
+            >
+              {busy ? 'Starting demo…' : 'Continue in demo mode'}
+            </button>
+          </div>
         )}
       </section>
     </main>

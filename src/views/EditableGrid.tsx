@@ -428,7 +428,7 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
       <div className="cs-toolbar">
         <div className="cs-toolbar-left">
           <span className="eyebrow">EcoSys-style cost sheet</span>
-          <h2 className="cs-page-heading">Cost sheet</h2>
+          <h3>Cost sheet</h3>
           <span className="cs-period-label">
             Open period: <strong>{state.settings.reportingPeriod.period}</strong>
             {periodLocked && <span className="badge badge-good"> Locked</span>}

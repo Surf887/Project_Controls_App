@@ -65,7 +65,16 @@ export function WbsManager({ onImportComplete }: WbsManagerProps) {
 
   return (
     <div className="view-stack">
-      <h1 className="page-heading">WBS manager</h1>
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Project structure</span>
+          <h1>WBS manager</h1>
+          <p className="muted">
+            Import a work breakdown structure and tag cost type, phase, and discipline for every node.
+          </p>
+        </div>
+      </div>
+
       <section className="metric-grid">
         <MetricTile label="WBS nodes" value={totals.nodes.toString()} detail="Hierarchy loaded in project store" />
         <MetricTile label="Original budget" value={formatUsd(totals.budget)} detail="Sum of WBS original budgets" />
@@ -73,47 +82,51 @@ export function WbsManager({ onImportComplete }: WbsManagerProps) {
         <MetricTile label="Baseline" value={state.meta.baselineLabel} detail={state.meta.name} />
       </section>
 
-      <section className="panel split-panel">
-        <div className="upload-zone">
-          <span className="eyebrow">WBS manager</span>
-          <h2>Upload CSV/JSON structure and tag cost type, phase, and discipline.</h2>
-          <p>
-            Expected CSV columns: <code>wbs, parentWbs, description, costType, phase, discipline, originalBudget, currency</code>.
-            After upload the cost sheet is rebuilt from the hierarchy.
-          </p>
-          <div className="upload-actions">
-            <label className="file-drop">
-              <input
-                accept=".csv,text/csv"
-                className="hidden-file"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) {
-                    void handleUpload(file)
-                    event.target.value = ''
-                  }
-                }}
-                type="file"
-              />
-              <strong>Choose WBS CSV</strong>
-              <span>EcoSys-style project structure import</span>
-            </label>
-            <div className="hero-actions">
-              <button className="ghost-button" onClick={downloadSample} type="button">
-                Download sample WBS CSV
-              </button>
-            </div>
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">WBS import</span>
+            <h3>Upload CSV/JSON structure and tag cost type, phase, and discipline</h3>
           </div>
-          <p className="upload-message">{message}</p>
+          <button className="ghost-button" onClick={downloadSample} type="button">
+            Download sample CSV
+          </button>
         </div>
-        <div className="format-card">
-          <h3>Cost-type tags</h3>
-          <ul>
-            <li>CAPEX / OPEX / Owner Cost / Contingency / Management Reserve</li>
-            <li>Phase: Engineering, Procurement, Construction, Commissioning</li>
-            <li>Discipline free-text (Mechanical, Piping, Civil, etc.)</li>
-            <li>Persists in browser localStorage via project store</li>
-          </ul>
+        <div className="split-panel">
+          <div className="upload-zone">
+            <p className="muted">
+              Expected columns: <code>wbs, parentWbs, description, costType, phase, discipline, originalBudget, currency</code>.
+              After upload the cost sheet is rebuilt from the hierarchy.
+            </p>
+            <div className="upload-actions">
+              <label className="file-drop">
+                <input
+                  accept=".csv,text/csv"
+                  className="hidden-file"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) {
+                      void handleUpload(file)
+                      event.target.value = ''
+                    }
+                  }}
+                  type="file"
+                />
+                <strong>Choose WBS CSV</strong>
+                <span>EcoSys-style project structure import</span>
+              </label>
+            </div>
+            <p className="upload-message">{message}</p>
+          </div>
+          <div className="format-card">
+            <h3>Cost-type tags</h3>
+            <ul>
+              <li>CAPEX / OPEX / Owner Cost / Contingency / Management Reserve</li>
+              <li>Phase: Engineering, Procurement, Construction, Commissioning</li>
+              <li>Discipline free-text (Mechanical, Piping, Civil, etc.)</li>
+              <li>Persists in browser localStorage via project store</li>
+            </ul>
+          </div>
         </div>
       </section>
 

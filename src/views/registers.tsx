@@ -419,7 +419,12 @@ export function ChangeRegister() {
 
   return (
     <div className="view-stack">
-      <h1 className="page-heading">Change register</h1>
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Change governance</span>
+          <h1>Change register</h1>
+        </div>
+      </div>
       <section className="metric-grid">
         <RegisterTile label="Approved" value={formatUsd(totals.approved ?? 0)} detail="Locked in forecast" />
         <RegisterTile label="Pending" value={formatUsd(totals.pending ?? 0)} detail="Awaiting decision" tone="risk" />
@@ -441,8 +446,12 @@ export function ChangeRegister() {
         <div className="workfront-list">
           {(Object.keys(changeMechanismMeta) as ChangeMechanism[]).map((key) => (
             <article key={key} className="workfront-card">
-              <strong>{changeMechanismMeta[key].label}</strong>
-              <small>{changeMechanismMeta[key].affectsBudget ? 'Moves current budget' : 'Forecast only'} · {changeMechanismMeta[key].affectsForecast ? 'Affects EAC' : 'No EAC impact'}</small>
+              <div className="workfront-head">
+                <div>
+                  <strong>{changeMechanismMeta[key].label}</strong>
+                  <small>{changeMechanismMeta[key].affectsBudget ? 'Moves current budget' : 'Forecast only'} · {changeMechanismMeta[key].affectsForecast ? 'Affects EAC' : 'No EAC impact'}</small>
+                </div>
+              </div>
               <p className="muted">{changeMechanismMeta[key].guidance}</p>
             </article>
           ))}
@@ -455,7 +464,7 @@ export function ChangeRegister() {
             <span className="eyebrow">New change request</span>
             <h3>Raise and submit for approval</h3>
           </div>
-          <button type="button" className="btn-secondary" onClick={() => setShowForm((v) => !v)}>
+          <button type="button" className="ghost-button" onClick={() => setShowForm((v) => !v)}>
             {showForm ? 'Cancel' : 'New change request'}
           </button>
         </div>
@@ -471,7 +480,7 @@ export function ChangeRegister() {
             <label className="field"><span>Affected WBS</span><input type="text" value={draft.affectedWbs} onChange={(e) => setDraft({ ...draft, affectedWbs: e.target.value })} /></label>
             <label className="field"><span>Approver</span><input type="text" value={draft.approver} onChange={(e) => setDraft({ ...draft, approver: e.target.value })} /></label>
             <div className="panel-actions">
-              <button type="button" className="btn-primary" disabled={!draft.title.trim()} onClick={createChange}>Create draft</button>
+              <button type="button" className="primary-button" disabled={!draft.title.trim()} onClick={createChange}>Create draft</button>
             </div>
           </div>
         )}
@@ -522,12 +531,12 @@ export function ChangeRegister() {
                   <td>
                     <div className="panel-actions">
                       {['draft', 'submitted', 'under_review', 'pending'].includes(c.status) && (
-                        <button type="button" className="btn-secondary" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'SUBMIT_CHANGE', payload: { changeId: c.id, actor: 'You', role: 'Change control' } }) }}>Submit</button>
+                        <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'SUBMIT_CHANGE', payload: { changeId: c.id, actor: 'You', role: 'Change control' } }) }}>Submit</button>
                       )}
                       {['submitted', 'under_review', 'pending'].includes(c.status) && (
                         <>
-                          <button type="button" className="btn-primary" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'approved', actor: c.approver, role: 'Approver' } }) }}>Approve</button>
-                          <button type="button" className="btn-secondary" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'rejected', actor: c.approver, role: 'Approver' } }) }}>Reject</button>
+                          <button type="button" className="primary-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'approved', actor: c.approver, role: 'Approver' } }) }}>Approve</button>
+                          <button type="button" className="ghost-button" onClick={(e) => { e.stopPropagation(); dispatch({ type: 'DECIDE_CHANGE', payload: { changeId: c.id, decision: 'rejected', actor: c.approver, role: 'Approver' } }) }}>Reject</button>
                         </>
                       )}
                     </div>
@@ -552,8 +561,12 @@ export function ChangeRegister() {
             {(selected.approvalHistory ?? []).length === 0 && <p className="muted">No approval steps recorded.</p>}
             {(selected.approvalHistory ?? []).map((step) => (
               <article key={step.id} className="workfront-card">
-                <strong>{step.action}</strong>
-                <small>{step.at} · {step.actor} ({step.role})</small>
+                <div className="workfront-head">
+                  <div>
+                    <strong>{step.action}</strong>
+                    <small>{step.at} · {step.actor} ({step.role})</small>
+                  </div>
+                </div>
                 {step.comment && <p className="muted">{step.comment}</p>}
               </article>
             ))}

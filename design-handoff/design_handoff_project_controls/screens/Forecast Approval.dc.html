@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#d8d4cc;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="approval" stage="5" hint-size="288px,100%"></dc-import>
+
+  <!-- ─── WORKSPACE ───────────────────────────────────── -->
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Monthly control cycle · Step 5 of 5 · Under review</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Forecast Approval</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button type="button" style="padding:9px 14px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">View package PDF</button>
+        <button type="button" style="padding:9px 15px; border:1px solid #e3c4bd; border-radius:8px; background:#fff; color:#c0392b; font-size:13px; font-weight:600; cursor:pointer;" style-hover="background:#fdf6f5;">Reject</button>
+        <button type="button" style="padding:9px 16px; border:1px solid transparent; border-radius:8px; background:#1f7a4d; color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.94);">Approve forecast</button>
+      </div>
+    </header>
+
+    <!-- approval banner -->
+    <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:14px 18px; border:1px solid color-mix(in srgb, var(--ac,#2d5bd7) 28%, transparent); border-radius:10px; background:color-mix(in srgb, var(--ac,#2d5bd7) 7%, #fff);">
+      <div style="display:flex; align-items:center; gap:11px; min-width:0; flex:1;">
+        <span style="width:34px; height:34px; flex:none; border-radius:8px; display:grid; place-items:center; background:var(--ac,#2d5bd7); color:#fff; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px;">R4</span>
+        <div style="line-height:1.3;">
+          <div style="font-weight:600; font-size:14.5px;">June 2026 Monthly Forecast · Rev 4</div>
+          <div style="font-size:12.5px; color:#6b6862;">Submitted by A. Rahman · Cost Engineer · awaiting <strong>K. Mensah, Project Director</strong></div>
+        </div>
+      </div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:7px 13px; border-radius:99px; font-size:12.5px; font-weight:600; background:color-mix(in srgb, var(--ac,#2d5bd7) 16%, #fff); color:var(--ac,#2d5bd7);">Under review · Director gate (&gt;$1M)</span>
+    </div>
+
+    <!-- KPI grid -->
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Current BAC</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px;">$842.0M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Budget at completion · CCE Rev 4</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Proposed EAC</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px;">$898.4M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Scenario · CPI-weighted roll-forward</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #f1d9d5; border-radius:10px; background:#fdf6f5; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">VAC</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px; color:#c0392b;">−$56.4M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Projected overrun · 6.7% of BAC</div>
+      </article>
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Δ vs Rev 3 EAC</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px; color:#9a5a0c;">+$7.1M</div>
+        <div style="font-size:12.5px; color:#6b6862;">Prior lock $891.3M · 1 period</div>
+      </article>
+    </div>
+
+    <!-- main two-column -->
+    <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:var(--gap,20px); align-items:start;">
+
+      <!-- LEFT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- EAC bridge -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:18px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Forecast bridge</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">What moves BAC to EAC</h3>
+          </div>
+          <svg viewBox="0 0 620 250" style="width:100%; height:auto; display:block; font-family:'IBM Plex Sans',sans-serif;">
+            <!-- gridlines (truncated axis $820M base) -->
+            <line x1="0" y1="20" x2="620" y2="20" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="65" x2="620" y2="65" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="110" x2="620" y2="110" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="155" x2="620" y2="155" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="200" x2="620" y2="200" stroke="#e7e4dd" stroke-width="1.4"></line>
+            <!-- connectors -->
+            <g stroke="#c4bfb4" stroke-width="1.4" stroke-dasharray="3 3">
+              <line x1="90" y1="156" x2="126" y2="156"></line>
+              <line x1="190" y1="93.6" x2="227" y2="93.6"></line>
+              <line x1="291" y1="55.8" x2="328" y2="55.8"></line>
+              <line x1="392" y1="32.4" x2="429" y2="32.4"></line>
+              <line x1="493" y1="43.2" x2="530" y2="43.2"></line>
+            </g>
+            <!-- bars -->
+            <rect x="26" y="156" width="64" height="44" rx="2" fill="#b3ada1"></rect>
+            <rect x="126" y="93.6" width="64" height="62.4" rx="2" fill="#b4690e"></rect>
+            <rect x="227" y="55.8" width="64" height="37.8" rx="2" fill="#c0392b"></rect>
+            <rect x="328" y="32.4" width="64" height="23.4" rx="2" fill="#c0392b"></rect>
+            <rect x="429" y="32.4" width="64" height="10.8" rx="2" fill="#1f7a4d"></rect>
+            <rect x="530" y="43.2" width="64" height="156.8" rx="2" fill="var(--ac,#2d5bd7)"></rect>
+            <!-- value labels -->
+            <g font-family="'IBM Plex Mono',monospace" font-size="12" font-weight="600" text-anchor="middle" fill="#1c1b18">
+              <text x="58" y="148">$842.0M</text>
+              <text x="158" y="85.6" fill="#9a5a0c">+$31.2M</text>
+              <text x="259" y="47.8" fill="#c0392b">+$18.9M</text>
+              <text x="360" y="24.4" fill="#c0392b">+$11.7M</text>
+              <text x="461" y="56" fill="#1f7a4d">−$5.4M</text>
+              <text x="562" y="35.2" fill="var(--ac,#2d5bd7)">$898.4M</text>
+            </g>
+            <!-- category labels -->
+            <g font-family="'IBM Plex Sans',sans-serif" font-size="11" text-anchor="middle" fill="#6b6862">
+              <text x="58" y="218">BAC</text>
+              <text x="158" y="218">Changes</text>
+              <text x="259" y="218">CPI trend</text>
+              <text x="360" y="218">Risk</text>
+              <text x="461" y="218">Upside</text>
+              <text x="562" y="218" font-weight="600" fill="#1c1b18">EAC</text>
+            </g>
+            <text x="2" y="238" font-family="'IBM Plex Mono',monospace" font-size="10" fill="#aaa49a">Axis truncated at $820M to expose period deltas · +$56.4M total swing</text>
+          </svg>
+        </section>
+
+        <!-- prior packages -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:16px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Workflow trail</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Prior forecast packages</h3>
+          </div>
+          <div style="overflow-x:auto; margin:0 -4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr style="text-align:left;">
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Package</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Period</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">EAC</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Approver</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ packages }}" as="p" hint-placeholder-count="4">
+                  <tr style="border-bottom:1px solid #f0eee9;">
+                    <td style="padding:11px 10px;"><strong style="font-weight:600;">{{ p.label }}</strong></td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; color:#6b6862;">{{ p.period }}</td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:600;">{{ p.eac }}</td>
+                    <td style="padding:11px 10px; color:#6b6862;">{{ p.approver }}</td>
+                    <td style="padding:11px 10px;"><span style="display:inline-flex; align-items:center; padding:3px 10px; border-radius:99px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:{{ p.stBg }}; color:{{ p.stColor }};">{{ p.status }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- approval timeline -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:18px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Approval history</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Rev 4 workflow</h3>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:26px; height:26px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:#1f7a4d; color:#fff;">✓</span><span style="flex:1; width:2px; background:#1f7a4d;"></span></div>
+              <div style="flex:1; padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600;">Drafted &amp; assembled</div><div style="font-size:12.5px; color:#6b6862;">A. Rahman · Cost Engineer</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">19 Jun · 09:14</div></div>
+            </div>
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:26px; height:26px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:#1f7a4d; color:#fff;">✓</span><span style="flex:1; width:2px; background:var(--ac,#2d5bd7);"></span></div>
+              <div style="flex:1; padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600;">Submitted for approval</div><div style="font-size:12.5px; color:#6b6862;">A. Rahman · "Monthly forecast submission"</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">20 Jun · 16:48</div></div>
+            </div>
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:26px; height:26px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:color-mix(in srgb, var(--ac,#2d5bd7) 16%, #fff); color:var(--ac,#2d5bd7); border:2px solid var(--ac,#2d5bd7);">●</span><span style="flex:1; width:2px; background:#d8d4cc;"></span></div>
+              <div style="flex:1; padding-bottom:18px;"><div style="font-size:13.5px; font-weight:600; color:var(--ac,#2d5bd7);">Under review</div><div style="font-size:12.5px; color:#6b6862;">K. Mensah · Project Director</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">Pending · 2 days in queue</div></div>
+            </div>
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:26px; height:26px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; background:#fff; border:2px solid #d8d4cc; color:#aaa49a;">○</span></div>
+              <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#97938b;">EAC locked in reporting</div><div style="font-size:12.5px; color:#aaa49a;">Publishes to Command Center &amp; packs</div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- gate checks -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Pre-lock gate</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Sign-off checklist</h3>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <div style="display:flex; align-items:center; gap:11px; padding:10px 6px; border-bottom:1px solid #f0eee9;"><span style="width:18px; height:18px; flex:none; border-radius:5px; background:#1f7a4d; color:#fff; display:grid; place-items:center; font-size:11px;">✓</span><span style="font-size:13px; flex:1;">All cost lines carry a basis note</span></div>
+            <div style="display:flex; align-items:center; gap:11px; padding:10px 6px; border-bottom:1px solid #f0eee9;"><span style="width:18px; height:18px; flex:none; border-radius:5px; background:#1f7a4d; color:#fff; display:grid; place-items:center; font-size:11px;">✓</span><span style="font-size:13px; flex:1;">Accruals posted &amp; period locked</span></div>
+            <div style="display:flex; align-items:center; gap:11px; padding:10px 6px; border-bottom:1px solid #f0eee9;"><span style="width:18px; height:18px; flex:none; border-radius:5px; background:#1f7a4d; color:#fff; display:grid; place-items:center; font-size:11px;">✓</span><span style="font-size:13px; flex:1;">Contingency draws reconciled</span></div>
+            <div style="display:flex; align-items:center; gap:11px; padding:10px 6px;"><span style="width:18px; height:18px; flex:none; border-radius:5px; background:#fbeede; border:1px solid #e6c79a; color:#9a5a0c; display:grid; place-items:center; font-size:11px;">!</span><span style="font-size:13px; flex:1;">FX exposure on PO-2231 flagged unhedged</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#9a5a0c;">advisory</span></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Comfortable';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+
+    // bridge: BAC 842 baseline (full bar). Increments scaled so 842 -> ~70% width, deltas stack to EAC 898.4
+    // scale: $1M = 0.083% width region; baseline bar 70% = 842, then +deltas up to 898.4 (~74.7%)
+    const bridge = [
+      { label: 'BAC baseline', amt: '$842.0M', left: '0%', width: '70%', color: '#b3ada1', amtColor: '#1c1b18' },
+      { label: 'Approved changes', amt: '+$31.2M', left: '70%', width: '2.6%', color: '#b4690e', amtColor: '#9a5a0c' },
+      { label: 'CPI trend overrun', amt: '+$18.9M', left: '72.6%', width: '1.6%', color: '#c0392b', amtColor: '#c0392b' },
+      { label: 'Risk-weighted exposure', amt: '+$11.7M', left: '74.2%', width: '1.0%', color: '#c0392b', amtColor: '#c0392b' },
+      { label: 'Realised opportunities', amt: '−$5.4M', left: '74.8%', width: '0.45%', color: '#1f7a4d', amtColor: '#1f7a4d' },
+      { label: 'Proposed EAC', amt: '$898.4M', left: '0%', width: '74.7%', color: ac, amtColor: ac },
+    ];
+
+    const stMap = {
+      approved: { bg: '#e3f3ea', color: '#1f7a4d' },
+      under_review: { bg: 'color-mix(in srgb,' + ac + ' 14%, transparent)', color: ac },
+      superseded: { bg: '#f0eee9', color: '#6b6862' },
+    };
+    const rawPk = [
+      { label: 'Rev 4 · June', period: 'Jun-26', eac: '$898.4M', approver: 'K. Mensah (pending)', status: 'under_review', st: 'under_review' },
+      { label: 'Rev 3 · May', period: 'May-26', eac: '$891.3M', approver: 'K. Mensah', status: 'approved', st: 'approved' },
+      { label: 'Rev 2 · April', period: 'Apr-26', eac: '$876.0M', approver: 'K. Mensah', status: 'superseded', st: 'superseded' },
+      { label: 'Rev 1 · March', period: 'Mar-26', eac: '$859.2M', approver: 'K. Mensah', status: 'superseded', st: 'superseded' },
+    ];
+    const packages = rawPk.map((p) => { const s = stMap[p.st]; return { ...p, stBg: s.bg, stColor: s.color }; });
+
+    return { ac, side, gap, cardPad, bridge, packages };
+  }
+}
+</script>
+</body>
+</html>

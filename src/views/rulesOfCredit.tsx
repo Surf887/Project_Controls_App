@@ -148,7 +148,8 @@ function TemplateDetail({
                       className={`chip-toggle ${done ? 'active' : ''}`}
                       onClick={() => onToggle(entry, step.id)}
                     >
-                      {done ? '✓' : '○'} {step.name} ({step.creditPercent}%)
+                      <span className={`status-dot ${done ? 'status-dot--done' : ''}`} aria-hidden />
+                      {step.name} ({step.creditPercent}%)
                     </button>
                   )
                 })}

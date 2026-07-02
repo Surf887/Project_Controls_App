@@ -38,7 +38,13 @@ export function ForecastEngineView() {
 
   return (
     <div className="view-stack">
-      <section className="metric-grid">
+      <header className="panel-header" style={{ marginBottom: 0 }}>
+        <div>
+          <span className="eyebrow">Cost forecasting</span>
+          <h3>Forecast engine — EAC scenarios</h3>
+        </div>
+      </header>
+      <section className="metric-grid metric-grid--3">
         <MetricTile label="EAC base" value={formatUsd(totals.eacBase)} detail="Actuals + remaining budget" />
         <MetricTile label="Best case EAC" value={formatUsd(totals.eacBestCase)} detail="Approved changes only" />
         <MetricTile label="Most likely EAC" value={formatUsd(totals.eacMostLikely)} detail="Pending × probability + risk + FX" tone="risk" />

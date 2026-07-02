@@ -142,10 +142,8 @@ export function ProcurementWorkspace() {
   return (
     <div className="view-stack">
       <section className="metric-grid">
-        <PhaseTile label="PO portfolio value" value={formatUsd(totalValue)} detail={`${purchaseOrders.length} purchase orders`} />
+        <PhaseTile label="PO portfolio value" value={formatUsd(totalValue)} detail={`${purchaseOrders.length} POs · ${contracts.filter((c) => c.status === 'active').length} active contracts`} />
         <PhaseTile label="Invoiced to date" value={formatUsd(totalInvoiced)} detail={`${((totalInvoiced / totalValue) * 100).toFixed(0)}% of PO value`} />
-        <PhaseTile label="Active contracts" value={contracts.filter((c) => c.status === 'active').length.toString()} detail={formatUsd(contracts.reduce((s, c) => s + c.contractValueUsd, 0))} />
-        <PhaseTile label="Invoice pipeline" value={formatUsd(pipeline.approved + pipeline.submitted)} detail={`${formatUsd(pipeline.held)} held`} tone={pipeline.held > 0 ? 'risk' : 'default'} />
         <PhaseTile label="POs at risk" value={lateCount.toString()} detail="Amber or red expediting" tone={lateCount > 0 ? 'risk' : 'default'} />
         <PhaseTile label="Recon exceptions" value={reconciliationIssues.toString()} detail="PO vs invoice register" tone={reconciliationIssues > 0 ? 'risk' : 'default'} />
       </section>
@@ -432,11 +430,9 @@ export function ConstructionWorkspace() {
   return (
     <div className="view-stack">
       <section className="metric-grid">
-        <PhaseTile label="Avg earned %" value={`${totalEarned.toFixed(0)}%`} detail={`Planned ${totalPlanned.toFixed(0)}%`} tone={totalEarned < totalPlanned ? 'risk' : 'default'} />
-        <PhaseTile label="Active work fronts" value={workFronts.filter((wf) => wf.status === 'in_progress').length.toString()} detail={`${workFronts.length} total`} />
+        <PhaseTile label="Avg earned %" value={`${totalEarned.toFixed(0)}%`} detail={`Planned ${totalPlanned.toFixed(0)}% · ${workFronts.filter((wf) => wf.status === 'in_progress').length} active fronts`} tone={totalEarned < totalPlanned ? 'risk' : 'default'} />
         <PhaseTile label="Productivity index" value={productivityIndex.toFixed(2)} detail="Earned ÷ actual man-hours" tone={productivityIndex < 0.9 ? 'risk' : 'default'} />
-        <PhaseTile label="Active blockers" value={blockerCount.toString()} detail="Across all fronts" tone="risk" />
-        <PhaseTile label="Subcontract value" value={formatUsd(scMetrics.totalValue)} detail={`${formatUsd(scMetrics.underBilled)} earned-not-invoiced`} />
+        <PhaseTile label="Active blockers" value={blockerCount.toString()} detail={`Across all fronts · ${formatUsd(scMetrics.totalValue)} subcontract`} tone={blockerCount > 0 ? 'risk' : 'default'} />
         <PhaseTile label="Field observations" value={openObservations.toString()} detail="Open quality / safety / schedule" tone={openObservations > 0 ? 'risk' : 'default'} />
       </section>
 
@@ -617,10 +613,9 @@ export function CommissioningWorkspace() {
     <div className="view-stack">
       <section className="metric-grid">
         <PhaseTile label="Systems tracked" value={commissioningSystems.length.toString()} detail="MC → handover" />
-        <PhaseTile label="Loop tests complete" value={`${loopsTested}/${totalLoops}`} detail={`${Math.round((loopsTested / totalLoops) * 100)}% loops tested`} />
+        <PhaseTile label="Loop tests complete" value={`${loopsTested}/${totalLoops}`} detail={`${totalLoops === 0 ? 0 : Math.round((loopsTested / totalLoops) * 100)}% loops tested`} />
+        <PhaseTile label="Punch items" value={`${punchA}A / ${punchB}B`} detail="A = must close before handover" tone={punchA > 0 ? 'risk' : 'default'} />
         <PhaseTile label="Turnover checklist" value={`${checklistComplete}/${turnoverChecklists.length}`} detail="System handover items" />
-        <PhaseTile label="Punch A items" value={punchA.toString()} detail="Critical - must close before handover" tone={punchA > 0 ? 'risk' : 'default'} />
-        <PhaseTile label="Punch B items" value={punchB.toString()} detail="Non-critical - close after handover" />
       </section>
 
       <section className="panel">

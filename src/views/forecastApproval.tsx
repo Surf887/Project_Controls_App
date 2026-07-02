@@ -42,14 +42,14 @@ export function ForecastApprovalView() {
             <span className="eyebrow">Forecast approval</span>
             <h3>{current.label}</h3>
           </div>
-          <div className="panel-actions">
+          <div className="panel-header-actions">
             {current.status !== 'approved' && current.status !== 'under_review' && (
-              <button type="button" className="btn-primary" onClick={submit}>Submit for approval</button>
+              <button type="button" className="primary-button" onClick={submit}>Submit for approval</button>
             )}
             {current.status === 'under_review' && (
               <>
-                <button type="button" className="btn-primary" onClick={() => dispatch({ type: 'APPROVE_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Forecast approved.' } })}>Approve</button>
-                <button type="button" className="btn-secondary" onClick={() => dispatch({ type: 'REJECT_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Return for rework.' } })}>Reject</button>
+                <button type="button" className="primary-button" onClick={() => dispatch({ type: 'APPROVE_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Forecast approved.' } })}>Approve</button>
+                <button type="button" className="ghost-button" onClick={() => dispatch({ type: 'REJECT_FORECAST', payload: { packageId: current.id, actor: 'Project Director', comment: 'Return for rework.' } })}>Reject</button>
               </>
             )}
           </div>

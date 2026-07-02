@@ -1,3 +1,4 @@
+import { loadRootEnvFile } from './config/loadEnv.js'
 import { createApp } from './app.js'
 import { validateEnv } from './config/env.js'
 import { closeDatabase, getProjectById, initDatabase, isUsingPostgres } from './db/database.js'
@@ -8,7 +9,9 @@ import { generateClosePackPdfAsync } from './services/pdfExport.js'
 import { getJwtSecret } from './auth/jwt.js'
 import { ensureBootstrapAdmin } from './auth/userStore.js'
 
-const port = Number(process.env.PORT ?? 3001)
+loadRootEnvFile()
+
+const port = Number(process.env.API_PORT ?? process.env.PORT ?? 3001)
 
 validateEnv()
 getJwtSecret()

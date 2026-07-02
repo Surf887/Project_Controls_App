@@ -48,13 +48,39 @@ export function AccrualsView() {
     dispatch({ type: 'UPDATE_COST_ACCRUAL', payload: { ...entry, status } })
   }
 
+  const allPosted = state.costAccruals.length > 0 && state.costAccruals.every((a) => a.status === 'posted')
+
   return (
     <div className="view-stack">
-      <section className="metric-grid">
+
+      {/* Topbar — matches handoff: mono eyebrow + h1 + status chip + actions */}
+      <header className="topbar">
+        <div className="topbar-identity">
+          <span className="eyebrow">Monthly control cycle · Step 1 of 5{allPosted ? ' · Posted' : ''}</span>
+          <h1>Accruals</h1>
+        </div>
+        <div className="topbar-actions">
+          <span
+            className="period-banner-status"
+            style={{ background: allPosted ? 'var(--positive-bg)' : 'var(--warning-bg)', color: allPosted ? 'var(--positive-fg)' : 'var(--warning-fg)' }}
+          >
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+            {allPosted ? `Period locked · ${currentPeriod}` : `Drafting · ${currentPeriod}`}
+          </span>
+          <button type="button" className="ghost-button" onClick={() => dispatch({ type: 'RECONCILE_ACCRUALS' })}>
+            Recalculate
+          </button>
+          <button type="button" className="primary-button" onClick={() => dispatch({ type: 'RECONCILE_ACCRUALS' })}>
+            + Add accrual
+          </button>
+        </div>
+      </header>
+
+      <section className="metric-grid kpi-row">
         <MetricTile label="Open accruals" value={formatUsd(totals.totalOpen)} detail={`Period ${currentPeriod}`} tone="watch" />
         <MetricTile label="Posted accruals" value={formatUsd(totals.totalPosted)} detail="Prior period postings" />
         <MetricTile label="Cost sheet actuals" value={formatUsd(costSheetActuals)} detail="Posted AP / ERP actuals" />
-        <MetricTile label="Economic actuals" value={formatUsd(economicActuals)} detail="Actuals + open accruals (period-end view)" />
+        <MetricTile label="Economic actuals" value={formatUsd(economicActuals)} detail="Actuals + open accruals (period-end view)" tone="accent" />
       </section>
 
       <section className="panel">
@@ -63,11 +89,11 @@ export function AccrualsView() {
             <span className="eyebrow">Accrual methods</span>
             <h3>How period-end cost is calculated</h3>
           </div>
-          <button type="button" className="btn-secondary" onClick={() => dispatch({ type: 'RECONCILE_ACCRUALS' })}>
+          <button type="button" className="ghost-button" onClick={() => dispatch({ type: 'RECONCILE_ACCRUALS' })}>
             Recalculate
           </button>
         </div>
-        <div className="form-grid">
+        <div className="metric-grid">
           <article className="metric-card">
             <span>Subcontract</span>
             <strong>{formatUsd(totals.bySource.subcontract)}</strong>
@@ -124,8 +150,10 @@ export function AccrualsView() {
                   <td className="muted">{entry.calculationMethod}</td>
                   <td>
                     <select
+                      className="select-input"
                       value={entry.status}
                       onChange={(event) => setStatus(entry, event.target.value as AccrualStatus)}
+                      style={{ minHeight: 'unset', padding: '3px 8px', fontSize: 12 }}
                     >
                       <option value="draft">draft</option>
                       <option value="reviewed">reviewed</option>
@@ -185,12 +213,15 @@ function MetricTile({
   label: string
   value: string
   detail: string
-  tone?: 'default' | 'watch'
+  tone?: 'default' | 'watch' | 'risk' | 'accent'
 }) {
+  let className = 'metric-card'
+  if (tone === 'watch') className = 'metric-card watch'
+  else if (tone === 'risk') className = 'metric-card risk'
   return (
-    <article className={tone === 'watch' ? 'metric-card watch' : 'metric-card'}>
+    <article className={className}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong style={tone === 'accent' ? { color: 'var(--ac)' } : undefined}>{value}</strong>
       <p>{detail}</p>
     </article>
   )

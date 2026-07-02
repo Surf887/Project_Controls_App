@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#cfcabf;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+  .cr-row:hover{background:#faf9f6;}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="changes" stage="3" hint-size="288px,100%"></dc-import>
+
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Marlin LNG · Train 2 Expansion · CCE Rev 4 — Sanctioned</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Change Register</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button type="button" style="padding:8px 12px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">Export</button>
+        <button type="button" style="padding:9px 15px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">+ Raise change</button>
+      </div>
+    </header>
+
+    <!-- summary strip -->
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+      <article style="padding:16px 18px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Open changes</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; letter-spacing:-.02em; margin:7px 0 2px;">14</div>
+        <div style="font-size:12px; color:#6b6862;">$31.2M total exposure</div>
+      </article>
+      <article style="padding:16px 18px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Approved · period</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; letter-spacing:-.02em; margin:7px 0 2px; color:var(--ac,#2d5bd7);">+$5.0M</div>
+        <div style="font-size:12px; color:#6b6862;">12 COs to current budget</div>
+      </article>
+      <article style="padding:16px 18px; border:1px solid rgba(180,105,14,.22); border-radius:10px; background:#fdfaf3; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Awaiting approval</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; letter-spacing:-.02em; margin:7px 0 2px; color:#b4690e;">5</div>
+        <div style="font-size:12px; color:#8a5a16;">$12.4M at change board</div>
+      </article>
+      <article style="padding:16px 18px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Forecast-only</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; letter-spacing:-.02em; margin:7px 0 2px;">7</div>
+        <div style="font-size:12px; color:#6b6862;">$18.6M variance, not budget</div>
+      </article>
+    </div>
+
+    <!-- register panel -->
+    <section style="border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05); overflow:hidden;">
+      <!-- toolbar -->
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid #e7e4dd;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">Mechanism</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#6b6862;"><span style="width:9px; height:9px; border-radius:3px; background:var(--ac,#2d5bd7);"></span>Budget</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#6b6862;"><span style="width:9px; height:9px; border-radius:3px; background:#0e8a7e;"></span>Scope</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#6b6862;"><span style="width:9px; height:9px; border-radius:3px; background:#b4690e;"></span>Forecast change</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#6b6862;"><span style="width:9px; height:9px; border-radius:3px; background:#8a8780;"></span>Forecast variance</span>
+        </div>
+        <div style="position:relative; display:flex; align-items:center;">
+          <span style="position:absolute; left:10px; color:#aaa49a; font-size:12px; pointer-events:none;">⌕</span>
+          <input type="text" placeholder="Filter changes" style="padding:7px 12px 7px 28px; width:190px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; font-family:inherit; font-size:12.5px; color:#1c1b18;">
+        </div>
+      </div>
+
+      <!-- table -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; min-width:900px;">
+          <thead>
+            <tr>
+              <th style="position:sticky; top:0; text-align:left; padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">CO #</th>
+              <th style="position:sticky; top:0; text-align:left; padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Change</th>
+              <th style="position:sticky; top:0; text-align:left; padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Mechanism</th>
+              <th style="position:sticky; top:0; text-align:left; padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">WBS</th>
+              <th style="position:sticky; top:0; text-align:right; padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Value $M</th>
+              <th style="position:sticky; top:0; text-align:right; padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Prob.</th>
+              <th style="position:sticky; top:0; text-align:left; padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Status</th>
+              <th style="position:sticky; top:0; text-align:right; padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:#97938b; background:#faf9f6; border-bottom:1px solid #e7e4dd;">Raised</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-031</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Subsea tie-in rework</div><div style="font-size:11.5px; color:#97938b;">Diver access redesign</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:var(--ac,#2d5bd7);"></span>Budget</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">C.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+4.2</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">100%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#e3f3ea; color:#1f7a4d;">Approved</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">02 Jun</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-028</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Compressor spec uplift</div><div style="font-size:11.5px; color:#97938b;">Vendor change · API 617</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#0e8a7e;"></span>Scope</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">B.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+6.8</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">90%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#fbeede; color:#b4690e;">Pending approval</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">28 May</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-033</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Civil rebar overrun</div><div style="font-size:11.5px; color:#97938b;">Quantity growth · foundations</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#b4690e;"></span>Forecast change</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">C.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+5.4</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">70%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#fbeede; color:#b4690e;">Pending approval</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">09 Jun</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-035</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">EUR FX revaluation</div><div style="font-size:11.5px; color:#97938b;">Unhedged PO-2231 drift</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#8a8780;"></span>Forecast variance</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">B.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+3.1</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#aaa49a;">—</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#eef0ee; color:#6b6862;">Forecast-only</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">14 Jun</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-037</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Flare tip redesign</div><div style="font-size:11.5px; color:#97938b;">Emissions compliance</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#0e8a7e;"></span>Scope</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">C.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+2.6</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">60%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#e6eefc; color:#2f5bcc;">Submitted</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">18 Jun</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-019</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Currency hedge release</div><div style="font-size:11.5px; color:#97938b;">Favourable settlement</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#8a8780;"></span>Forecast variance</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">B.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#1f7a4d;">−1.4</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#aaa49a;">—</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#eef0ee; color:#6b6862;">Forecast-only</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">03 May</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-040</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Insulation scope addition</div><div style="font-size:11.5px; color:#97938b;">Cryogenic line extent</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:#0e8a7e;"></span>Scope</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">C.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+3.0</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">50%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#f0eee9; color:#97938b;">Draft</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">20 Jun</td>
+            </tr>
+            <tr class="cr-row">
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#4a4842;">CO-022</td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9;"><div style="font-size:13.5px; font-weight:600;">Permit delay standby</div><div style="font-size:11.5px; color:#97938b;">Authority approval slip</div></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#4a4842;"><span style="width:9px; height:9px; border-radius:3px; background:var(--ac,#2d5bd7);"></span>Budget</span></td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">E.00</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#c0392b;">+1.0</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#6b6862;">100%</td>
+              <td style="padding:12px 12px; border-bottom:1px solid #f0eee9;"><span style="display:inline-flex; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; font-family:'IBM Plex Mono',monospace; background:#e3f3ea; color:#1f7a4d;">Approved</span></td>
+              <td style="padding:12px 14px; border-bottom:1px solid #f0eee9; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:#97938b;">12 May</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- footer -->
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:12px 18px; border-top:1px solid #e7e4dd; background:#faf9f6;">
+        <span style="font-size:12px; color:#97938b;">Approved budget changes draw from CN.00 contingency · forecast variances flow to the Forecast Engine only</span>
+        <span style="font-size:12px; color:#97938b; font-family:'IBM Plex Mono',monospace;">8 of 26 shown</span>
+      </div>
+    </section>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Compact&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Compact';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+    return { ac, side, gap, cardPad };
+  }
+}
+</script>
+</body>
+</html>

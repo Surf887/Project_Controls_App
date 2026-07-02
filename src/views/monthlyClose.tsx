@@ -129,15 +129,10 @@ export function MonthlyCloseWorkspace() {
       </section>
 
       <section className="panel ingestion-apply-panel" data-testid="ingestion-apply">
-        <div className="ingestion-apply-head">
+        <div className="panel-header">
           <div>
             <span className="eyebrow">Ingestion → forecast</span>
             <h3>Approved contractor data → live EAC</h3>
-            <p className="muted">
-              {pendingApply > 0
-                ? `${pendingApply} approved extraction${pendingApply === 1 ? '' : 's'} ready to post to the cost model.`
-                : 'No approved extractions waiting. Approve values in the review queue to post them into the forecast.'}
-            </p>
           </div>
           <button
             className="primary-button"
@@ -154,6 +149,11 @@ export function MonthlyCloseWorkspace() {
             Apply approved extractions
           </button>
         </div>
+        <p className="muted">
+          {pendingApply > 0
+            ? `${pendingApply} approved extraction${pendingApply === 1 ? '' : 's'} ready to post to the cost model.`
+            : 'No approved extractions waiting. Approve values in the review queue to post them into the forecast.'}
+        </p>
         {state.ingestionApplications && state.ingestionApplications[0] && (
           <div className="ingestion-apply-insight" data-testid="ingestion-insight">
             <p>
@@ -185,16 +185,16 @@ export function MonthlyCloseWorkspace() {
 
       {sccsRollup.length > 0 && (
         <section className="panel sccs-close-panel" data-testid="close-sccs-rollup">
-          <div className="ingestion-apply-head">
+          <div className="panel-header">
             <div>
               <span className="eyebrow">ISO 19008 SCCS</span>
               <h3>Cost exposure by standard composite code</h3>
-              <p className="muted">Top SCCS rollups from the live cost sheet — for benchmarking and close-pack exchange.</p>
             </div>
             <Link className="ghost-button" to="/cost-structure/sccs">
               Open SCCS workspace
             </Link>
           </div>
+          <p className="muted">Top SCCS rollups from the live cost sheet — for benchmarking and close-pack exchange.</p>
           <ul className="ingestion-apply-lines">
             {sccsRollup.map((line) => (
               <li key={line.composite}>
@@ -208,7 +208,12 @@ export function MonthlyCloseWorkspace() {
 
       {close.globalBlockers.length > 0 && (
         <section className="panel close-blockers-panel" data-testid="close-blockers">
-          <h3>What needs attention</h3>
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Close gate</span>
+              <h3>What needs attention</h3>
+            </div>
+          </div>
           <ul>
             {close.globalBlockers.map((blocker) => (
               <li key={blocker}>{blocker}</li>
@@ -301,7 +306,12 @@ export function MonthlyCloseWorkspace() {
       </nav>
 
       <section className="panel close-ecosys-note">
-        <h3>Why this beats module-first PMIS</h3>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Platform rationale</span>
+            <h3>Why this beats module-first PMIS</h3>
+          </div>
+        </div>
         <ul className="close-compare-list">
           <li>
             <strong>Workflow clarity</strong> — sequential gates with live data, not 40 open menu items

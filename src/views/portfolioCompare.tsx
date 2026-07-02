@@ -12,6 +12,12 @@ export function PortfolioCompareView() {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Portfolio management</span>
+          <h1>Portfolio compare</h1>
+        </div>
+      </div>
       <section className="metric-grid">
         <MetricTile label="Projects in portfolio" value={projects.length.toString()} detail="Cross-project benchmarking" />
         <MetricTile
@@ -38,7 +44,7 @@ export function PortfolioCompareView() {
             <span className="eyebrow">Portfolio comparison</span>
             <h3>Project-to-project performance</h3>
           </div>
-          <button type="button" className="btn-secondary" onClick={() => dispatch({ type: 'SYNC_PORTFOLIO' })}>
+          <button type="button" className="ghost-button" onClick={() => dispatch({ type: 'SYNC_PORTFOLIO' })}>
             Refresh active project
           </button>
         </div>
@@ -88,9 +94,9 @@ export function PortfolioCompareView() {
 
 function MetricTile({ label, value, detail, tone = 'default' }: { label: string; value: string; detail: string; tone?: 'default' | 'watch' }) {
   return (
-    <article className={tone === 'watch' ? 'metric-card watch' : 'metric-card'}>
+    <article className="metric-card" style={tone === 'watch' ? { borderColor: 'color-mix(in srgb, var(--warning-fg) 25%, var(--border))' } : undefined}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong style={tone === 'watch' ? { color: 'var(--warning-fg)' } : undefined}>{value}</strong>
       <p>{detail}</p>
     </article>
   )

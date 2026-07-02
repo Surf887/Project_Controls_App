@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#cfcabf;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="forecast" stage="4" hint-size="288px,100%"></dc-import>
+
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Marlin LNG · Train 2 Expansion · CCE Rev 4 — Sanctioned</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Forecast Engine</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:#6b6862;">Last run <strong style="color:#1c1b18; font-weight:600;">21 Jun · 17:42</strong></span>
+        <button type="button" style="padding:8px 12px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">Export</button>
+        <button type="button" style="padding:9px 15px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">Run forecast →</button>
+      </div>
+    </header>
+
+    <!-- scenario cards -->
+    <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;">
+      <!-- best -->
+      <article style="padding:20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Best case</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px; background:#f0eee9; color:#6b6862;">P10</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; letter-spacing:-.02em; margin:9px 0 3px;">$872.0M</div>
+        <div style="font-size:12.5px; color:#6b6862;"><span style="color:#c0392b; font-weight:600;">VAC −$30.0M</span></div>
+        <div style="margin-top:12px; padding-top:11px; border-top:1px solid #f0eee9; font-size:12px; color:#97938b; line-height:1.45;">Approved changes only · no open risk</div>
+      </article>
+      <!-- most likely (selected) -->
+      <article style="padding:20px; border:2px solid var(--ac,#2d5bd7); border-radius:10px; background:#fff; box-shadow:0 4px 14px rgba(45,91,215,.1); position:relative;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--ac,#2d5bd7);">Most likely</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px; background:color-mix(in srgb, var(--ac,#2d5bd7) 14%, #fff); color:var(--ac,#2d5bd7);">P50 · selected</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; letter-spacing:-.02em; margin:9px 0 3px;">$898.4M</div>
+        <div style="font-size:12.5px; color:#6b6862;"><span style="color:#c0392b; font-weight:600;">VAC −$56.4M</span></div>
+        <div style="margin-top:12px; padding-top:11px; border-top:1px solid #eef0f7; font-size:12px; color:#6b6862; line-height:1.45;">Pending × probability + risk exposure + FX stress</div>
+      </article>
+      <!-- worst -->
+      <article style="padding:20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:#97938b;">Worst case</span>
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px; background:#fbeede; color:#b4690e;">P90</span>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; letter-spacing:-.02em; margin:9px 0 3px;">$946.2M</div>
+        <div style="font-size:12.5px; color:#6b6862;"><span style="color:#c0392b; font-weight:600;">VAC −$104.2M</span></div>
+        <div style="margin-top:12px; padding-top:11px; border-top:1px solid #f0eee9; font-size:12px; color:#97938b; line-height:1.45;">Full pending + open-risk worst + 2× FX stress</div>
+      </article>
+    </div>
+
+    <!-- main two column -->
+    <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:var(--gap,20px); align-items:start;">
+
+      <!-- LEFT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- EAC build-up -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:18px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Most-likely build-up</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">What drives the −$56.4M variance</h3>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; padding:12px 14px; border-radius:9px; background:#f6f5f2;">
+            <div><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">Current budget</div><div style="font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:600; margin-top:2px;">$842.0M</div></div>
+            <span style="color:#aaa49a; font-size:18px;">→</span>
+            <div style="text-align:right;"><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">Forecast EAC</div><div style="font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:600; margin-top:2px;">$898.4M</div></div>
+          </div>
+
+          <!-- contribution bars -->
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><span style="font-size:13px; font-weight:500;">Open-risk exposure</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#b4690e;">+22.4</span></div>
+              <div style="height:9px; border-radius:99px; background:#f0eee9; overflow:hidden;"><div style="height:100%; width:100%; border-radius:99px; background:#b4690e;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><span style="font-size:13px; font-weight:500;">Pending changes (× probability)</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--ac,#2d5bd7);">+18.6</span></div>
+              <div style="height:9px; border-radius:99px; background:#f0eee9; overflow:hidden;"><div style="height:100%; width:83%; border-radius:99px; background:var(--ac,#2d5bd7);"></div></div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><span style="font-size:13px; font-weight:500;">CPI / trend drift</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#6b6862;">+8.6</span></div>
+              <div style="height:9px; border-radius:99px; background:#f0eee9; overflow:hidden;"><div style="height:100%; width:38%; border-radius:99px; background:#8a8780;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><span style="font-size:13px; font-weight:500;">FX stress (unhedged exposure)</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#0e8a9c;">+6.8</span></div>
+              <div style="height:9px; border-radius:99px; background:#f0eee9; overflow:hidden;"><div style="height:100%; width:30%; border-radius:99px; background:#0e8a9c;"></div></div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding-top:14px; border-top:1px solid #f0eee9;">
+            <span style="font-size:13px; font-weight:600;">Total forecast variance</span>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:700; color:#c0392b;">+$56.4M</span>
+          </div>
+        </section>
+
+        <!-- FTC curve -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
+            <div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Forecast-to-complete</span>
+              <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">ETC spread · $461.0M remaining</h3>
+            </div>
+            <div style="display:flex; padding:3px; border-radius:8px; background:#f0eee9; gap:2px;">
+              <button type="button" style="padding:5px 11px; border:0; border-radius:6px; background:transparent; color:#6b6862; font-size:12px; font-weight:500; cursor:pointer;" style-hover="color:#1c1b18;">Linear</button>
+              <button type="button" style="padding:5px 11px; border:0; border-radius:6px; background:#fff; color:#1c1b18; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 1px 1px rgba(28,27,24,.06);">Front-loaded</button>
+              <button type="button" style="padding:5px 11px; border:0; border-radius:6px; background:transparent; color:#6b6862; font-size:12px; font-weight:500; cursor:pointer;" style-hover="color:#1c1b18;">Back-loaded</button>
+            </div>
+          </div>
+
+          <!-- period spread bars -->
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; align-items:end; height:140px; padding:0 2px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">92.0</span><div style="width:100%; max-width:42px; height:100%; border-radius:6px 6px 0 0; background:var(--ac,#2d5bd7);"></div></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">88.0</span><div style="width:100%; max-width:42px; height:95%; border-radius:6px 6px 0 0; background:var(--ac,#2d5bd7);"></div></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">80.0</span><div style="width:100%; max-width:42px; height:86%; border-radius:6px 6px 0 0; background:color-mix(in srgb, var(--ac,#2d5bd7) 78%, #fff);"></div></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">72.0</span><div style="width:100%; max-width:42px; height:78%; border-radius:6px 6px 0 0; background:color-mix(in srgb, var(--ac,#2d5bd7) 62%, #fff);"></div></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">68.0</span><div style="width:100%; max-width:42px; height:74%; border-radius:6px 6px 0 0; background:color-mix(in srgb, var(--ac,#2d5bd7) 50%, #fff);"></div></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#4a4842;">61.0</span><div style="width:100%; max-width:42px; height:66%; border-radius:6px 6px 0 0; background:color-mix(in srgb, var(--ac,#2d5bd7) 40%, #fff);"></div></div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; text-align:center;">
+            <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- assumptions -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Engine assumptions</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Most-likely inputs</h3>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #f0eee9;"><span style="font-size:13px; color:#4a4842;">Pending change probability</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;">60%</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #f0eee9;"><span style="font-size:13px; color:#4a4842;">Risk exposure source</span><span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;">Risk register · P50</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #f0eee9;"><span style="font-size:13px; color:#4a4842;">FX stress multiplier</span><span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;">1.0×</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0;"><span style="font-size:13px; color:#4a4842;">Trend basis</span><span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;">CPI 0.956 · 3-mo</span></div>
+          </div>
+        </section>
+
+        <!-- run status -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Run status</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Inputs &amp; downstream</h3>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:9px; margin-bottom:16px;">
+            <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:7px; height:7px; flex:none; border-radius:50%; background:#1f7a4d;"></span><span style="flex:1;">Cost Sheet Rev C</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#1f7a4d;">locked</span></div>
+            <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:7px; height:7px; flex:none; border-radius:50%; background:#1f7a4d;"></span><span style="flex:1;">Change Register</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6b6862;">14 open</span></div>
+            <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:7px; height:7px; flex:none; border-radius:50%; background:#1f7a4d;"></span><span style="flex:1;">Risk Register</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6b6862;">9 open</span></div>
+            <div style="display:flex; align-items:center; gap:9px; font-size:13px;"><span style="width:7px; height:7px; flex:none; border-radius:50%; background:#b4690e;"></span><span style="flex:1;">FX rate table</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#b4690e;">drift</span></div>
+          </div>
+          <div style="padding:12px 14px; border-radius:9px; background:#fbeede; display:flex; gap:10px; align-items:flex-start;">
+            <span style="font-size:13px;">⚠</span>
+            <div style="font-size:12.5px; color:#8a5a16; line-height:1.45;">Forecast Approval is <strong>blocked</strong> until this period's run is locked.</div>
+          </div>
+          <button type="button" style="width:100%; margin-top:14px; padding:11px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13.5px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">Run &amp; lock Jun 2026 forecast</button>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Compact&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Compact';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+    return { ac, side, gap, cardPad };
+  }
+}
+</script>
+</body>
+</html>

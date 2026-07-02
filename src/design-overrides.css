@@ -1,0 +1,1601 @@
+/**
+ * IBM Plex design system — component overrides
+ */
+
+/* ─── Base typography ─────────────────────────────────────────────── */
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+  background: var(--canvas);
+}
+
+h1 {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--ink-primary);
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
+}
+
+h3,
+.panel h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-primary);
+}
+
+h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+p,
+.muted {
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.page-heading {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.topbar h1 {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-top: 6px;
+}
+
+/* Mono: labels, numbers, codes, KPIs, pills, timestamps */
+.eyebrow,
+.sidebar-section-label,
+.filter-inline > span,
+.filter-bar label,
+th,
+.cs-period-label,
+.metric-card > span,
+.metric-tile > span,
+.badge,
+.status-pill,
+.sidebar-step-order,
+.stage-index,
+.report-meta strong,
+.metric-card strong,
+.close-ring span,
+.log-order,
+.cs-dirty-badge,
+.cs-audit-bar,
+.detail-list dt,
+.filter-bar label,
+.topbar-menu-field > span,
+kbd,
+.mono,
+[data-mono='true'] {
+  font-family: var(--font-mono);
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.metric-card strong,
+.metric-tile > strong,
+.close-hero-progress strong,
+.pipeline-stage b {
+  font-family: var(--font-mono);
+  font-size: 29px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-primary);
+}
+
+.metric-tile > strong {
+  font-size: 29px;
+}
+
+/* ─── Metric card tones ───────────────────────────────────────────── */
+.metric-card.watch {
+  border-color: color-mix(in srgb, var(--warning-fg) 28%, var(--border));
+}
+.metric-card.watch strong {
+  color: var(--warning-fg);
+}
+
+/* .metric-card.risk already defined in styles.css */
+
+/* ─── Shell & workspace ───────────────────────────────────────────── */
+.shell {
+  grid-template-columns: var(--sidebar-width) 1fr;
+  background: var(--canvas);
+}
+
+/* ─── Topbar layout ───────────────────────────────────────────────── */
+.topbar-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Groups of related controls in the right action area */
+.topbar-group {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+/* Visual divider between action groups */
+.topbar-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ─── Error banner (replaces raw error text in topbar) ────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border: 1px solid color-mix(in srgb, var(--critical-fg) 40%, var(--border));
+  border-radius: var(--radius-control);
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.error-banner-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.error-banner-message {
+  flex: 1;
+  font-family: var(--font-sans);
+}
+
+.error-banner-dismiss {
+  background: transparent;
+  border: 0;
+  color: var(--critical-fg);
+  opacity: 0.55;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.error-banner-dismiss:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--critical-fg) 10%, transparent);
+}
+
+.workspace {
+  padding: var(--workspace-pad);
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 20px);
+}
+
+/* view-stack respects density --gap var */
+.view-stack {
+  gap: var(--gap, 20px);
+}
+
+.metric-grid {
+  gap: var(--grid-gap-compact);
+}
+
+/* ─── Sidebar (handoff redesign) ──────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-width);
+  padding: 22px 16px 18px;
+  gap: 18px;
+  color: #e9e7e2;
+  background: var(--side);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: none;
+}
+
+/* Brand mark: 40×40, 9px radius */
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  background: var(--ac);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.brand p {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.brand span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a8780;
+  line-height: 1.3;
+}
+
+/* Connection chip */
+.sidebar-status {
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-status-copy strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #eef0ee;
+}
+
+.sidebar-status-copy span {
+  font-size: 11px;
+  color: #80807a;
+}
+
+/* Live dot — handoff green with pulse animation */
+.sidebar-status-dot--live {
+  background: #37c871;
+  box-shadow: 0 0 0 3px rgba(55, 200, 113, 0.18);
+  animation: pcpulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pcpulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.88); }
+}
+
+.sidebar-status-dot--local {
+  background: var(--warning-fg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning-fg) 18%, transparent);
+}
+
+/* ─── Period progress section ─────────────────────────────────────── */
+.sidebar-period {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-period-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.sidebar-period-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #6f6f78;
+}
+
+.sidebar-period-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ac);
+}
+
+/* Close workspace button with embedded progress bar */
+.sidebar-close-btn {
+  width: 100%;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ac) 40%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ac) 20%, transparent);
+  color: #fff;
+  padding: 11px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sidebar-close-btn:hover {
+  background: color-mix(in srgb, var(--ac) 30%, transparent);
+}
+
+.sidebar-close-btn--active {
+  background: color-mix(in srgb, var(--ac) 28%, transparent);
+  border-color: color-mix(in srgb, var(--ac) 50%, transparent);
+}
+
+.sidebar-close-btn-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sidebar-close-btn-arrow {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--ac) 55%, #fff);
+}
+
+.sidebar-close-track {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  display: block;
+}
+
+.sidebar-close-fill {
+  display: block;
+  height: 100%;
+  background: var(--ac);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* ─── Workflow stepper ────────────────────────────────────────────── */
+.sidebar-steps {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Badge base (pending state) */
+.sidebar-step-order {
+  background: rgba(255, 255, 255, 0.07);
+  color: #9b9b95;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Step name/sub base (pending) */
+.sidebar-step-copy > span {
+  font-size: 13px;
+  color: #cfcfc9;
+  line-height: 1.25;
+}
+
+.sidebar-step-copy > small {
+  font-size: 11px;
+  color: #73736d;
+  font-family: var(--font-mono);
+  line-height: 1.3;
+}
+
+/* Gate pending (last step while pending) */
+.sidebar-step-order--gate {
+  background: rgba(180, 105, 14, 0.2) !important;
+  color: #e0a24e !important;
+  border-color: transparent !important;
+}
+
+/* Done step */
+.sidebar-step--done .sidebar-step-order {
+  background: rgba(55, 200, 113, 0.18);
+  color: #5fd98f;
+  border-color: transparent;
+}
+
+.sidebar-step--done .sidebar-step-copy > small {
+  color: #5f9d72;
+}
+
+/* Active step */
+.sidebar-step--active .sidebar-step-order,
+.sidebar-step.active .sidebar-step-order {
+  background: var(--ac);
+  color: #fff;
+  border-color: transparent;
+}
+
+.sidebar-step--active,
+.sidebar-step.active {
+  background: color-mix(in srgb, var(--ac) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ac) 34%, transparent);
+}
+
+.sidebar-step--active .sidebar-step-copy > span,
+.sidebar-step.active .sidebar-step-copy > span {
+  color: #fff;
+  font-weight: 600;
+}
+
+.sidebar-step--active .sidebar-step-copy > small,
+.sidebar-step.active .sidebar-step-copy > small {
+  color: color-mix(in srgb, var(--ac) 45%, #fff);
+}
+
+/* Blocked step (amber) */
+.sidebar-step--blocked .sidebar-step-order {
+  background: rgba(180, 105, 14, 0.2);
+  color: #e0a24e;
+  border-color: transparent;
+}
+
+.sidebar-step--blocked .sidebar-step-copy > small {
+  color: #c9913f;
+}
+
+/* Hover states */
+.sidebar-step--active:hover,
+.sidebar-step.active:hover {
+  background: color-mix(in srgb, var(--ac) 24%, transparent);
+}
+
+/* ─── Search button ───────────────────────────────────────────────── */
+.sidebar-search-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #b9b9b2;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.sidebar-search-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar-search-btn kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #9b9b95;
+}
+
+/* ─── Pinned section ──────────────────────────────────────────────── */
+.sidebar-pinned {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-pinned-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ─── Sidebar section label (eyebrow) ─────────────────────────────── */
+.sidebar-section-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #6f6f78;
+  padding: 0 4px 4px;
+  display: block;
+}
+
+/* ─── Nav link titles ─────────────────────────────────────────────── */
+.sidebar-link-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #c2c2bc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-link.active .sidebar-link-title {
+  color: #fff;
+  font-weight: 600;
+}
+
+.sidebar-link-meta,
+.sidebar-step-copy small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8a8780;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Active link */
+.sidebar-link.active,
+.sidebar-link--primary.active {
+  background: color-mix(in srgb, var(--ac) 18%, transparent);
+  border-color: color-mix(in srgb, var(--ac) 34%, transparent);
+}
+
+.sidebar-link--primary {
+  background: color-mix(in srgb, var(--ac) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ac) 25%, transparent);
+}
+
+/* ─── User footer ─────────────────────────────────────────────────── */
+.sidebar-user-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e9e7e2;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sidebar-user-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.sidebar-user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #eef0ee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 11px;
+  color: #80807a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Cards & panels ──────────────────────────────────────────────── */
+.panel,
+.metric-card,
+.metric-tile,
+.dashboard-hero,
+.cs-shell,
+.report-card,
+.close-stepper-item,
+.close-flow-bar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.panel {
+  padding: var(--space-card);
+}
+
+.metric-tile {
+  padding: var(--space-card-compact) 18px;
+}
+
+.dashboard-hero-text,
+.dashboard-hero-chart {
+  background: var(--surface);
+}
+
+.dashboard-hero {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.dashboard-hero-chart {
+  border-left: 1px solid var(--hairline);
+  background: var(--canvas);
+}
+
+.panel-header h3 {
+  margin-top: 2px;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────── */
+.primary-button,
+.small-button:not(.secondary) {
+  padding: 9px 16px;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--ac);
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.primary-button:hover,
+.small-button:not(.secondary):hover {
+  filter: brightness(0.92);
+  background: var(--ac);
+}
+
+.ghost-button,
+.small-button.secondary {
+  padding: 8px 14px;
+  color: var(--ink-primary);
+  border: 1px solid #ddd9d1;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ghost-button:hover,
+.small-button.secondary:hover {
+  border-color: #c2bdb2;
+  background: #faf9f6;
+}
+
+.link-button {
+  color: var(--ac);
+  font-weight: 600;
+}
+
+/* Approve button — green, used on Forecast Approval screen */
+.approve-button {
+  padding: 9px 16px;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: #1f7a4d;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.approve-button:hover {
+  filter: brightness(0.94);
+}
+
+/* Reject button — white bg, red border and text */
+.reject-button {
+  padding: 9px 16px;
+  color: var(--critical-fg);
+  border: 1px solid color-mix(in srgb, var(--critical-fg) 40%, #e7e4dd);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.reject-button:hover {
+  background: var(--critical-bg);
+}
+
+/* ─── Status pills & badges ───────────────────────────────────────── */
+.badge,
+.status-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+}
+
+.badge-good,
+.badge-approved,
+.status-pill--complete {
+  color: var(--positive-fg);
+  background: var(--positive-bg);
+}
+
+.badge-watch,
+.badge-warning,
+.badge-pending-review,
+.badge-reviewing,
+.badge-extracted,
+.badge-classified,
+.badge-unapproved,
+.status-pill--in_progress {
+  color: var(--warning-fg);
+  background: var(--warning-bg);
+}
+
+.badge-risk,
+.badge-critical,
+.badge-fail,
+.badge-needs-correction,
+.badge-rejected,
+.status-pill--blocked {
+  color: var(--critical-fg);
+  background: var(--critical-bg);
+}
+
+.badge-received {
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 12%, var(--surface));
+}
+
+/* Status pill — "Submitted": accent blue tint (per Change Register handoff) */
+.badge-submitted,
+.status-pill--submitted {
+  color: #2f5bcc;
+  background: #e6eefc;
+}
+
+/* Status pill — "Forecast-only" / neutral (no budget impact) */
+.badge-forecast-only,
+.status-pill--forecast-only,
+.badge-neutral {
+  color: #6b6862;
+  background: #eef0ee;
+}
+
+/* Status pill — "Draft" / muted */
+.badge-draft,
+.status-pill--draft {
+  color: #97938b;
+  background: #f0eee9;
+}
+
+/* Status pill — "Superseded" / same as draft */
+.badge-superseded {
+  color: var(--ink-muted);
+  background: #f0eee9;
+}
+
+/* Status pill — "Under review" / accent-tinted */
+.badge-under-review,
+.status-pill--under_review {
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 14%, #fff);
+}
+
+/* ─── Inputs ──────────────────────────────────────────────────────── */
+.select-input,
+.filter-input,
+.value-input,
+.field input,
+.field select,
+.command-palette-input,
+.boe-textarea {
+  border: 1px solid #ddd9d1;
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-primary);
+  font-size: 14px;
+}
+
+.select-input:focus,
+.filter-input:focus,
+.value-input:focus,
+.field input:focus,
+.command-palette-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--ac) 35%, transparent);
+  outline-offset: 1px;
+  border-color: var(--ac);
+}
+
+.filter-bar {
+  background: var(--canvas);
+  border-color: var(--border);
+}
+
+/* ─── Progress bars (no gradients) ────────────────────────────────── */
+.progress-track,
+.confidence-track,
+.close-flow-progress-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: #ece9e3;
+  overflow: hidden;
+}
+
+.progress-fill,
+.confidence-fill.good,
+.close-flow-progress-fill {
+  background: var(--ac);
+  border-radius: var(--radius-pill);
+}
+
+.confidence-fill.watch {
+  background: var(--warning-fg);
+}
+
+.confidence-fill.risk {
+  background: var(--critical-fg);
+}
+
+.progress-fill.plan {
+  background: var(--ink-faint);
+}
+
+.progress-fill.capture {
+  background: var(--positive-fg);
+}
+
+/* Close ring — solid track, no conic gradient */
+.close-ring {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 0.5rem;
+  background: #ece9e3;
+  border: none;
+  position: relative;
+  font-family: var(--font-mono);
+}
+
+.close-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 6px solid var(--ac);
+  opacity: calc(var(--pct) / 100);
+  box-sizing: border-box;
+}
+
+.close-ring span {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Tables ──────────────────────────────────────────────────────── */
+th {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  /* Handoff uses #faf9f6 — a slightly warmer off-white — not the canvas color */
+  background: #faf9f6;
+  border-bottom: 1px solid var(--hairline);
+}
+
+td {
+  /* Handoff table rows use --hairline (#f0eee9) for subtle row separators */
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+}
+
+td strong,
+.report-card h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.report-card p,
+td small {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+tr:hover > td {
+  background: #faf9f6;
+}
+
+.selected-row,
+.row-active {
+  background: color-mix(in srgb, var(--ac) 6%, var(--surface));
+}
+
+.sortable-header:hover {
+  background: #faf9f6;
+  color: var(--ink-primary);
+}
+
+/* ─── List rows ───────────────────────────────────────────────────── */
+.report-card,
+.mapping-row,
+.risk-item,
+.rule-card {
+  border-color: var(--border);
+  border-radius: var(--radius-control);
+}
+
+.report-card:hover,
+.mapping-row:hover {
+  background: #faf9f6;
+}
+
+.pipeline-stage {
+  background: var(--canvas);
+  border-color: var(--border);
+  border-radius: var(--radius-control);
+}
+
+.stage-index {
+  color: var(--ac);
+}
+
+/* ─── Charts ──────────────────────────────────────────────────────── */
+.chart-legend,
+.legend-dot {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+/* ─── Cost sheet accents ────────────────────────────────────────────── */
+.cs-group-row th {
+  background: var(--side);
+}
+
+.cs-header-row .cs-th {
+  background: var(--canvas);
+  border-bottom-color: var(--border);
+}
+
+.cs-row-ca > .cs-col-wbs {
+  box-shadow: inset 3px 0 0 var(--ac);
+}
+
+.cs-row-ca .cs-wbs-code {
+  color: var(--ac);
+}
+
+.cs-active {
+  outline-color: var(--ac) !important;
+  background: color-mix(in srgb, var(--ac) 8%, var(--surface)) !important;
+}
+
+.cs-totals-row .cs-td {
+  background: var(--side) !important;
+}
+
+/* ─── Monthly close ───────────────────────────────────────────────── */
+.close-hero h1 {
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* 6 metrics → 3×2 grid — no orphan cards */
+.close-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.close-cta-panel {
+  border-color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 6%, var(--surface));
+}
+
+.close-stepper-item:hover,
+.close-stepper-item--current {
+  border-color: var(--ac);
+  background: #faf9f6;
+}
+
+/* box-shadow double ring on current step */
+.close-stepper-item--current {
+  box-shadow: 0 0 0 1px var(--ac), var(--shadow-card);
+}
+
+.close-stepper-order,
+.close-step-order {
+  font-family: var(--font-mono);
+  color: var(--ac);
+}
+
+.close-flow-back {
+  color: var(--ac);
+}
+
+/* Step "X of Y" in the flow bar — mono, eyebrow-style */
+.close-flow-step-eyebrow {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 3px;
+}
+
+/* Ingestion & SCCS data lists */
+.ingestion-apply-lines {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-primary);
+}
+
+.ingestion-apply-lines li {
+  margin-bottom: 4px;
+}
+
+.ingestion-apply-lines code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+/* Post-application delta insight */
+.ingestion-apply-insight {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ─── Upload / file drop (no gradient) ────────────────────────────── */
+.file-drop {
+  border: 1.5px dashed #ddd9d1;
+  border-radius: var(--radius-card);
+  background: var(--canvas);
+}
+
+.format-card {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-card);
+  background: var(--canvas);
+}
+
+.empty-state {
+  background: var(--canvas);
+  border-color: var(--border);
+}
+
+/* ─── Login ───────────────────────────────────────────────────────── */
+.login-error {
+  color: var(--critical-fg);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--critical-bg);
+  border: 1px solid color-mix(in srgb, var(--critical-fg) 20%, transparent);
+}
+
+.loading-shell {
+  background: var(--canvas);
+}
+
+.loading-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+/* ─── Command palette ─────────────────────────────────────────────── */
+.command-palette {
+  border-radius: var(--radius-card);
+  border-color: var(--border);
+}
+
+.command-palette-results button:hover {
+  background: #faf9f6;
+}
+
+/* ─── Mobile nav ──────────────────────────────────────────────────── */
+.mobile-nav-item.active {
+  color: var(--ac);
+}
+
+/* ─── SCCS codes ──────────────────────────────────────────────────── */
+.sccs-inline-code,
+.sccs-rule-list code,
+.detail-json {
+  font-family: var(--font-mono);
+}
+
+.detail-json {
+  background: var(--canvas);
+  border-color: var(--border);
+}
+
+/* ─── Forecast Engine — 6-card 3×2 metric grid ───────────── */
+.metric-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .metric-grid--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ─── Forecast Approval — panel-header action buttons ─────── */
+.panel-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ─── Forecast Approval — workfront timeline cards ─────────── */
+.workfront-card {
+  border-radius: var(--radius-control);
+  border-color: var(--border);
+  background: var(--canvas);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.workfront-card strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  text-transform: capitalize;
+}
+
+.workfront-card small {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+/* ─── Cost Structure — bar chart accent ────────────────────── */
+.bar-actual {
+  background: var(--ac);
+}
+
+/* ─── Responsive: sidebar becomes a static top band ≤1100px ─────────
+   Overrides the fixed 288px column; sections keep their dark styling. */
+@media (max-width: 1100px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  /* Stepper wraps into compact cards instead of one tall column */
+  .sidebar-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 4px;
+  }
+
+  .sidebar-steps li {
+    min-width: 0;
+  }
+
+  /* Pinned links flow as a chip row */
+  .sidebar-pinned-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .sidebar-pinned-list li {
+    flex: 1 1 150px;
+    min-width: 0;
+  }
+
+  .sidebar-pinned-list .sidebar-link {
+    width: 100%;
+  }
+
+  .sidebar-user-footer {
+    margin-top: 0;
+  }
+
+  .close-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .close-metrics,
+  .metric-grid--3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Handoff allows 24–29px for big metrics; use the floor on phones */
+  .metric-tile > strong {
+    font-size: 24px;
+  }
+}
+
+/* ─── Period banner (Command Center) ─────────────────────────────── */
+.period-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.period-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.period-banner-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--positive-fg);
+}
+
+.period-banner-dot--warning { background: var(--warning-fg); }
+.period-banner-dot--critical { background: var(--critical-fg); }
+
+.period-banner-copy {
+  line-height: 1.3;
+}
+
+.period-banner-copy strong {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink-primary);
+}
+
+.period-banner-copy span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.period-banner-progress {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.period-banner-track {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: #ece9e3;
+  overflow: hidden;
+}
+
+.period-banner-fill {
+  display: block;
+  height: 100%;
+  background: var(--ac);
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+
+.period-banner-pct {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-primary);
+  white-space: nowrap;
+}
+
+.period-banner-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.period-banner-status--ok {
+  background: var(--positive-bg);
+  color: var(--positive-fg);
+}
+
+.period-banner-status--warning {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.period-banner-status--critical {
+  background: var(--critical-bg);
+  color: var(--critical-fg);
+}
+
+/* ─── Close tracker timeline (Command Center "Period close sequence") ── */
+.close-tracker {
+  display: flex;
+  flex-direction: column;
+}
+
+.close-tracker-step {
+  display: flex;
+  gap: 13px;
+  align-items: stretch;
+}
+
+.close-tracker-spine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.close-tracker-badge {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.close-tracker-badge--done {
+  background: var(--positive-fg);
+  color: #fff;
+}
+
+.close-tracker-badge--active {
+  background: var(--ac);
+  color: #fff;
+}
+
+.close-tracker-badge--pending {
+  background: var(--surface);
+  border: 2px solid #d8d4cc;
+  color: #97938b;
+}
+
+.close-tracker-badge--gate {
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.close-tracker-line {
+  flex: 1;
+  width: 2px;
+  min-height: 10px;
+  background: #d8d4cc;
+}
+
+.close-tracker-line--done {
+  background: var(--positive-fg);
+}
+
+.close-tracker-line--active {
+  background: var(--ac);
+}
+
+.close-tracker-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+  padding-bottom: 16px;
+}
+
+.close-tracker-step:last-child .close-tracker-body {
+  padding-bottom: 0;
+}
+
+.close-tracker-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.close-tracker-name--active {
+  color: var(--ac);
+}
+
+.close-tracker-name--muted {
+  color: var(--ink-secondary);
+}
+
+/* ─── Approval banner (Forecast Approval screen) ─────────────────── */
+.approval-banner {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--ac) 28%, transparent);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--ac) 7%, var(--surface));
+}
+
+.approval-banner-badge {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--radius-control);
+  display: grid;
+  place-items: center;
+  background: var(--ac);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.approval-banner-copy {
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.approval-banner-copy strong {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink-primary);
+}
+
+.approval-banner-copy span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.approval-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--ac) 16%, var(--surface));
+  color: var(--ac);
+  white-space: nowrap;
+}
+
+/* ─── Gate checklist (Forecast Approval sign-off checklist) ─────── */
+.gate-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gate-check-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.gate-check-row:last-child {
+  border-bottom: none;
+}
+
+.gate-check-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+
+.gate-check-icon--pass {
+  background: var(--positive-fg);
+  color: #fff;
+}
+
+.gate-check-icon--advisory {
+  background: var(--warning-bg);
+  border: 1px solid #e6c79a;
+  color: var(--warning-fg);
+}
+
+.gate-check-label {
+  font-size: 13px;
+  flex: 1;
+  color: var(--ink-primary);
+}
+
+.gate-check-note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--warning-fg);
+}
+
+/* ─── Topbar identity block (eyebrow + h1 grouping) ─────────────── */
+.topbar-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Topbar alignment override — flex-start so identity + actions top-align */
+.topbar {
+  align-items: flex-start;
+}
+
+/* ─── Scenario card selected (Forecast Engine P50) ──────────────── */
+.scenario-card--selected {
+  border: 2px solid var(--ac) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ac) 10%, transparent) !important;
+}
+
+/* ─── Metric card critical / risk tone ──────────────────────────── */
+.metric-card.risk {
+  border-color: color-mix(in srgb, var(--critical-fg) 25%, var(--border));
+  background: var(--critical-bg);
+}
+
+.metric-card.risk strong {
+  color: var(--critical-fg);
+}
+
+/* ─── Metric card KPI row — tighter padding (18/20) ─────────────── */
+.kpi-row .metric-card {
+  padding: var(--space-kpi-v, 18px) var(--space-kpi-h, 20px);
+}

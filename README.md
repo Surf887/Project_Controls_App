@@ -15,7 +15,7 @@ npm run dev
 - **Frontend:** http://localhost:5173/ (Vite proxies `/api` → backend)
 - **API:** http://localhost:3001/api/health
 
-The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable the client falls back to `localStorage`.
+The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control. The `If-Match` state-version header is **required** on `POST /api/projects/:id/actions` (missing → 428, malformed → 400, stale → 409 with the current version). If the API is unreachable the client falls back to `localStorage`.
 
 ### Frontend only (legacy local mode)
 
@@ -139,7 +139,7 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 - Active project is single-project at a time; portfolio compare shows seeded benchmark projects alongside the live one
 - Persistence is either JSON file or PostgreSQL (set `DATABASE_URL`); project state is stored as a versioned JSONB blob in Postgres today — splitting cost sheet / registers into relational tables is the next enterprise step
 - Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
-- Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
+- Auth ships with JWT issuance at `/api/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo auth defaults **on only when `NODE_ENV=development`** (set `DEMO_AUTH=false`/`true` to override; always off in production), requires an explicit `x-pc-role` header or demo sign-in — credential-less requests stay unauthenticated — and the client's demo login UI follows the server's `/auth/config`. Production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
 - Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
 - No P6/SAP/EcoSys live API feeds
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools

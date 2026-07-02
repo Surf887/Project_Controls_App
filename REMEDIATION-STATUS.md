@@ -14,11 +14,11 @@ Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Statu
 
 ## P1 — High (fixed)
 
-- ✅ Audit chain now HMAC-keyed (`AUDIT_HMAC_SECRET`) with serialized appends.
+- ✅ Audit chain HMAC-keyed (`AUDIT_HMAC_SECRET`, enforced ≥16 chars in production; per-event `alg` recorded, mixed/unkeyed events flagged on verify). Appends are synchronous within the process.
 - ✅ Fail-fast in production when `DATABASE_URL` is unset; JSON writes are atomic.
-- ✅ Zod validation on all mutating routes; `If-Match` validated as a positive integer.
-- ✅ Top-level React error boundary; 409 conflicts surfaced (no silent edit loss); token expiry handling.
-- ✅ Structured JSON logging + request logging with `x-request-id`; real DB health (`/api/health`, `/live`, `/ready`).
+- ✅ Zod validation on all mutating routes; `If-Match` is **required** on action writes and validated as a positive integer (428 when missing, 400 when malformed, 409 on version conflict).
+- ✅ Top-level React error boundary; 409 conflicts surfaced (no silent edit loss); token expiry handling; cost-sheet grid preserves unsaved rows when server state changes underneath.
+- ✅ Structured JSON logging (`utils/logger.ts`) + per-request `x-request-id` correlation and request completion logs; real DB health (`/api/health`, `/live`, `/ready`).
 - ✅ Graceful shutdown (drain + pool close + timeout, SIGTERM/SIGINT).
 - ✅ Route-level code splitting (main chunk ~600 kB → ~308 kB).
 - ✅ Connector OAuth tokens encrypted at rest (AES-256-GCM, `CREDENTIALS_KEY`).

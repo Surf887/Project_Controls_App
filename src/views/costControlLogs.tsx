@@ -17,20 +17,22 @@ export function CostControlLogsView() {
   const stats = useMemo(() => buildCostControlLogStats(state), [state])
 
   return (
-    <section className="panel-stack" data-testid="cost-control-logs">
+    <div className="view-stack" data-testid="cost-control-logs">
       <MonthlyCloseRedirectNote />
-      <header className="panel-header">
+      <div className="topbar">
         <div>
-          <p className="eyebrow">Cost control</p>
+          <span className="eyebrow">Cost control</span>
           <h1>Cost control logs</h1>
           <p className="muted">
             {stats.length} industry-standard logs for monthly close — each links to the workspace that owns the data.
           </p>
         </div>
-        <Link className="ghost-button" to="/close">
-          Monthly close
-        </Link>
-      </header>
+        <div className="topbar-actions">
+          <Link className="ghost-button" to="/close">
+            Monthly close
+          </Link>
+        </div>
+      </div>
 
       <div className="log-grid">
         {stats.map(({ log, headline, detail, openCount, status }) => (
@@ -62,18 +64,23 @@ export function CostControlLogsView() {
       </div>
 
       <article className="panel">
-        <h3>How this maps to monthly close</h3>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Close sequence</span>
+            <h3>How this maps to monthly close</h3>
+          </div>
+        </div>
         <p className="muted">
           Accruals (8), actuals (6), and commitments (2) reconcile before forecast (5) submission. Changes (3),
           MoC (16), and trends (4) feed the change board. Contingency (10), risk (9), and claims (13) gate reserve
           draws. FX (18) and WBS mapping (17) close out international and coding integrity. All logs append to the
           immutable audit trail on the server.
         </p>
-        <p className="muted">
+        <p className="muted" style={{ marginTop: '8px' }}>
           <Link to={pathForView('audit-trail')}>Audit trail</Link> ·{' '}
           <Link to="/exports">Export centre</Link>
         </p>
       </article>
-    </section>
+    </div>
   )
 }

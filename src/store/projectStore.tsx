@@ -23,6 +23,7 @@ interface ProjectStoreValue {
   reconnect: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   loginSso: (idToken: string) => Promise<void>
+  loginDemo: (role?: string) => Promise<void>
   logout: () => void
   ready: boolean
   error: string | null
@@ -355,6 +356,20 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
     [connectBackend],
   )
 
+  const loginDemo = useCallback(
+    async (role = demoRole()) => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('pc-role', role)
+      }
+      await api.signIn(role)
+      setError(null)
+      await connectBackend()
+      setAuthRequired(false)
+      setReady(true)
+    },
+    [connectBackend],
+  )
+
   const logout = useCallback(() => {
     if (expiryTimerRef.current) {
       clearTimeout(expiryTimerRef.current)
@@ -378,6 +393,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
       reconnect,
       login,
       loginSso,
+      loginDemo,
       logout,
       ready,
       error,
@@ -396,6 +412,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
       reconnect,
       login,
       loginSso,
+      loginDemo,
       logout,
       ready,
       error,

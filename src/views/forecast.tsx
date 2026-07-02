@@ -81,8 +81,24 @@ export function ForecastWhatIf() {
       </section>
 
       <section className="two-column">
-        <TornadoChart {...monteCarlo} />
-        <CdfChart {...monteCarlo} />
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Sensitivity analysis</span>
+              <h3>Top drivers — tornado chart</h3>
+            </div>
+          </div>
+          <TornadoChart {...monteCarlo} />
+        </div>
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Probability</span>
+              <h3>Cumulative distribution (CDF)</h3>
+            </div>
+          </div>
+          <CdfChart {...monteCarlo} />
+        </div>
       </section>
     </div>
   )

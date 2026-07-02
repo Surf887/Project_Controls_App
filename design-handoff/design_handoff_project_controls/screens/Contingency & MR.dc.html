@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#d8d4cc;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="contingency" stage="3" hint-size="288px,100%"></dc-import>
+
+  <!-- ─── WORKSPACE ───────────────────────────────────── -->
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Monthly control cycle · Step 3 of 5 · In progress</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Contingency &amp; Management Reserve</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button type="button" style="padding:9px 14px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">Reconcile now</button>
+        <button type="button" style="padding:9px 15px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">+ Record draw</button>
+      </div>
+    </header>
+
+    <!-- reserve pools hero -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--gap,20px);">
+      <!-- CN.00 -->
+      <article style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+          <div>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">CN.00 · Contingency reserve</span>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:600; letter-spacing:-.02em; margin:7px 0 0;">$23.6M <span style="font-size:14px; color:#97938b; font-weight:500;">remaining</span></div>
+          </div>
+          <span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:99px; font-size:11.5px; font-weight:600; background:#e3f3ea; color:#1f7a4d;">Healthy · 56%</span>
+        </div>
+        <div style="margin-top:16px; height:10px; border-radius:99px; background:#ece9e3; overflow:hidden; display:flex;">
+          <span style="display:block; height:100%; width:43.8%; background:var(--ac,#2d5bd7);"></span>
+          <span style="display:block; height:100%; width:10%; background:color-mix(in srgb, var(--ac,#2d5bd7) 40%, #fff); border-left:2px solid #fff;"></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:12px; margin-top:14px;">
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;">$42.0M</div><div style="font-size:11.5px; color:#97938b;">Original reserve</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;">$18.4M</div><div style="font-size:11.5px; color:#97938b;">Posted draws</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; color:#b4690e;">$4.2M</div><div style="font-size:11.5px; color:#97938b;">Pending</div></div>
+        </div>
+      </article>
+      <!-- MR.00 -->
+      <article style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+          <div>
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">MR.00 · Management reserve</span>
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:600; letter-spacing:-.02em; margin:7px 0 0;">$9.7M <span style="font-size:14px; color:#97938b; font-weight:500;">remaining</span></div>
+          </div>
+          <span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:99px; font-size:11.5px; font-weight:600; background:#fbeede; color:#9a5a0c;">Director gate</span>
+        </div>
+        <div style="margin-top:16px; height:10px; border-radius:99px; background:#ece9e3; overflow:hidden; display:flex;">
+          <span style="display:block; height:100%; width:23.3%; background:#5b5750;"></span>
+          <span style="display:block; height:100%; width:12%; background:#b8b2a7; border-left:2px solid #fff;"></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:12px; margin-top:14px;">
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;">$15.0M</div><div style="font-size:11.5px; color:#97938b;">Original reserve</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;">$3.5M</div><div style="font-size:11.5px; color:#97938b;">Posted draws</div></div>
+          <div><div style="font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; color:#b4690e;">$1.8M</div><div style="font-size:11.5px; color:#97938b;">Submitted</div></div>
+        </div>
+      </article>
+    </div>
+
+    <!-- main two-column -->
+    <div style="display:grid; grid-template-columns:1.62fr 1fr; gap:var(--gap,20px); align-items:start;">
+
+      <!-- LEFT: ledger + draw register -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- reserve ledger -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:16px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Reserve ledger</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">WBS reserve balances</h3>
+          </div>
+          <div style="overflow-x:auto; margin:0 -4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr style="text-align:left;">
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd;">WBS</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Original</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Drawn</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Pending</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; text-align:right;">Remaining</th>
+                  <th style="padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b; border-bottom:1px solid #e7e4dd; width:120px;">Utilization</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ ledger }}" as="row" hint-placeholder-count="5">
+                  <tr style="border-bottom:1px solid #f0eee9;">
+                    <td style="padding:11px 10px;"><strong style="font-family:'IBM Plex Mono',monospace; font-weight:600;">{{ row.wbs }}</strong><div style="font-size:11.5px; color:#97938b;">{{ row.disc }}</div></td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right;">{{ row.orig }}</td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right;">{{ row.drawn }}</td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; color:{{ row.pendColor }};">{{ row.pending }}</td>
+                    <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:600;">{{ row.remaining }}</td>
+                    <td style="padding:11px 10px;">
+                      <div style="display:flex; align-items:center; gap:9px;">
+                        <span style="flex:1; height:5px; border-radius:99px; background:#ece9e3; overflow:hidden;"><span style="display:block; height:100%; background:{{ row.barColor }}; width:{{ row.pctW }};"></span></span>
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#6b6862; min-width:38px; text-align:right;">{{ row.pct }}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                </sc-for>
+                <tr style="border-top:2px solid #e7e4dd;">
+                  <td style="padding:11px 10px; font-weight:700;">Total reserve</td>
+                  <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700;">$57.0M</td>
+                  <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700;">$21.9M</td>
+                  <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700; color:#b4690e;">$6.0M</td>
+                  <td style="padding:11px 10px; font-family:'IBM Plex Mono',monospace; text-align:right; font-weight:700;">$29.1M</td>
+                  <td style="padding:11px 10px;"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- draw register -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px;">
+            <div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Change linkage</span>
+              <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Draw register</h3>
+            </div>
+            <span style="display:inline-flex; align-items:center; padding:4px 9px; border-radius:99px; font-size:11.5px; font-weight:600; background:#fbeede; color:#9a5a0c;">2 awaiting approval</span>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <sc-for list="{{ draws }}" as="d" hint-placeholder-count="6">
+              <div style="display:grid; grid-template-columns:auto 1fr auto auto; gap:14px; align-items:center; padding:13px 6px; border-bottom:1px solid #f0eee9;">
+                <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; background:{{ d.reserveBg }}; color:{{ d.reserveColor }};">{{ d.reserve }}</span>
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px; font-weight:600;"><span style="font-family:'IBM Plex Mono',monospace; color:#6b6862;">{{ d.changeId }}</span> · {{ d.title }}</div>
+                  <div style="font-size:12px; color:#97938b;">{{ d.wbs }} · drawn {{ d.date }}</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600; text-align:right;">{{ d.amount }}</div>
+                <span style="display:inline-flex; align-items:center; justify-content:center; min-width:78px; padding:4px 10px; border-radius:99px; font-size:11.5px; font-weight:600; background:{{ d.statusBg }}; color:{{ d.statusColor }};">{{ d.status }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: rules + waterfall -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- engine config -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:16px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Draw rules</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Contingency engine</h3>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 8px; border-bottom:1px solid #f0eee9; cursor:pointer;">
+              <span style="font-size:13px;">Auto-draw on approved change</span>
+              <span style="width:36px; height:20px; flex:none; border-radius:99px; background:var(--ac,#2d5bd7); position:relative;"><span style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span>
+            </label>
+            <label style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 8px; border-bottom:1px solid #f0eee9; cursor:pointer;">
+              <span style="font-size:13px;">Positive changes only</span>
+              <span style="width:36px; height:20px; flex:none; border-radius:99px; background:var(--ac,#2d5bd7); position:relative;"><span style="position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:#fff;"></span></span>
+            </label>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 8px; border-bottom:1px solid #f0eee9;">
+              <span style="font-size:13px;">Max draw % of reserve</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; padding:3px 9px; border:1px solid #ddd9d1; border-radius:7px;">25%</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 8px;">
+              <span style="font-size:13px;">Route to MR above</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; padding:3px 9px; border:1px solid #ddd9d1; border-radius:7px;">$1.0M</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- depletion / waterfall -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:18px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Reserve burn-down</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Contingency depletion</h3>
+          </div>
+          <svg viewBox="0 0 320 150" style="width:100%; height:auto; display:block;">
+            <line x1="0" y1="20" x2="320" y2="20" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="55" x2="320" y2="55" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="90" x2="320" y2="90" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="125" x2="320" y2="125" stroke="#e7e4dd" stroke-width="1"></line>
+            <polyline points="0,22 64,38 128,55 192,68 256,86 320,104" fill="none" stroke="#b3ada1" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round"></polyline>
+            <polyline points="0,22 64,34 128,46 192,62" fill="none" stroke="var(--ac,#2d5bd7)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <circle cx="192" cy="62" r="4" fill="var(--ac,#2d5bd7)" stroke="#fff" stroke-width="2"></circle>
+          </svg>
+          <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#aaa49a; margin-top:6px;"><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span></div>
+          <div style="display:flex; gap:16px; margin-top:14px; padding-top:14px; border-top:1px solid #f0eee9;">
+            <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#6b6862;"><span style="width:14px; height:3px; border-radius:2px; background:var(--ac,#2d5bd7);"></span>Actual draw</span>
+            <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#6b6862;"><span style="width:14px; height:0; border-top:2px dashed #97938b;"></span>Planned burn</span>
+          </div>
+          <p style="margin:14px 0 0; font-size:12.5px; color:#6b6862; line-height:1.5;">Draw pace running 9% under planned burn — reserve projected to hold past mechanical completion.</p>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Comfortable';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+
+    const barOf = (p) => (p >= 80 ? '#c0392b' : p >= 60 ? '#b4690e' : '#1f7a4d');
+    const rawLedger = [
+      { wbs: '2000-CI', disc: 'Civil & structural', orig: '$8.0M', drawn: '$4.1M', pending: '—', remaining: '$3.9M', pct: 51 },
+      { wbs: '3000-ME', disc: 'Mechanical', orig: '$11.0M', drawn: '$3.8M', pending: '$4.2M', remaining: '$3.0M', pct: 73 },
+      { wbs: '4000-PI', disc: 'Piping', orig: '$9.0M', drawn: '$4.6M', pending: '—', remaining: '$4.4M', pct: 51 },
+      { wbs: '5000-EL', disc: 'Electrical & I&C', orig: '$6.0M', drawn: '$2.4M', pending: '—', remaining: '$3.6M', pct: 40 },
+      { wbs: '6000-SU', disc: 'Subsea & marine', orig: '$8.0M', drawn: '$3.5M', pending: '—', remaining: '$4.5M', pct: 44 },
+      { wbs: 'MR.00', disc: 'Management reserve', orig: '$15.0M', drawn: '$3.5M', pending: '$1.8M', remaining: '$9.7M', pct: 35 },
+    ];
+    const ledger = rawLedger.map((r) => ({ ...r, pctW: r.pct + '%', barColor: barOf(r.pct), pendColor: r.pending === '—' ? '#aaa49a' : '#b4690e' }));
+
+    const stMap = {
+      posted: { bg: '#e3f3ea', color: '#1f7a4d', label: 'Posted' },
+      pending: { bg: '#fbeede', color: '#9a5a0c', label: 'Pending' },
+      submitted: { bg: '#eef2fd', color: ac, label: 'Submitted' },
+    };
+    const cn = { bg: 'color-mix(in srgb,' + ac + ' 16%, transparent)', color: ac, label: 'CN.00' };
+    const mr = { bg: '#efece7', color: '#5b5750', label: 'MR.00' };
+    const rawDraws = [
+      { changeId: 'CO-022', title: 'Subsea tie-in weather standby', wbs: '6000-SU', date: '12 May', amount: '$5.6M', reserve: 'cn', status: 'posted' },
+      { changeId: 'CO-018', title: 'Piping spool rework — IFC Rev D', wbs: '4000-PI', date: '28 Apr', amount: '$4.6M', reserve: 'cn', status: 'posted' },
+      { changeId: 'CO-009', title: 'Geotech foundation redesign', wbs: '2000-CI', date: '06 Apr', amount: '$3.5M', reserve: 'mr', status: 'posted' },
+      { changeId: 'CO-027', title: 'Electrical bulk MTO growth', wbs: '5000-EL', date: '21 May', amount: '$2.4M', reserve: 'cn', status: 'posted' },
+      { changeId: 'CO-031', title: 'Compressor skid re-rate (CN-014)', wbs: '3000-ME', date: '17 Jun', amount: '$4.2M', reserve: 'cn', status: 'pending' },
+      { changeId: 'CO-033', title: 'Cyclone Ilsa standby — force majeure', wbs: '6000-SU', date: '19 Jun', amount: '$1.8M', reserve: 'mr', status: 'submitted' },
+    ];
+    const draws = rawDraws.map((d) => {
+      const r = d.reserve === 'mr' ? mr : cn;
+      const s = stMap[d.status];
+      return { ...d, reserve: r.label, reserveBg: r.bg, reserveColor: r.color, status: s.label, statusBg: s.bg, statusColor: s.color };
+    });
+
+    return { ac, side, gap, cardPad, ledger, draws };
+  }
+}
+</script>
+</body>
+</html>

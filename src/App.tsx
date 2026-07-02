@@ -143,10 +143,11 @@ const CostControlLogsView = lazy(() =>
 
 type View = NavView
 
-// Demo role switcher / unauthenticated `x-pc-role` fallback is gated behind
-// VITE_DEMO_AUTH. Production builds leave this false so the topbar never shows
-// a role selector and the client requires a real JWT from /platform/auth/token.
-const demoAuthEnabled = import.meta.env.VITE_DEMO_AUTH === 'true'
+// Demo login + role switcher: on in local dev by default, or when VITE_DEMO_AUTH
+// / the server reports demoAuthEnabled. Production builds stay off unless the
+// server explicitly enables demo auth (never in production).
+const clientDemoAuth =
+  import.meta.env.VITE_DEMO_AUTH === 'true' || import.meta.env.DEV
 
 const statusLabels: Record<ReviewStatus, string> = {
   pending_review: 'Pending review',
@@ -200,6 +201,7 @@ function App() {
     reconnect,
     login,
     loginSso,
+    loginDemo,
     logout,
     ready,
     error,
@@ -218,7 +220,13 @@ function App() {
     typeof localStorage !== 'undefined' ? localStorage.getItem('pc-role') ?? 'cost_controller' : 'cost_controller',
   )
   const [moreOpen, setMoreOpen] = useState(false)
+  const [errorDismissed, setErrorDismissed] = useState(false)
   const closeFocus = isCloseFlowRoute(location.pathname)
+
+  useEffect(() => {
+    if (error) setErrorDismissed(false)
+  }, [error])
+  const demoAuthAvailable = clientDemoAuth || authConfig?.demoAuthEnabled === true
 
   function setActiveView(view: View) {
     navigate(pathForView(view))
@@ -447,7 +455,9 @@ function App() {
       <LoginScreen
         onLogin={login}
         onSso={loginSso}
+        onDemoLogin={loginDemo}
         oidcEnabled={authConfig?.oidcEnabled}
+        demoAuthEnabled={demoAuthAvailable}
         globalError={error}
       />
     )
@@ -460,46 +470,79 @@ function App() {
         backendEnabled={backendEnabled}
         syncing={syncing}
         onReconnect={reconnect}
+        onSearchClick={() => commandPalette.setOpen(true)}
       />
 
       <section className="workspace">
         <header className="topbar">
-          <div>
+          <div className="topbar-identity">
             <span className="eyebrow">
               {state.meta.name} · {state.meta.baselineLabel}
               {syncing ? ' · saving…' : ''}
             </span>
             <h1>Project Controls Intelligence Platform</h1>
-            {error && <p className="muted topbar-note">{error}</p>}
           </div>
           <div className="topbar-actions">
-            <label className="filter-inline topbar-select">
-              <span>Project</span>
-              <select
-                className="select-input compact-select"
-                value={state.meta.id}
-                disabled={!backendEnabled || syncing}
-                onChange={(event) => void switchProject(event.target.value)}
-              >
-                {(projects.length > 0 ? projects : [{ id: state.meta.id, name: state.meta.name, baselineLabel: state.meta.baselineLabel, updatedAt: '' }]).map(
-                  (project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className="filter-inline topbar-select">
-              <span>Baseline</span>
-              <input className="select-input compact-select" value={state.meta.baselineLabel} readOnly aria-readonly="true" />
-            </label>
-            <button className="ghost-button" onClick={() => commandPalette.setOpen(true)} type="button">
-              Search ⌘K
-            </button>
-            <button className="primary-button" onClick={() => setActiveView('review')} type="button">
-              Review queue
-            </button>
+            <div className="topbar-group">
+              <label className="filter-inline topbar-select">
+                <span>Project</span>
+                <select
+                  className="select-input compact-select"
+                  value={state.meta.id}
+                  disabled={!backendEnabled || syncing}
+                  onChange={(event) => void switchProject(event.target.value)}
+                >
+                  {(projects.length > 0 ? projects : [{ id: state.meta.id, name: state.meta.name, baselineLabel: state.meta.baselineLabel, updatedAt: '' }]).map(
+                    (project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label className="filter-inline topbar-select">
+                <span>Baseline</span>
+                <input className="select-input compact-select" value={state.meta.baselineLabel} readOnly aria-readonly="true" />
+              </label>
+            </div>
+            <div className="topbar-sep" aria-hidden="true" />
+            <div className="topbar-group">
+              <button className="ghost-button" onClick={() => commandPalette.setOpen(true)} type="button">
+                Search ⌘K
+              </button>
+              <button className="primary-button" onClick={() => setActiveView('review')} type="button">
+                Review queue
+              </button>
+            </div>
+            {demoAuthAvailable && (
+              <>
+                <div className="topbar-sep" aria-hidden="true" />
+                <div className="topbar-group">
+                  <label className="filter-inline topbar-select" title="Switch demo role (local demo only)">
+                    <span>Demo role</span>
+                    <select
+                      className="select-input compact-select"
+                      value={userRole}
+                      onChange={(event) => {
+                        const role = event.target.value
+                        localStorage.setItem('pc-role', role)
+                        setUserRole(role)
+                        if (backendEnabled) {
+                          void signIn(role).then(() => reconnect()).catch(() => undefined)
+                        }
+                      }}
+                    >
+                      <option value="viewer">Viewer</option>
+                      <option value="cost_controller">Cost controller</option>
+                      <option value="approver">Approver</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </label>
+                </div>
+              </>
+            )}
+            <div className="topbar-sep" aria-hidden="true" />
             <div className="topbar-menu">
               <button
                 className="ghost-button topbar-menu-trigger"
@@ -514,32 +557,7 @@ function App() {
                 <>
                   <div className="topbar-menu-backdrop" onClick={() => setMoreOpen(false)} role="presentation" />
                   <div className="topbar-menu-popover" role="menu">
-                    {demoAuthEnabled && (
-                      <label
-                        className="topbar-menu-field"
-                        title="Demo role switcher — disabled in production builds (VITE_DEMO_AUTH=false)"
-                      >
-                        <span>Role (demo)</span>
-                        <select
-                          className="select-input compact-select"
-                          value={userRole}
-                          onChange={(event) => {
-                            const role = event.target.value
-                            localStorage.setItem('pc-role', role)
-                            setUserRole(role)
-                            if (backendEnabled) {
-                              void signIn(role).then(() => reconnect()).catch(() => undefined)
-                            }
-                          }}
-                        >
-                          <option value="viewer">Viewer</option>
-                          <option value="cost_controller">Cost controller</option>
-                          <option value="approver">Approver</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </label>
-                    )}
-                    {currentUser && !demoAuthEnabled && (
+                    {currentUser && !demoAuthAvailable && (
                       <div className="topbar-menu-field" title={`Signed in as ${currentUser.email ?? currentUser.name} (${currentUser.role})`}>
                         <span>Signed in</span>
                         <button
@@ -593,6 +611,21 @@ function App() {
             </div>
           </div>
         </header>
+
+        {error && !errorDismissed && (
+          <div className="error-banner" role="alert">
+            <span className="error-banner-icon" aria-hidden="true">⚠</span>
+            <span className="error-banner-message">{error}</span>
+            <button
+              className="error-banner-dismiss"
+              type="button"
+              aria-label="Dismiss error"
+              onClick={() => setErrorDismissed(true)}
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {closeFocus && location.pathname !== monthlyClosePath && <CloseFlowBar />}
 
@@ -652,7 +685,7 @@ function App() {
 
         {activeView === 'review' && (
           <ReviewDesk
-            selectedValueId={selectedValue.id}
+            selectedValueId={selectedValue?.id ?? ''}
             values={values}
             onApprove={(id) => updateReviewState(id, 'approved', 'approved')}
             onBulkApprove={approveCleanValues}
@@ -665,7 +698,18 @@ function App() {
 
         {activeView === 'validation' && <Validation values={values} onSelect={setSelectedValueId} />}
 
-        {activeView === 'lineage' && <Lineage value={selectedValue} />}
+        {activeView === 'lineage' &&
+          (selectedValue ? (
+            <Lineage value={selectedValue} />
+          ) : (
+            <section className="panel">
+              <span className="eyebrow">Click-to-source traceability</span>
+              <h3>No extracted values yet</h3>
+              <p className="empty-state">
+                Import a contractor report from the ingestion workspace to trace every number to its source.
+              </p>
+            </section>
+          ))}
 
         {activeView === 'wbs' && (
           <WbsManager onImportComplete={() => setActiveView('costsheet')} />
@@ -772,7 +816,7 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
           <span className="eyebrow">AI Project Controls Intelligence Platform</span>
           <h2>Every reported number — reviewable, correctable, approvable, traceable.</h2>
           <p>Owner-side contractor report ingestion · Earned value analytics · Rules-based risk signals · Source lineage on every value.</p>
-          <div className="hero-actions">
+          <div className="hero-actions" style={{ marginTop: '4px' }}>
             <button className="primary-button" onClick={onOpenReview} type="button">Open review queue</button>
             <button className="ghost-button" onClick={onOpenValidation} type="button">Validation rules</button>
           </div>
@@ -783,7 +827,7 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
         </div>
       </section>
 
-      <section className="metric-grid">
+      <section className="metric-grid" style={{ gap: 'var(--grid-gap, 20px)' }}>
         <MetricCard label="Forecast exposure" value={formatCurrency(metrics.forecastExposure)} detail="USD values in current queue" />
         <MetricCard label="Review progress" value={`${metrics.reviewProgress}%`} detail={`${metrics.approved} approved values`} />
         <MetricCard
@@ -805,7 +849,7 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
         <div className="pipeline-grid">
           {pipelineStages.map((stage, index) => (
             <article className="pipeline-stage" key={stage.label}>
-              <span className="stage-index">{String(index + 1).padStart(2, '0')}</span>
+              <span className="stage-index">{String(index + 1).padStart(2, '0')} / {pipelineStages.length}</span>
               <strong>{stage.label}</strong>
               <b>{stage.count}</b>
               <small>{stage.detail}</small>
@@ -1243,7 +1287,8 @@ function Validation({ values, onSelect }: { values: ExtractedValue[]; onSelect: 
 
   return (
     <div className="view-stack">
-      <section className="metric-grid">
+      <section className="metric-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 'var(--grid-gap, 20px)' }}>
+        <MetricCard label="Total values" value={values.length.toString()} detail="extracted from source documents" />
         <MetricCard label="Mapping coverage" value={`${mappingCoverage}%`} detail="values mapped to client WBS/CBS" />
         <MetricCard
           label="Validation rules"

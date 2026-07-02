@@ -146,10 +146,14 @@ export function ExportCentreView() {
     <div className="view-stack" data-testid="export-centre">
       <MonthlyCloseRedirectNote />
       <section className="panel">
-        <span className="eyebrow">Reporting</span>
-        <h2>Leadership close pack</h2>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Reporting</span>
+            <h3>Leadership close pack</h3>
+          </div>
+        </div>
         <p className="muted">Trusted packs for project director sign-off — server-generated when API connected.</p>
-        <div className="filter-row">
+        <div className="panel-actions">
           <button className="primary-button" type="button" onClick={() => void downloadServerClosePack()} disabled={loading} data-testid="export-close-pack">
             {loading ? 'Generating…' : 'Download full close pack'}
           </button>
@@ -165,11 +169,16 @@ export function ExportCentreView() {
             Cost sheet CSV
           </button>
         </div>
-        {message && <p className="muted">{message}</p>}
+        {message && <p className="muted" style={{ marginTop: '10px' }}>{message}</p>}
       </section>
       <section className="panel">
-        <h3>Included in close pack</h3>
-        <ul>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Package contents</span>
+            <h3>Included in close pack</h3>
+          </div>
+        </div>
+        <ul className="plain-list">
           <li>Executive summary with control-account totals</li>
           <li>Monthly cost summary, EVM snapshot, change pipeline, audit extract</li>
           <li>

@@ -52,18 +52,20 @@ export function WorkflowAdminView() {
   }
 
   return (
-    <section className="panel-stack" data-testid="workflow-admin">
+    <div className="view-stack" data-testid="workflow-admin">
       <MonthlyCloseRedirectNote />
-      <header className="panel-header">
+      <div className="topbar">
         <div>
-          <p className="eyebrow">Enterprise workflows</p>
+          <span className="eyebrow">Enterprise workflows</span>
           <h1>Workflow administration</h1>
           <p className="muted">Review approval chains, SLAs, and temporary delegations.</p>
         </div>
-        <Link className="ghost-button" to="/admin/governance">
-          Governance
-        </Link>
-      </header>
+        <div className="topbar-actions">
+          <Link className="ghost-button" to="/admin/governance">
+            Governance
+          </Link>
+        </div>
+      </div>
 
       {!backendEnabled && (
         <p className="callout">Connect to the API to manage server-backed workflow delegations.</p>
@@ -72,9 +74,14 @@ export function WorkflowAdminView() {
       {message && <p className="callout">{message}</p>}
 
       <article className="panel">
-        <h2>Configured workflows</h2>
-        <div className="table-scroll">
-          <table className="data-table">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Approval chains</span>
+            <h3>Configured workflows</h3>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
             <thead>
               <tr>
                 <th>Name</th>
@@ -98,7 +105,12 @@ export function WorkflowAdminView() {
       </article>
 
       <article className="panel">
-        <h2>SLA hints</h2>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Service levels</span>
+            <h3>SLA hints</h3>
+          </div>
+        </div>
         <ul className="plain-list">
           <li>Forecast approval: submit by T+3 business days after month-end</li>
           <li>Change board: decision within 5 business days of submission</li>
@@ -107,40 +119,49 @@ export function WorkflowAdminView() {
       </article>
 
       <article className="panel">
-        <h2>Delegations</h2>
-        <form className="form-grid" onSubmit={(event) => void submitDelegation(event)}>
-          <label>
-            Workflow
-            <select
-              value={form.workflowId}
-              onChange={(event) => setForm((prev) => ({ ...prev, workflowId: event.target.value }))}
-            >
-              {workflows.map((workflow) => (
-                <option key={workflow.id} value={workflow.id}>
-                  {workflow.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            From user
-            <input value={form.fromUserId} onChange={(event) => setForm((prev) => ({ ...prev, fromUserId: event.target.value }))} />
-          </label>
-          <label>
-            To user
-            <input value={form.toUserId} onChange={(event) => setForm((prev) => ({ ...prev, toUserId: event.target.value }))} />
-          </label>
-          <label>
-            Until
-            <input type="date" value={form.until} onChange={(event) => setForm((prev) => ({ ...prev, until: event.target.value }))} />
-          </label>
-          <button className="primary-button" type="submit" disabled={!backendEnabled}>
-            Save delegation
-          </button>
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Temporary assignments</span>
+            <h3>Delegations</h3>
+          </div>
+        </div>
+        <form onSubmit={(event) => void submitDelegation(event)}>
+          <div className="form-grid">
+            <label className="field">
+              <span>Workflow</span>
+              <select
+                value={form.workflowId}
+                onChange={(event) => setForm((prev) => ({ ...prev, workflowId: event.target.value }))}
+              >
+                {workflows.map((workflow) => (
+                  <option key={workflow.id} value={workflow.id}>
+                    {workflow.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>From user</span>
+              <input value={form.fromUserId} onChange={(event) => setForm((prev) => ({ ...prev, fromUserId: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>To user</span>
+              <input value={form.toUserId} onChange={(event) => setForm((prev) => ({ ...prev, toUserId: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Until</span>
+              <input type="date" value={form.until} onChange={(event) => setForm((prev) => ({ ...prev, until: event.target.value }))} />
+            </label>
+          </div>
+          <div className="panel-actions">
+            <button className="primary-button" type="submit" disabled={!backendEnabled}>
+              Save delegation
+            </button>
+          </div>
         </form>
 
         {delegations.length > 0 && (
-          <ul className="plain-list">
+          <ul className="plain-list" style={{ marginTop: '16px' }}>
             {delegations.map((row) => (
               <li key={row.id}>
                 {row.workflowId}: {row.fromUserId} → {row.toUserId} until {row.until}
@@ -149,6 +170,6 @@ export function WorkflowAdminView() {
           </ul>
         )}
       </article>
-    </section>
+    </div>
   )
 }

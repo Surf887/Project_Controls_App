@@ -175,7 +175,7 @@ export function IntegrationsView() {
           <div className="panel-actions">
             <button
               type="button"
-              className="btn-secondary"
+              className="ghost-button"
               disabled={busyId === connector.id}
               onClick={() => handleTest(connector)}
             >
@@ -183,7 +183,7 @@ export function IntegrationsView() {
             </button>
             <button
               type="button"
-              className="btn-primary"
+              className="primary-button"
               disabled={busyId === connector.id}
               onClick={() => handleSync(connector)}
             >

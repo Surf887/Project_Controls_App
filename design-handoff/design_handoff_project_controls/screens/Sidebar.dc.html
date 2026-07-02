@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<aside style="position:sticky; top:0; height:100vh; overflow-y:auto; display:flex; flex-direction:column; gap:18px; padding:22px 16px 18px; background:var(--side,#16161a); color:#e9e7e2; border-right:1px solid rgba(255,255,255,.07); font-family:'IBM Plex Sans',system-ui,sans-serif;">
+
+  <div style="display:flex; gap:11px; align-items:center;">
+    <div style="width:40px; height:40px; flex:none; display:grid; place-items:center; border-radius:9px; background:var(--ac,#2d5bd7); color:#fff; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px; letter-spacing:.04em;">PC</div>
+    <div style="min-width:0;">
+      <div style="font-weight:600; font-size:14px; color:#fff; line-height:1.2;">Project Controls</div>
+      <div style="font-size:12px; color:#8a8780; line-height:1.3;">Marlin LNG · Train 2</div>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:center; padding:9px 11px; border-radius:9px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);">
+    <span style="width:8px; height:8px; border-radius:50%; background:#37c871; box-shadow:0 0 0 3px rgba(55,200,113,.18); animation:pcpulse 1.6s ease-in-out infinite;"></span>
+    <div style="min-width:0;">
+      <div style="font-size:12.5px; font-weight:600; color:#eef0ee; line-height:1.25;">Connected to API</div>
+      <div style="font-size:11px; color:#80807a;">Changes persist on server</div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 2px;">
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; color:#6f6f78;">This period · Jun 2026</span>
+      <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--ac,#2d5bd7);">{{ pct }}</span>
+    </div>
+
+    <button type="button" style="text-align:left; width:100%; border:1px solid color-mix(in srgb, var(--ac,#2d5bd7) 40%, transparent); border-radius:10px; background:color-mix(in srgb, var(--ac,#2d5bd7) 20%, transparent); color:#fff; padding:11px 12px; cursor:pointer; display:flex; flex-direction:column; gap:9px;" style-hover="background:color-mix(in srgb, var(--ac,#2d5bd7) 30%, transparent);">
+      <span style="display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:13.5px; font-weight:600;">Close workspace</span>
+        <span style="font-size:14px; color:#cfd6ff;">→</span>
+      </span>
+      <span style="height:5px; border-radius:99px; background:rgba(255,255,255,.14); overflow:hidden; display:block;"><span style="display:block; height:100%; width:{{ pct }}; background:var(--ac,#2d5bd7); border-radius:99px;"></span></span>
+    </button>
+
+    <ol style="list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:2px;">
+      <sc-for list="{{ steps }}" as="s" hint-placeholder-count="5">
+        <li><button type="button" style="{{ s.rowStyle }}" style-hover="{{ s.hover }}">
+          <span style="{{ s.badgeStyle }}">{{ s.badgeText }}</span>
+          <span style="display:flex; flex-direction:column;"><span style="{{ s.nameStyle }}">{{ s.name }}</span><span style="{{ s.subStyle }}">{{ s.sub }}</span></span>
+        </button></li>
+      </sc-for>
+    </ol>
+  </div>
+
+  <button type="button" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border:1px solid rgba(255,255,255,.1); border-radius:9px; background:rgba(255,255,255,.05); color:#b9b9b2; cursor:pointer; font-size:12.5px; font-weight:500;" style-hover="background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.16);">
+    <span style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; color:#80807a;">⌕</span> Search all modules</span>
+    <kbd style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:2px 6px; border-radius:5px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#9b9b95;">⌘K</kbd>
+  </button>
+
+  <div style="display:flex; flex-direction:column; gap:3px;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.11em; text-transform:uppercase; color:#6f6f78; padding:0 4px 4px;">Pinned</span>
+    <button type="button" style="{{csStyle}}" style-hover="background:rgba(255,255,255,.07);">Cost Sheet</button>
+    <button type="button" style="{{crStyle}}" style-hover="background:rgba(255,255,255,.07);">Change Register</button>
+    <button type="button" style="{{feStyle}}" style-hover="background:rgba(255,255,255,.07);">Forecast Engine</button>
+    <button type="button" style="{{pcStyle}}" style-hover="background:rgba(255,255,255,.07);">Portfolio Compare</button>
+  </div>
+
+  <div style="margin-top:auto; display:flex; align-items:center; gap:10px; padding:10px 8px 2px; border-top:1px solid rgba(255,255,255,.08);">
+    <div style="width:32px; height:32px; flex:none; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.1); color:#e9e7e2; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600;">JA</div>
+    <div style="min-width:0; line-height:1.25;">
+      <div style="font-size:12.5px; font-weight:600; color:#eef0ee;">J. Adeyemi</div>
+      <div style="font-size:11px; color:#80807a;">Cost Controller</div>
+    </div>
+  </div>
+</aside>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:288,&quot;height&quot;:820},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;accruals&quot;,&quot;costsheet&quot;,&quot;contingency&quot;,&quot;changes&quot;,&quot;forecast&quot;,&quot;approval&quot;,&quot;portfolio&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;stage&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:1,&quot;max&quot;:5,&quot;default&quot;:3,&quot;tsType&quot;:&quot;number&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'dashboard';
+    const stage = Number(this.props.stage ?? 3); // 1..5 = current monthly-cycle step
+
+    const pctMap = { 1: '15%', 2: '30%', 3: '45%', 4: '65%', 5: '80%' };
+    const pct = pctMap[stage] || '45%';
+
+    const defs = [
+      { name: 'Accruals',          done: 'Posted & locked',        act: 'Drafting accruals',          pend: 'Awaiting period open' },
+      { name: 'Cost Sheet',        done: 'Rev C locked',           act: 'Editing Rev C',              pend: 'Awaiting accruals' },
+      { name: 'Contingency & MR',  done: 'Reserves reconciled',    act: 'Drawing CN-014',             pend: 'Awaiting cost sheet' },
+      { name: 'Forecast Engine',   done: 'Rev 4 run complete',     act: 'Running forecast',           pend: 'Ready to run' },
+      { name: 'Forecast Approval', done: 'Approved',               act: 'Awaiting Director sign-off', pend: 'Awaiting forecast run' },
+    ];
+
+    const rowBase = "width:100%; text-align:left; display:grid; grid-template-columns:24px 1fr; gap:10px; align-items:center; padding:7px 8px; border-radius:8px; color:inherit; cursor:pointer;";
+    const badgeBase = "width:24px; height:24px; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;";
+
+    const steps = defs.map((d, i) => {
+      const n = i + 1;
+      const isActive = n === stage;
+      const isDone = n < stage;
+      const isGate = n === 5; // Forecast Approval gate styling while pending
+      if (isActive) {
+        return {
+          name: d.name, sub: d.act, badgeText: String(n),
+          rowStyle: rowBase + " border:1px solid color-mix(in srgb, var(--ac,#2d5bd7) 34%, transparent); background:color-mix(in srgb, var(--ac,#2d5bd7) 16%, transparent);",
+          badgeStyle: badgeBase + " background:var(--ac,#2d5bd7); color:#fff;",
+          nameStyle: "font-size:13px; font-weight:600; color:#fff;",
+          subStyle: "font-size:11px; color:color-mix(in srgb, var(--ac,#2d5bd7) 45%, #ffffff);",
+          hover: "background:color-mix(in srgb, var(--ac,#2d5bd7) 24%, transparent);",
+        };
+      }
+      if (isDone) {
+        return {
+          name: d.name, sub: d.done, badgeText: '✓',
+          rowStyle: rowBase + " border:1px solid transparent; background:transparent;",
+          badgeStyle: badgeBase + " background:rgba(55,200,113,.18); color:#5fd98f;",
+          nameStyle: "font-size:13px; color:#cfcfc9;",
+          subStyle: "font-size:11px; color:#5f9d72;",
+          hover: "background:rgba(255,255,255,.06);",
+        };
+      }
+      // pending
+      return {
+        name: d.name, sub: d.pend, badgeText: isGate ? '!' : String(n),
+        rowStyle: rowBase + " border:1px solid transparent; background:transparent;",
+        badgeStyle: badgeBase + (isGate
+          ? " background:rgba(180,105,14,.2); color:#e0a24e;"
+          : " background:rgba(255,255,255,.07); color:#9b9b95; border:1px solid rgba(255,255,255,.14);"),
+        nameStyle: "font-size:13px; color:#cfcfc9;",
+        subStyle: isGate ? "font-size:11px; color:#c9913f;" : "font-size:11px; color:#73736d;",
+        hover: "background:rgba(255,255,255,.06);",
+      };
+    });
+
+    const idle = 'text-align:left; width:100%; padding:8px 10px; border:1px solid transparent; border-radius:8px; background:transparent; color:#c2c2bc; font-size:13px; cursor:pointer;';
+    const on = 'text-align:left; width:100%; padding:8px 10px; border:1px solid color-mix(in srgb, var(--ac,#2d5bd7) 34%, transparent); border-radius:8px; background:color-mix(in srgb, var(--ac,#2d5bd7) 18%, transparent); color:#fff; font-weight:600; font-size:13px; cursor:pointer;';
+    const sty = (k) => (active === k ? on : idle);
+
+    return { pct, steps, csStyle: sty('costsheet'), crStyle: sty('changes'), feStyle: sty('forecast'), pcStyle: sty('portfolio') };
+  }
+}
+</script>
+</body>
+</html>

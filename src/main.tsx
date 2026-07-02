@@ -4,7 +4,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import App from './App'
 import { ProjectStoreProvider } from './store/projectStore'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import './design-tokens.css'
 import './styles.css'
+import './design-overrides.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

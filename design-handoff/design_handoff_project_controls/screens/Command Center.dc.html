@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f4f1;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#46464d;border-radius:6px;}
+  .pc-canvas ::-webkit-scrollbar-thumb{background:#d8d4cc;}
+  @keyframes pcpulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.85);}}
+</style>
+</helmet>
+
+<div style="--ac:{{ac}}; --side:{{side}}; --gap:{{gap}}; --pad:{{cardPad}}; display:grid; grid-template-columns:288px 1fr; min-height:100vh; background:#f5f4f1; color:#1c1b18; font-family:'IBM Plex Sans',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.55;">
+
+  <dc-import name="Sidebar" active="dashboard" stage="3" hint-size="288px,100%"></dc-import>
+
+  <!-- ─── WORKSPACE ───────────────────────────────────── -->
+  <section class="pc-canvas" style="min-width:0; padding:26px 32px 40px; display:flex; flex-direction:column; gap:var(--gap,20px);">
+
+    <!-- topbar -->
+    <header style="display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Marlin LNG · Train 2 Expansion · CCE Rev 4 — Sanctioned</div>
+        <h1 style="margin:6px 0 0; font-size:27px; font-weight:700; letter-spacing:-.025em; line-height:1.05;">Command Center</h1>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button type="button" style="display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">Search <kbd style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:2px 5px; border-radius:4px; background:#f0eee9; border:1px solid #ddd9d1;">⌘K</kbd></button>
+        <div style="position:relative; display:flex; align-items:center;">
+          <select style="appearance:none; -webkit-appearance:none; padding:8px 30px 8px 12px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#1c1b18; font-family:inherit; font-size:13px; font-weight:500; cursor:pointer;">
+            <option>Marlin LNG · Train 2</option>
+            <option>Marlin LNG · Train 1</option>
+            <option>Bonga SW Tie-back</option>
+          </select>
+          <span style="position:absolute; right:11px; pointer-events:none; color:#97938b; font-size:11px;">▾</span>
+        </div>
+        <button type="button" style="padding:9px 15px; border:1px solid transparent; border-radius:8px; background:var(--ac,#2d5bd7); color:#fff; font-size:13px; font-weight:600; cursor:pointer;" style-hover="filter:brightness(.92);">Open close workspace</button>
+        <button type="button" style="padding:9px 12px; border:1px solid #ddd9d1; border-radius:8px; background:#fff; color:#4a4842; font-size:13px; font-weight:500; cursor:pointer;" style-hover="border-color:#c2bdb2;">More ▾</button>
+      </div>
+    </header>
+
+    <!-- period banner -->
+    <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; padding:14px 18px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+      <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+        <span style="width:9px; height:9px; flex:none; border-radius:50%; background:{{statusDot}};"></span>
+        <div style="line-height:1.3;">
+          <div style="font-weight:600; font-size:14.5px;">June 2026 monthly close</div>
+          <div style="font-size:12.5px; color:#6b6862;">9 days to forecast cutoff · 2 of 5 steps complete</div>
+        </div>
+      </div>
+      <div style="flex:1; min-width:160px; display:flex; align-items:center; gap:12px;">
+        <span style="flex:1; height:6px; border-radius:99px; background:#ece9e3; overflow:hidden;"><span style="display:block; height:100%; width:45%; background:var(--ac,#2d5bd7); border-radius:99px;"></span></span>
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:#1c1b18;">45%</span>
+      </div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:99px; font-size:12.5px; font-weight:600; background:{{statusBg}}; color:{{statusColor}};">{{statusLabel}}</span>
+    </div>
+
+    <!-- KPI grid -->
+    <div style="display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;">
+      <!-- EAC -->
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Forecast at completion</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 2px;">$898.4M</div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:#6b6862;"><span style="font-weight:600; color:#c0392b;">VAC −$56.4M</span> vs BAC $842.0M</div>
+      </article>
+      <!-- CPI -->
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Cost performance · CPI</span>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin:8px 0 2px;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; color:#b4690e;">0.956</span>
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:84px; height:26px;"><polyline points="0,6.2 14.3,7.4 28.6,9.8 42.9,11 57.1,12.2 71.4,13.4 85.7,14.6 100,15.8" fill="none" stroke="#b4690e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+        <div style="font-size:12.5px; color:#6b6862;">EV $476M / AC $498M</div>
+      </article>
+      <!-- SPI -->
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Schedule performance · SPI</span>
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin:8px 0 2px;">
+          <span style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; color:#c0392b;">0.913</span>
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:84px; height:26px;"><polyline points="0,5.5 14.3,8.4 28.6,11.3 42.9,12.8 57.1,15.7 71.4,17.2 85.7,18.7 100,20.1" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+        </div>
+        <div style="font-size:12.5px; color:#6b6862;">Earned 50.2% vs plan 55.0%</div>
+      </article>
+      <!-- Contingency -->
+      <article style="padding:18px 20px; border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Contingency remaining</span>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:29px; font-weight:600; letter-spacing:-.02em; margin:8px 0 6px;">$23.6M</div>
+        <span style="display:block; height:6px; border-radius:99px; background:#ece9e3; overflow:hidden; margin-bottom:6px;"><span style="display:block; height:100%; width:56%; background:#1f7a4d; border-radius:99px;"></span></span>
+        <div style="font-size:12.5px; color:#6b6862;">$18.4M drawn of $42.0M reserve</div>
+      </article>
+    </div>
+
+    <!-- main two-column -->
+    <div style="display:grid; grid-template-columns:1.55fr 1fr; gap:var(--gap,20px); align-items:start;">
+
+      <!-- LEFT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- EVM S-curve -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px;">
+            <div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Earned value · cumulative %</span>
+              <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Cost &amp; schedule S-curve</h3>
+            </div>
+            <div style="display:flex; gap:16px; flex-wrap:wrap;">
+              <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#6b6862; font-weight:500;"><span style="width:14px; height:3px; border-radius:2px; background:#b3ada1;"></span>Planned</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#6b6862; font-weight:500;"><span style="width:14px; height:3px; border-radius:2px; background:var(--ac,#2d5bd7);"></span>Earned</span>
+              <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#6b6862; font-weight:500;"><span style="width:14px; height:0; border-top:2px dashed #97938b;"></span>Data date</span>
+            </div>
+          </div>
+
+          <svg viewBox="0 0 600 200" style="width:100%; height:auto; display:block;">
+            <line x1="0" y1="20" x2="600" y2="20" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="62.5" x2="600" y2="62.5" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="105" x2="600" y2="105" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="147.5" x2="600" y2="147.5" stroke="#f0eee9" stroke-width="1"></line>
+            <line x1="0" y1="190" x2="600" y2="190" stroke="#e7e4dd" stroke-width="1"></line>
+            <line x1="272.7" y1="14" x2="272.7" y2="192" stroke="#97938b" stroke-width="1.2" stroke-dasharray="4 4"></line>
+            <polyline points="0,186.6 54.5,179.8 109,166.2 163.6,145.8 218.2,122 272.7,96.5 327.3,74.4 381.8,55.7 436.4,42.1 490.9,31.9 545.5,25.1 600,20" fill="none" stroke="#b3ada1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <polyline points="0,186.6 54.5,181.5 109,169.6 163.6,150.9 218.2,127.1 272.7,105" fill="none" stroke="var(--ac,#2d5bd7)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <circle cx="272.7" cy="105" r="4.5" fill="var(--ac,#2d5bd7)" stroke="#fff" stroke-width="2"></circle>
+          </svg>
+          <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#aaa49a; margin-top:6px; padding:0 2px;">
+            <span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid #f0eee9;">
+            <div><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">BCWS · planned</div><div style="font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:600; margin-top:4px;">$521.0M</div></div>
+            <div><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">BCWP · earned</div><div style="font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:600; margin-top:4px; color:var(--ac,#2d5bd7);">$476.0M</div></div>
+            <div><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#97938b;">ACWP · actual</div><div style="font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:600; margin-top:4px;">$498.0M</div></div>
+          </div>
+        </section>
+
+        <!-- close tracker -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px;">
+            <div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Monthly control cycle</span>
+              <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Period close sequence</h3>
+            </div>
+            <button type="button" style="padding:8px 14px; border:1px solid var(--ac,#2d5bd7); border-radius:8px; background:#fff; color:var(--ac,#2d5bd7); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap;" style-hover="background:#f3f5fe;">Resume close →</button>
+          </div>
+
+          <div style="display:flex; flex-direction:column;">
+            <!-- step 1 -->
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:#1f7a4d; color:#fff;">✓</span><span style="flex:1; width:2px; background:#1f7a4d;"></span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1; padding-bottom:16px;"><div style="font-size:13.5px; font-weight:600;">Accruals</div><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:#e3f3ea; color:#1f7a4d;">Posted</span></div>
+            </div>
+            <!-- step 2 -->
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:#1f7a4d; color:#fff;">✓</span><span style="flex:1; width:2px; background:#d8d4cc;"></span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1; padding-bottom:16px;"><div style="font-size:13.5px; font-weight:600;">Cost Sheet</div><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:#e3f3ea; color:#1f7a4d;">Rev C locked</span></div>
+            </div>
+            <!-- step 3 -->
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:var(--ac,#2d5bd7); color:#fff;">3</span><span style="flex:1; width:2px; background:#d8d4cc;"></span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1; padding-bottom:16px;"><div style="font-size:13.5px; font-weight:600; color:var(--ac,#2d5bd7);">Contingency &amp; MR</div><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:#eef2fd; color:var(--ac,#2d5bd7);">In progress</span></div>
+            </div>
+            <!-- step 4 -->
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:#fff; border:2px solid #d8d4cc; color:#97938b;">4</span><span style="flex:1; width:2px; background:#d8d4cc;"></span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1; padding-bottom:16px;"><div style="font-size:13.5px; font-weight:600; color:#4a4842;">Forecast Engine</div><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:#f0eee9; color:#6b6862;">Ready to run</span></div>
+            </div>
+            <!-- step 5 -->
+            <div style="display:flex; gap:13px; align-items:stretch;">
+              <div style="display:flex; flex-direction:column; align-items:center;"><span style="width:28px; height:28px; flex:none; border-radius:50%; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; background:#fbeede; color:#b4690e;">!</span></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1;"><div style="font-size:13.5px; font-weight:600; color:#4a4842;">Forecast Approval</div><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; background:#fbeede; color:#b4690e;">Blocked</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT -->
+      <div style="display:flex; flex-direction:column; gap:var(--gap,20px); min-width:0;">
+
+        <!-- exceptions -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+            <div>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Needs action</span>
+              <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Exceptions before lock</h3>
+            </div>
+            <span style="display:inline-flex; align-items:center; padding:4px 9px; border-radius:99px; font-size:11.5px; font-weight:600; background:#fae3e0; color:#c0392b;">4 open</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <button type="button" style="display:flex; align-items:center; gap:11px; text-align:left; width:100%; padding:11px 10px; border:0; border-radius:8px; background:transparent; cursor:pointer; border-bottom:1px solid #f0eee9;" style-hover="background:#faf9f6;">
+              <span style="width:7px; height:7px; flex:none; border-radius:50%; background:#c0392b;"></span>
+              <span style="flex:1; min-width:0;"><span style="display:block; font-size:13px; font-weight:600;">3 cost lines exceed 10% variance</span><span style="display:block; font-size:12px; color:#6b6862;">Civil · Mechanical · Piping</span></span>
+              <span style="color:#aaa49a; font-size:13px;">→</span>
+            </button>
+            <button type="button" style="display:flex; align-items:center; gap:11px; text-align:left; width:100%; padding:11px 10px; border:0; border-radius:8px; background:transparent; cursor:pointer; border-bottom:1px solid #f0eee9;" style-hover="background:#faf9f6;">
+              <span style="width:7px; height:7px; flex:none; border-radius:50%; background:#b4690e;"></span>
+              <span style="flex:1; min-width:0;"><span style="display:block; font-size:13px; font-weight:600;">Contingency draw CN-014 awaiting approval</span><span style="display:block; font-size:12px; color:#6b6862;">$4.2M · linked to CO-031</span></span>
+              <span style="color:#aaa49a; font-size:13px;">→</span>
+            </button>
+            <button type="button" style="display:flex; align-items:center; gap:11px; text-align:left; width:100%; padding:11px 10px; border:0; border-radius:8px; background:transparent; cursor:pointer; border-bottom:1px solid #f0eee9;" style-hover="background:#faf9f6;">
+              <span style="width:7px; height:7px; flex:none; border-radius:50%; background:#b4690e;"></span>
+              <span style="flex:1; min-width:0;"><span style="display:block; font-size:13px; font-weight:600;">FX exposure unhedged on PO-2231</span><span style="display:block; font-size:12px; color:#6b6862;">$23.8M · EUR rate drift</span></span>
+              <span style="color:#aaa49a; font-size:13px;">→</span>
+            </button>
+            <button type="button" style="display:flex; align-items:center; gap:11px; text-align:left; width:100%; padding:11px 10px; border:0; border-radius:8px; background:transparent; cursor:pointer;" style-hover="background:#faf9f6;">
+              <span style="width:7px; height:7px; flex:none; border-radius:50%; background:#97938b;"></span>
+              <span style="flex:1; min-width:0;"><span style="display:block; font-size:13px; font-weight:600;">2 forecast rows missing basis note</span><span style="display:block; font-size:12px; color:#6b6862;">Required before sign-off</span></span>
+              <span style="color:#aaa49a; font-size:13px;">→</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- predictive signals -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Predictive signals</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Early warnings</h3>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="padding:12px 14px; border:1px solid #f1d9d5; border-radius:9px; background:#fdf6f5;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span style="font-size:13px; font-weight:600;">CPI eroding on Civil Works</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#c0392b;">82% conf.</span></div>
+              <p style="margin:6px 0 0; font-size:12.5px; color:#6b6862; line-height:1.5;">Trend projects 0.91 by Aug close if burn rate holds.</p>
+            </div>
+            <div style="padding:12px 14px; border:1px solid #e7e4dd; border-radius:9px; background:#faf9f6;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;"><span style="font-size:13px; font-weight:600;">Long-lead compressor slipping</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#b4690e;">74% conf.</span></div>
+              <p style="margin:6px 0 0; font-size:12.5px; color:#6b6862; line-height:1.5;">Forecast on-site 18 days late vs required date.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- activity -->
+        <section style="padding:var(--pad,22px); border:1px solid #e7e4dd; border-radius:10px; background:#fff; box-shadow:0 1px 2px rgba(28,27,24,.05);">
+          <div style="margin-bottom:14px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#97938b;">Audit trail</span>
+            <h3 style="margin:4px 0 0; font-size:16px; font-weight:600; letter-spacing:-.01em;">Recent activity</h3>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <div style="display:flex; gap:12px; padding:0 0 14px; position:relative;">
+              <span style="width:8px; height:8px; flex:none; margin-top:5px; border-radius:50%; background:var(--ac,#2d5bd7);"></span>
+              <div style="border-left:1px solid #e7e4dd; padding:0 0 0 14px; margin-left:-5px;"><div style="font-size:13px;"><strong style="font-weight:600;">You</strong> approved the Accruals package</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">2h ago</div></div>
+            </div>
+            <div style="display:flex; gap:12px; padding:0 0 14px;">
+              <span style="width:8px; height:8px; flex:none; margin-top:5px; border-radius:50%; background:#c4bfb4;"></span>
+              <div style="border-left:1px solid #e7e4dd; padding:0 0 0 14px; margin-left:-5px;"><div style="font-size:13px;"><strong style="font-weight:600;">A. Rahman</strong> submitted Cost Sheet Rev C</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">5h ago</div></div>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <span style="width:8px; height:8px; flex:none; margin-top:5px; border-radius:50%; background:#c4bfb4;"></span>
+              <div style="padding:0 0 0 14px; margin-left:-5px;"><div style="font-size:13px;"><strong style="font-weight:600;">Forecast Engine</strong> run completed</div><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#97938b; margin-top:2px;">Yesterday · 17:42</div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentColor&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Signal Blue&quot;,&quot;Petrol&quot;,&quot;Industrial Amber&quot;,&quot;Navy &amp; Coral&quot;],&quot;default&quot;:&quot;Signal Blue&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Comfortable&quot;,&quot;Compact&quot;],&quot;default&quot;:&quot;Compact&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;scheduleStatus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;On track&quot;,&quot;Behind schedule&quot;,&quot;At risk&quot;],&quot;default&quot;:&quot;Behind schedule&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accentColor ?? 'Signal Blue';
+    const acMap = { 'Signal Blue': '#2d5bd7', 'Petrol': '#0f6e6b', 'Industrial Amber': '#b4690e', 'Navy & Coral': '#ec6a4a' };
+    const sideMap = { 'Signal Blue': '#16161a', 'Petrol': '#112523', 'Industrial Amber': '#1c1814', 'Navy & Coral': '#18253f' };
+    const ac = acMap[accent] || '#2d5bd7';
+    const side = sideMap[accent] || '#16161a';
+    const density = this.props.density ?? 'Comfortable';
+    const gap = density === 'Compact' ? '14px' : '20px';
+    const cardPad = density === 'Compact' ? '16px' : '22px';
+    const status = this.props.scheduleStatus ?? 'Behind schedule';
+    const map = {
+      'On track': { label: 'On track to forecast lock', bg: '#e3f3ea', color: '#1f7a4d', dot: '#1f7a4d' },
+      'Behind schedule': { label: 'Behind schedule · SPI 0.91', bg: '#fbeede', color: '#9a5a0c', dot: '#b4690e' },
+      'At risk': { label: 'At risk · forecast lock slipping', bg: '#fae3e0', color: '#c0392b', dot: '#c0392b' },
+    };
+    const s = map[status] || map['Behind schedule'];
+    return { ac, side, gap, cardPad, statusLabel: s.label, statusBg: s.bg, statusColor: s.color, statusDot: s.dot };
+  }
+}
+</script>
+</body>
+</html>

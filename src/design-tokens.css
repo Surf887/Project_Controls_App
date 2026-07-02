@@ -1,0 +1,102 @@
+/**
+ * Project Controls — IBM Plex design tokens
+ * Accent: set data-accent on <html> — signal-blue | petrol | amber | navy-coral
+ */
+
+:root,
+[data-accent='signal-blue'] {
+  --ac: #2d5bd7;
+  --side: #16161a;
+}
+
+[data-accent='petrol'] {
+  --ac: #0f6e6b;
+  --side: #112523;
+}
+
+[data-accent='amber'] {
+  --ac: #b4690e;
+  --side: #1c1814;
+}
+
+[data-accent='navy-coral'] {
+  --ac: #ec6a4a;
+  --side: #18253f;
+}
+
+:root {
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* Surfaces */
+  --canvas: #f5f4f1;
+  --surface: #fff;
+  --hairline: #f0eee9;
+
+  /* Ink */
+  --ink-primary: #1c1b18;
+  --ink-secondary: #4a4842;
+  --ink-muted: #6b6862;
+  --ink-faint: #97938b;
+
+  /* Borders & elevation */
+  --border: #e7e4dd;
+  --shadow-card: 0 1px 2px rgba(28, 27, 24, 0.05);
+
+  /* Semantic */
+  --positive-fg: #1f7a4d;
+  --positive-bg: #e3f3ea;
+  --warning-fg: #b4690e;
+  --warning-bg: #fbeede;
+  --critical-fg: #c0392b;
+  --critical-bg: #fae3e0;
+  --danger: var(--critical-fg);
+
+  /* Geometry */
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-pill: 99px;
+  --sidebar-width: 288px;
+  --space-card: 22px;
+  --space-card-compact: 16px;
+  --grid-gap: 20px;
+  --grid-gap-compact: 14px;
+  --workspace-pad: 26px 32px 40px;
+
+  /* Density-aware aliases — can be overridden by app shell for Comfortable/Compact toggle */
+  --gap: var(--grid-gap);        /* 20px comfortable default; set to --grid-gap-compact for compact */
+  --pad: var(--space-card);      /* 22px comfortable default; set to --space-card-compact for compact */
+
+  /* KPI card padding — matches handoff 4-up row (18px vertical / 20px horizontal) */
+  --space-kpi-v: 18px;
+  --space-kpi-h: 20px;
+
+  /* Legacy aliases (existing components reference these) */
+  --ink: var(--ink-primary);
+  --muted: var(--ink-muted);
+  --line: var(--border);
+  --panel: var(--surface);
+  --panel-strong: var(--surface);
+  --blue: var(--ac);
+  --blue-dark: color-mix(in srgb, var(--ac) 82%, #000);
+  --accent: var(--ac);
+  --cyan: var(--ac);
+  --green: var(--positive-fg);
+  --amber: var(--warning-fg);
+  --red: var(--critical-fg);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: 0 2px 8px rgba(28, 27, 24, 0.08);
+  --shadow-lg: 0 8px 24px rgba(28, 27, 24, 0.1);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-card);
+  --radius-lg: var(--radius-card);
+
+  color: var(--ink-primary);
+  background: var(--canvas);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}

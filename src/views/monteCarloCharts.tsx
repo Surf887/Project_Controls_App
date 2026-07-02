@@ -31,16 +31,16 @@ export function HistogramChart({ samples, p10, p50, p90 }: MonteCarloResult) {
           const height = (count / maxCount) * (H - PAD.top - PAD.bottom)
           const x = PAD.left + index * barWidth
           const y = H - PAD.bottom - height
-          return <rect key={index} x={x} y={y} width={barWidth - 2} height={height} fill="#1f5eff" opacity={0.75} />
+          return <rect key={index} x={x} y={y} width={barWidth - 2} height={height} style={{ fill: 'var(--ac)', opacity: 0.72 }} />
         })}
         {[p10, p50, p90].map((value, index) => {
           const x = PAD.left + ((value - min) / range) * (W - PAD.left - PAD.right)
-          const colors = ['#64748b', '#0d9469', '#c73636']
+          const cssVars = ['var(--ink-faint)', 'var(--positive-fg)', 'var(--critical-fg)']
           const labels = ['P10', 'P50', 'P90']
           return (
             <g key={labels[index]}>
-              <line x1={x} x2={x} y1={PAD.top} y2={H - PAD.bottom} stroke={colors[index]} strokeDasharray="4 3" />
-              <text x={x} y={PAD.top - 2} fill={colors[index]} fontSize={10} textAnchor="middle">{labels[index]}</text>
+              <line x1={x} x2={x} y1={PAD.top} y2={H - PAD.bottom} style={{ stroke: cssVars[index] }} strokeDasharray="4 3" />
+              <text x={x} y={PAD.top - 2} style={{ fill: cssVars[index] }} fontSize={10} textAnchor="middle">{labels[index]}</text>
             </g>
           )
         })}
@@ -61,11 +61,12 @@ export function TornadoChart({ drivers }: MonteCarloResult) {
         {drivers.map((driver, index) => {
           const width = (Math.abs(driver.impact) / maxImpact) * (W - PAD.left - PAD.right)
           const y = PAD.top + index * (barHeight + 8)
+          const barColor = driver.impact >= 0 ? 'var(--critical-fg)' : 'var(--positive-fg)'
           return (
             <g key={driver.label}>
-              <text x={PAD.left} y={y + 16} fill="#334155" fontSize={11}>{driver.label}</text>
-              <rect x={PAD.left + 140} y={y} width={width} height={barHeight} fill={driver.impact >= 0 ? '#c73636' : '#0d9469'} rx={4} />
-              <text x={PAD.left + 150 + width} y={y + 16} fill="#334155" fontSize={11}>{formatUsdShort(driver.impact)}</text>
+              <text x={PAD.left} y={y + 16} style={{ fill: 'var(--ink-secondary)' }} fontSize={11}>{driver.label}</text>
+              <rect x={PAD.left + 140} y={y} width={width} height={barHeight} style={{ fill: barColor }} rx={4} />
+              <text x={PAD.left + 150 + width} y={y + 16} style={{ fill: 'var(--ink-secondary)' }} fontSize={11}>{formatUsdShort(driver.impact)}</text>
             </g>
           )
         })}
@@ -87,13 +88,13 @@ export function CdfChart({ samples, p10, p50, p90 }: MonteCarloResult) {
     <div className="chart-wrap">
       <span className="eyebrow">Cumulative distribution (CDF)</span>
       <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" aria-label="CDF curve">
-        <path d={path} fill="none" stroke="#1f5eff" strokeWidth={2.5} />
+        <path d={path} fill="none" style={{ stroke: 'var(--ac)' }} strokeWidth={2.5} />
         {[p10, p50, p90].map((value, index) => {
           const x = PAD.left + ((value - sorted[0]) / (sorted[sorted.length - 1] - sorted[0])) * (W - PAD.left - PAD.right)
           const labels = ['P10', 'P50', 'P90']
           return (
             <g key={labels[index]}>
-              <line x1={x} x2={x} y1={PAD.top} y2={H - PAD.bottom} stroke="#94a3b8" strokeDasharray="3 3" />
+              <line x1={x} x2={x} y1={PAD.top} y2={H - PAD.bottom} style={{ stroke: 'var(--ink-faint)' }} strokeDasharray="3 3" />
             </g>
           )
         })}

@@ -40,8 +40,13 @@ export function BasisOfEstimateView() {
       <section className="boe-grid">
         {sections.map((section) => (
           <article className="panel boe-section" key={section.key}>
-            <span className="eyebrow">{section.label}</span>
-            <small>{section.hint}</small>
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Basis of estimate</span>
+                <h3>{section.label}</h3>
+              </div>
+            </div>
+            <p className="muted">{section.hint}</p>
             <textarea
               className="boe-textarea"
               onChange={(event) => updateField(section.key, event.target.value)}

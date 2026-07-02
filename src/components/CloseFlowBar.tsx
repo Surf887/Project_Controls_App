@@ -19,9 +19,10 @@ export function CloseFlowBar() {
           ← Monthly close
         </Link>
         <div className="close-flow-status">
-          <span className="close-flow-step-label">
-            Step {close.currentStep.order} of {close.totalSteps} · {close.currentStep.title}
+          <span className="close-flow-step-eyebrow">
+            Step {close.currentStep.order} of {close.totalSteps}
           </span>
+          <span className="close-flow-step-label">{close.currentStep.title}</span>
           <div className="close-flow-progress-track" aria-hidden>
             <div className="close-flow-progress-fill" style={{ width: `${close.percentComplete}%` }} />
           </div>

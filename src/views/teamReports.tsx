@@ -17,24 +17,30 @@ export function TeamReportsView() {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Team reports</span>
+          <h1>Team report packs</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Team reports</span>
+            <span className="eyebrow">Report templates</span>
             <h3>Generate CSV packs for team consumption</h3>
           </div>
         </div>
-        <div className="workfront-list">
+        <div className="report-list">
           {teamReportTemplates.map((template) => (
-            <article key={template.id} className="workfront-card">
-              <div className="workfront-head">
-                <div>
-                  <strong>{template.name}</strong>
-                  <small>{template.audience}</small>
-                </div>
-                <button type="button" className="btn-primary" onClick={() => generate(template.id)}>Generate CSV</button>
+            <article key={template.id} className="report-card">
+              <div>
+                <span className="eyebrow">{template.audience}</span>
+                <h4>{template.name}</h4>
+                <p>{template.description}</p>
               </div>
-              <p className="muted">{template.description}</p>
+              <div className="report-meta">
+                <button type="button" className="ghost-button" onClick={() => generate(template.id)}>Generate CSV</button>
+              </div>
             </article>
           ))}
         </div>
@@ -84,11 +90,17 @@ export function AuditTrailView() {
 
   return (
     <div className="view-stack">
+      <div className="topbar">
+        <div>
+          <span className="eyebrow">Audit trail</span>
+          <h1>Who changed what and when</h1>
+        </div>
+      </div>
       <section className="panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Audit trail</span>
-            <h3>Who changed forecast, changes, and settings</h3>
+            <span className="eyebrow">Immutable log</span>
+            <h3>Forecast, change, and settings history</h3>
           </div>
         </div>
         <div className="table-wrap">

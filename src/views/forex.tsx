@@ -58,6 +58,12 @@ export function ForexView() {
 
   return (
     <div className="view-stack">
+      {risk.missingRateCurrencies.length > 0 && (
+        <div className="notice-card risk" role="alert">
+          No treasury rate configured for {risk.missingRateCurrencies.join(', ')} — those PO exposures are
+          excluded from USD totals until a rate is added below.
+        </div>
+      )}
       <section className="metric-grid">
         <MetricTile label="PO exposure (USD)" value={formatUsd(exposures.reduce((s, e) => s + e.amountUsd, 0))} detail="Converted at treasury rates" />
         <MetricTile label="Unhedged exposure" value={formatUsd(risk.totalUnhedgedUsd)} detail="Open FX position" tone="watch" />
@@ -184,9 +190,9 @@ export function ForexView() {
                   </td>
                   <td>{exposure.currency}</td>
                   <td>{exposure.amountForeign.toLocaleString()}</td>
-                  <td>{formatUsd(exposure.amountUsd)}</td>
+                  <td>{exposure.rateMissing ? <span className="badge badge-risk">No rate</span> : formatUsd(exposure.amountUsd)}</td>
                   <td>{exposure.hedgedPct}%</td>
-                  <td>{formatUsd(exposure.unhedgedUsd)}</td>
+                  <td>{exposure.rateMissing ? <span className="badge badge-risk">No rate</span> : formatUsd(exposure.unhedgedUsd)}</td>
                   <td>{exposure.hedgeInstrument ?? '—'}</td>
                 </tr>
               ))}

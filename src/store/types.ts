@@ -93,6 +93,8 @@ export interface FxExposure {
   hedgedPct: number
   hedgeInstrument?: string
   unhedgedUsd: number
+  /** True when no treasury rate exists for the currency — USD amounts are unquantified (0). */
+  rateMissing?: boolean
 }
 
 export interface FxSettings {

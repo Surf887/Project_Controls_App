@@ -1,28 +1,50 @@
 import type { CostRow } from '../data/costSheet'
 import type { EvmAccount, EvmResult } from '../data/intelligence'
 import type { ProgressCreditEntry, RuleOfCreditTemplate } from '../store/types'
-import { PERIODS } from '../data/costSheet'
+import { CURRENT_PERIOD_INDEX, PERIODS } from '../data/costSheet'
 import { controlAccountRows } from './costAggregation'
 import { wbsEarnedPercent } from './rulesOfCredit'
 
 export type EvmEacMethod = 'bac_cpi' | 'ac_plus_remaining' | 'engine_most_likely'
+
+/**
+ * Resolve the reporting period label (e.g. `settings.reportingPeriod.period`)
+ * to an index into PERIODS. Unknown/absent labels fall back to the calendar
+ * default so a renamed period cannot silently zero out PV.
+ */
+export function resolvePeriodIndex(currentPeriod?: string): number {
+  if (currentPeriod) {
+    const index = PERIODS.indexOf(currentPeriod)
+    if (index >= 0) {
+      return index
+    }
+  }
+  return CURRENT_PERIOD_INDEX
+}
 
 export function costSheetToEvmAccounts(
   rows: CostRow[],
   options?: {
     templates?: RuleOfCreditTemplate[]
     progressCredits?: ProgressCreditEntry[]
+    /** Reporting period label driving planned value (PV); defaults to the seed calendar's current period. */
+    currentPeriod?: string
   },
 ): EvmAccount[] {
   const templates = options?.templates ?? []
   const progressCredits = options?.progressCredits ?? []
+  // Planned progress tracks the open reporting period instead of a hardcoded
+  // month so PV/SPI stay correct when the period rolls forward.
+  const periodIndex = resolvePeriodIndex(options?.currentPeriod)
+  const plannedProgress = (periodIndex + 1) / PERIODS.length
 
   return controlAccountRows(rows).map((row) => {
       const bac = row.originalBudget + row.approvedChanges
       const ac = row.actualsToDate
-      const plannedProgress = PERIODS.filter((_, index) => index <= 5).length / PERIODS.length
 
       const rocEarned = wbsEarnedPercent(row.wbs, templates, progressCredits)
+      // Without rules-of-credit data, fall back to a cost-ratio proxy capped at
+      // 95% so a control account never reports complete on spend alone.
       const earnedRatio =
         rocEarned != null
           ? rocEarned / 100

@@ -215,6 +215,7 @@ export function syncActivePortfolioProject(state: ProjectState): PortfolioProjec
   const evm = costSheetToEvmAccounts(state.costSheetRows, {
     templates: state.ruleOfCreditTemplates,
     progressCredits: state.progressCredits,
+    currentPeriod: state.settings.reportingPeriod.period,
   }).map((account) =>
     computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
   )
@@ -310,7 +311,9 @@ export function generateTeamReportCsv(
       break
     case 'evm_snapshot':
       rows = [['WBS', 'BAC', 'EV', 'AC', 'CPI', 'SPI', 'EAC']]
-      costSheetToEvmAccounts(state.costSheetRows).forEach((account) => {
+      costSheetToEvmAccounts(state.costSheetRows, {
+        currentPeriod: state.settings.reportingPeriod.period,
+      }).forEach((account) => {
         const result = computeEvmWithMethod(account, state.settings.evmEacMethod)
         rows.push([
           account.wbs,

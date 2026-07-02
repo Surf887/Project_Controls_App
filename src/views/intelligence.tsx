@@ -273,6 +273,7 @@ export function ControlsIntelligence() {
       costSheetToEvmAccounts(state.costSheetRows, {
         templates: state.ruleOfCreditTemplates,
         progressCredits: state.progressCredits,
+        currentPeriod: state.settings.reportingPeriod.period,
       }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
       ),
@@ -282,6 +283,7 @@ export function ControlsIntelligence() {
       state.progressCredits,
       state.ruleOfCreditTemplates,
       state.settings.evmEacMethod,
+      state.settings.reportingPeriod.period,
     ],
   )
   const scurve = useMemo(() => buildScurveFromCostSheet(state.costSheetRows), [state.costSheetRows])
@@ -402,10 +404,12 @@ export function PredictiveIntelligence() {
   const { state } = useProjectStore()
   const results = useMemo(
     () =>
-      costSheetToEvmAccounts(state.costSheetRows).map((account) =>
+      costSheetToEvmAccounts(state.costSheetRows, {
+        currentPeriod: state.settings.reportingPeriod.period,
+      }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod),
       ),
-    [state.costSheetRows, state.settings.evmEacMethod],
+    [state.costSheetRows, state.settings.evmEacMethod, state.settings.reportingPeriod.period],
   )
   const signals = buildPredictiveSignals(results)
 

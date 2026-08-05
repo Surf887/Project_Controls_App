@@ -28,7 +28,7 @@ This pass also closes two gaps found after the original audit: production images
 - ✅ Graceful shutdown (drain + pool close + timeout, SIGTERM/SIGINT).
 - ✅ Route-level code splitting (main chunk ~600 kB → ~308 kB).
 - ✅ Connector OAuth tokens encrypted at rest (AES-256-GCM, `CREDENTIALS_KEY`).
-- ✅ CI: production dependency audit is blocking; production Docker build and e2e jobs are enabled.
+- ✅ CI: production dependency audit is blocking; Docker, e2e, and Postgres migration/concurrency jobs are enabled.
 - ✅ Secrets: compose uses env vars; Postgres not host-exposed; `server/data/*` and `.env` gitignored.
 - ✅ Path-traversal guard on `projectId`; production admin-password length check.
 - ✅ Fixed a fresh-checkout seeding bug (migration pre-created an empty store, blocking seed) that would have hung server tests/CI on a clean clone.

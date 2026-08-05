@@ -27,6 +27,18 @@ import { publicErrorMessage, sendRouteError } from '../utils/routeError.js'
 
 export const projectsRouter = Router()
 
+export function parseIfMatchVersion(value: string | string[] | undefined): number | undefined {
+  if (value == null) return undefined
+  if (Array.isArray(value) || !/^[1-9]\d*$/.test(value.trim())) {
+    throw new Error('If-Match must be a positive integer state version')
+  }
+  const version = Number(value)
+  if (!Number.isSafeInteger(version)) {
+    throw new Error('If-Match must be a positive integer state version')
+  }
+  return version
+}
+
 projectsRouter.get('/', requireRole('viewer'), async (req, res) => {
   let projects = await listProjects()
   const user = req.user!
@@ -80,7 +92,13 @@ projectsRouter.post('/:projectId/actions', guardProjectAction, async (req, res) 
       return
     }
     const action = parsed.data as ProjectAction
-    const expectedVersion = req.headers['if-match'] ? Number(req.headers['if-match']) : undefined
+    let expectedVersion: number | undefined
+    try {
+      expectedVersion = parseIfMatchVersion(req.headers['if-match'])
+    } catch (error) {
+      res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid If-Match header' })
+      return
+    }
     const result = await applyAction(param(req.params.projectId), action, req.user ?? undefined, expectedVersion)
     res.setHeader('X-State-Version', String(result.version))
     res.json({ state: result.state, version: result.version })

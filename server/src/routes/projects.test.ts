@@ -46,6 +46,18 @@ describe('API routes', () => {
     expect(res.status).toBe(400)
   })
 
+  it('POST actions rejects a malformed If-Match version', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
+    const projectId = active.body.state.meta.id as string
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'viewer')
+      .set('If-Match', 'not-a-version')
+      .send({ type: 'SET_SELECTED_VALUE', payload: active.body.state.selectedValueId })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/positive integer/)
+  })
+
   it('GET compute forecast uses control-account totals', async () => {
     const active = await request(app).get('/api/projects/active')
     const projectId = active.body.state.meta.id as string

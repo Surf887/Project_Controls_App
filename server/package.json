@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "build": "node scripts/build.mjs && tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:postgres": "vitest run src/db/postgresProjectStore.integration.test.ts",
     "smoke": "tsx src/smoke.ts"
   },
   "dependencies": {

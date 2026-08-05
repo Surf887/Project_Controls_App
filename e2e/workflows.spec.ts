@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { sampleP6Csv } from '../src/utils/p6CsvImport'
 
+// These workflows intentionally mutate the same seeded project through the
+// optimistic-concurrency API, so run them serially instead of manufacturing
+// conflicts between otherwise independent browser contexts.
+test.describe.configure({ mode: 'serial' })
+
 test.describe('Monthly close workspace', () => {
   test('loads guided close hub with continue CTA', async ({ page }) => {
     await page.goto('/close')

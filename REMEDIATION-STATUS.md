@@ -61,4 +61,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 70 client/domain tests pass; server bundle + typecheck pass; 65 server tests pass; and all 8 Playwright workflows pass with demo auth. The production dependency gate has no unacknowledged high/critical findings. CI also builds the production Docker image (the local cloud runner does not provide a container daemon).
+After this pass: client typecheck + production build pass; 70 client/domain tests pass; server bundle + typecheck pass; 66 server tests pass locally; and all 8 Playwright workflows pass with demo auth. CI additionally executes two Postgres migration/concurrency tests and builds the production Docker image (the local cloud runner provides neither service). The production dependency gate has no unacknowledged high/critical findings.

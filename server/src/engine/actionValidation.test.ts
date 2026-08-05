@@ -21,4 +21,33 @@ describe('validateProjectAction', () => {
       }),
     ).toThrow(ActionValidationError)
   })
+
+  it('blocks extraction and mapping edits after the period is locked', () => {
+    const state = createSeedState()
+    state.settings.reportingPeriod.locked = true
+
+    expect(() =>
+      validateProjectAction(state, {
+        type: 'SET_VALUES',
+        payload: state.values,
+      }),
+    ).toThrow(/reporting period is locked/)
+  })
+
+  it('blocks approval when a financial extraction has no target control account', () => {
+    const state = createSeedState()
+    const values = state.values.map((value) =>
+      value.id === 'val-003'
+        ? ({
+            ...value,
+            category: 'forecast',
+            wbs: 'DOES-NOT-EXIST',
+            reviewStatus: 'approved',
+            approvalStatus: 'approved',
+          } as ExtractedValue)
+        : value,
+    )
+
+    expect(() => validateProjectAction(state, { type: 'SET_VALUES', payload: values })).toThrow(/does not map/)
+  })
 })

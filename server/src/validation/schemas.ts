@@ -1,12 +1,38 @@
 import { z } from 'zod'
 import { ACTION_MIN_ROLE, isBlockedClientAction } from '../auth/actionPolicy.js'
 
+const sccsAssignmentSchema = z.object({
+  pbs: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  sab: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  cor: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  composite: z.string().regex(/^[A-Z0-9]{1,8}\.[A-Z0-9]{1,8}\.[A-Z0-9]{1,8}$/),
+  source: z.enum(['mapped', 'manual', 'import']),
+})
+
 const costRowSchema = z
   .object({
-    id: z.string(),
-    wbs: z.string(),
-    description: z.string(),
+    id: z.string().min(1).max(128),
+    wbs: z.string().min(1).max(128),
+    cbs: z.string().max(128),
+    description: z.string().min(1).max(1000),
     parentId: z.string().nullable(),
+    sccs: sccsAssignmentSchema.optional(),
+  })
+  .passthrough()
+
+const extractedValueSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    reportId: z.string().min(1).max(128),
+    field: z.string().min(1).max(500),
+    category: z.enum(['cost', 'progress', 'change', 'procurement', 'forecast']),
+    normalizedValue: z.number().finite(),
+    unit: z.string().min(1).max(32),
+    wbs: z.string().min(1).max(128),
+    cbs: z.string().min(1).max(128),
+    reviewStatus: z.enum(['pending_review', 'needs_correction', 'approved']),
+    approvalStatus: z.enum(['unapproved', 'approved', 'rejected']),
+    sccs: sccsAssignmentSchema.optional(),
   })
   .passthrough()
 
@@ -111,7 +137,7 @@ const actionSchemas = [
     payload: z.object({ drawId: z.string().min(1), actor: z.string().min(1) }),
   }),
   z.object({ type: z.literal('SET_REPORTS'), payload: z.array(z.record(z.string(), z.unknown())) }),
-  z.object({ type: z.literal('SET_VALUES'), payload: z.array(z.record(z.string(), z.unknown())) }),
+  z.object({ type: z.literal('SET_VALUES'), payload: z.array(extractedValueSchema).max(10_000) }),
   z.object({ type: z.literal('SET_SELECTED_VALUE'), payload: z.string().min(1) }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),
 ] as const satisfies ReadonlyArray<z.ZodTypeAny>

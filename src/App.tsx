@@ -9,8 +9,10 @@ import {
   type ReportDocument,
   type ReviewStatus,
 } from './data/projectData'
+import type { CostRow } from './data/costSheet'
 import { useProjectStore } from './store/projectStore'
 import {
+  approvalBlockReason,
   buildCsvImport,
   canApproveValue,
   clearStoredState,
@@ -18,6 +20,7 @@ import {
 } from './utils/workflow'
 import { resetExtractionForCorrection } from './engine/extractionIntegrity'
 import { resolveSccsForExtraction } from './engine/sccs'
+import { applyManualExtractionMapping } from './engine/manualMapping'
 // SCurveChart stays eager: it renders inside the always-mounted Dashboard hero,
 // so lazy-loading it would just add a flash with no real chunk-size benefit.
 import { SCurveChart } from './views/charts'
@@ -32,6 +35,8 @@ import { isCloseFlowRoute } from './data/monthlyCloseSteps'
 import { CloseFlowBar } from './components/CloseFlowBar'
 import { signIn } from './api/client'
 import { LoginScreen } from './views/login'
+import { ExtractionMappingEditor, type ExtractionMappingDraft } from './components/ExtractionMappingEditor'
+import { useProjectRole } from './hooks/useProjectRole'
 
 // Route-level code splitting: each routed view is loaded on demand so the
 // initial bundle stays small. Named exports are adapted to the default export
@@ -212,6 +217,7 @@ function App() {
     authConfig,
     projects,
   } = useProjectStore()
+  const { canEdit } = useProjectRole()
   const location = useLocation()
   const navigate = useNavigate()
   const commandPalette = useCommandPalette()
@@ -329,6 +335,16 @@ function App() {
             }
           : value,
       ),
+    )
+  }
+
+  function updateExtractionMapping(id: string, draft: ExtractionMappingDraft) {
+    setValues((current) =>
+      applyManualExtractionMapping(current, {
+        valueId: id,
+        ...draft,
+        actor: currentUser?.name ?? 'You',
+      }).values,
     )
   }
 
@@ -685,10 +701,14 @@ function App() {
 
         {activeView === 'review' && (
           <ReviewDesk
+            canEdit={canEdit}
+            costSheetRows={state.costSheetRows}
+            periodLocked={state.settings.reportingPeriod.locked}
             selectedValueId={selectedValue?.id ?? ''}
             values={values}
             onApprove={(id) => updateReviewState(id, 'approved', 'approved')}
             onBulkApprove={approveCleanValues}
+            onChangeMapping={updateExtractionMapping}
             onChangeValue={updateNormalizedValue}
             onRecordCorrection={recordCorrection}
             onReject={(id) => updateReviewState(id, 'needs_correction', 'rejected')}
@@ -858,6 +878,17 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
         </div>
       </section>
 
+      <section className="panel">
+        <ExtractionMappingEditor
+          costSheetRows={costSheetRows}
+          disabled={editingDisabled}
+          disabledReason={editingDisabledReason}
+          matchingCount={matchingMappingCount}
+          onSave={(draft) => onChangeMapping(selectedValue.id, draft)}
+          value={selectedValue}
+        />
+      </section>
+
       <section className="two-column">
         <div className="panel">
           <div className="panel-header">
@@ -1010,20 +1041,28 @@ function ReportCard({ report }: { report: ReportDocument }) {
 }
 
 interface ReviewDeskProps {
+  canEdit: boolean
+  costSheetRows: CostRow[]
+  periodLocked: boolean
   selectedValueId: string
   values: ExtractedValue[]
   onApprove: (id: string) => void
   onBulkApprove: (ids: string[]) => void
+  onChangeMapping: (id: string, draft: ExtractionMappingDraft) => void
   onChangeValue: (id: string, nextValue: string) => void
   onRecordCorrection: (id: string) => void
   onReject: (id: string) => void
   onSelect: (id: string) => void
 }
 function ReviewDesk({
+  canEdit,
+  costSheetRows,
+  periodLocked,
   selectedValueId,
   values,
   onApprove,
   onBulkApprove,
+  onChangeMapping,
   onChangeValue,
   onRecordCorrection,
   onReject,
@@ -1033,6 +1072,20 @@ function ReviewDesk({
   const [categoryFilter, setCategoryFilter] = useState<ExtractedValue['category'] | 'all'>('all')
   const [reviewFilter, setReviewFilter] = useState<ReviewStatus | 'all'>('all')
   const selectedValue = values.find((value) => value.id === selectedValueId) ?? values[0]
+  const editingDisabled = !canEdit || periodLocked
+  const editingDisabledReason = !canEdit
+    ? 'Your current role is read-only.'
+    : periodLocked
+      ? 'The reporting period is locked. Unlock it before changing mappings.'
+      : undefined
+  const matchingMappingCount = selectedValue
+    ? values.filter(
+        (value) =>
+          value.reportId === selectedValue.reportId &&
+          value.wbs === selectedValue.wbs &&
+          value.cbs === selectedValue.cbs,
+      ).length
+    : 0
   const categories = Array.from(new Set(values.map((value) => value.category)))
   const filteredValues = useMemo(
     () =>
@@ -1082,7 +1135,7 @@ function ReviewDesk({
             <span className="badge badge-watch">{filteredValues.length} visible</span>
             <button
               className="ghost-button"
-              disabled={cleanApprovalIds.length === 0}
+              disabled={editingDisabled || cleanApprovalIds.length === 0}
               onClick={() => onBulkApprove(cleanApprovalIds)}
               type="button"
             >
@@ -1154,7 +1207,8 @@ function ReviewDesk({
                 </tr>
               ) : (
                 filteredValues.map((value) => {
-                  const approvalBlocked = !canApproveValue(value)
+                  const approvalReason = approvalBlockReason(value)
+                  const approvalBlocked = editingDisabled || approvalReason !== null
 
                   return (
                     <tr className={selectedValueId === value.id ? 'selected-row' : ''} key={value.id}>
@@ -1168,6 +1222,7 @@ function ReviewDesk({
                         <input
                           aria-label={`Normalized value for ${value.field}`}
                           className="value-input"
+                          disabled={editingDisabled}
                           onChange={(event) => onChangeValue(value.id, event.target.value)}
                           type="number"
                           value={value.normalizedValue}
@@ -1209,12 +1264,17 @@ function ReviewDesk({
                             className="small-button"
                             disabled={approvalBlocked}
                             onClick={() => onApprove(value.id)}
-                            title={approvalBlocked ? 'Resolve critical validation issues before approval.' : 'Approve value'}
+                            title={editingDisabled ? editingDisabledReason : approvalReason ?? 'Approve value'}
                             type="button"
                           >
                             Approve
                           </button>
-                          <button className="small-button secondary" onClick={() => onReject(value.id)} type="button">
+                          <button
+                            className="small-button secondary"
+                            disabled={editingDisabled}
+                            onClick={() => onReject(value.id)}
+                            type="button"
+                          >
                             Flag
                           </button>
                         </div>
@@ -1250,7 +1310,12 @@ function ReviewDesk({
               <dd>{selectedValue.reviewer}</dd>
             </div>
           </dl>
-          <button className="ghost-button" onClick={() => onRecordCorrection(selectedValue.id)} type="button">
+          <button
+            className="ghost-button"
+            disabled={editingDisabled}
+            onClick={() => onRecordCorrection(selectedValue.id)}
+            type="button"
+          >
             Record correction note
           </button>
         </div>
@@ -1260,7 +1325,7 @@ function ReviewDesk({
           <h3>What blocks approval</h3>
           {!canApproveValue(selectedValue) && (
             <div className="notice-card risk">
-              Resolve critical validation issues before this value can be approved.
+              {approvalBlockReason(selectedValue)}
             </div>
           )}
           {selectedValue.validationIssues.length === 0 ? (
@@ -1282,8 +1347,8 @@ function ReviewDesk({
 }
 
 function Validation({ values, onSelect }: { values: ExtractedValue[]; onSelect: (id: string) => void }) {
-  const mappedValues = values.filter((value) => value.wbs !== 'N/A').length
-  const mappingCoverage = Math.round((mappedValues / values.length) * 100)
+  const mappedValues = values.filter((value) => !/UNMAPPED/i.test(`${value.wbs} ${value.cbs}`)).length
+  const mappingCoverage = values.length === 0 ? 0 : Math.round((mappedValues / values.length) * 100)
 
   return (
     <div className="view-stack">

@@ -494,6 +494,9 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     case 'SET_REPORTS':
       return { ...state, reports: action.payload }
     case 'SET_VALUES':
+      if (isPeriodLocked(state)) {
+        return state
+      }
       return applyValuesUpdate(state, action.payload, 'Cost Controller')
     case 'SET_SELECTED_VALUE':
       return { ...state, selectedValueId: action.payload }

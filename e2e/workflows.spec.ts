@@ -40,6 +40,21 @@ test.describe('WBS import', () => {
   })
 })
 
+test.describe('Manual SCCS mapping', () => {
+  test('saves and restores a control-account override', async ({ page }) => {
+    await page.goto('/cost-structure/sccs')
+    await expect(page.getByTestId('sccs-manual-mapping')).toBeVisible()
+
+    await page.getByTestId('sccs-mapping-accounts').getByRole('button', { name: 'Edit' }).first().click()
+    await page.getByLabel('Manual PBS code').selectOption('BA')
+    await page.getByTestId('save-manual-sccs').click()
+    await expect(page.getByRole('button', { name: 'Restore automatic' })).toBeEnabled()
+
+    await page.getByRole('button', { name: 'Restore automatic' }).click()
+    await expect(page.getByRole('button', { name: 'Restore automatic' })).toBeDisabled()
+  })
+})
+
 test.describe('Change approval', () => {
   test('change register loads', async ({ page }) => {
     await page.goto('/changes')

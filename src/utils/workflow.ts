@@ -175,8 +175,18 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
   }
 }
 
+export function approvalBlockReason(value: ExtractedValue): string | null {
+  if (value.wbs.trim().length === 0 || value.cbs.trim().length === 0 || /UNMAPPED/i.test(`${value.wbs} ${value.cbs}`)) {
+    return 'Map this value to a valid WBS and CBS before approval.'
+  }
+  if (value.validationIssues.some((issue) => issue.severity === 'critical')) {
+    return 'Resolve critical validation issues before approval.'
+  }
+  return null
+}
+
 export function canApproveValue(value: ExtractedValue) {
-  return !value.validationIssues.some((issue) => issue.severity === 'critical')
+  return approvalBlockReason(value) === null
 }
 
 export function sampleCsvContent() {
@@ -323,7 +333,7 @@ function inferOwner(category: ExtractedValue['category']) {
   }
 }
 
-function generateValidationIssues(input: {
+export function generateValidationIssues(input: {
   field: string
   unit: string
   confidence: number

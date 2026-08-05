@@ -36,6 +36,7 @@ This pass also closes two gaps found after the original audit: production images
 - ✅ Production image provides a persistent writable volume for file-backed audit and baseline records.
 - ✅ Production client disables offline/local seed fallback unless `VITE_ALLOW_OFFLINE=true` is explicitly set.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
+- ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
 
 ## P2 — Medium/Low (addressed)
 
@@ -58,7 +59,8 @@ These are either operational (not code we can complete here) or larger initiativ
 - **Expanded test coverage** for the remaining routes/services and UI components; add a coverage tool + threshold.
 - **Operational / compliance:** TLS termination + reverse proxy config for your environment, automated backup scheduling, third-party penetration test, SOC 2 control mapping, and (if needed) Kubernetes/horizontal-scale topology. `LICENSE` choice is left to the repository owner.
 - **Feature truthfulness:** intelligence views and connector handshakes still contain simulated data/behavior. Keep them clearly labeled or disabled for users who could interpret them as live integrations.
+- **Enterprise source adapters:** P6 XER/live API, normalized high-volume schedule storage, SAP actuals/commitments, Planview governance data, and PDF/OCR extraction remain the next integration increments.
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 70 client/domain tests pass; server bundle + typecheck pass; 66 server tests pass locally; and all 8 Playwright workflows pass with demo auth. CI additionally executes two Postgres migration/concurrency tests and builds the production Docker image (the local cloud runner provides neither service). The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 79 client/domain tests pass; server bundle + typecheck pass; 69 server tests pass locally; and all 9 Playwright workflows pass with demo auth. CI additionally executes two Postgres migration/concurrency tests and builds the production Docker image (the local cloud runner provides neither service). The production dependency gate has no unacknowledged high/critical findings.

@@ -61,4 +61,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + 66 unit tests pass; client production build succeeds (code-split); server bundle + typecheck pass; 55 server tests pass; e2e suite passes with demo auth. CI additionally builds the production Docker image and runs a dependency audit.
+After this pass: client typecheck + production build pass; 70 client/domain tests pass; server bundle + typecheck pass; 65 server tests pass; and all 8 Playwright workflows pass with demo auth. The production dependency gate has no unacknowledged high/critical findings. CI also builds the production Docker image (the local cloud runner does not provide a container daemon).

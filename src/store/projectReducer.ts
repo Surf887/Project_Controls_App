@@ -11,6 +11,7 @@ import {
 import { reconcileContingencyInState } from '../engine/projectReconcile'
 import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
 import { applyApprovedExtractions } from '../engine/ingestionPosting'
+import { findOwningControlAccount } from '../engine/applyExtractionsCore'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
 import { applyValuesUpdate } from '../engine/extractionIntegrity'
 import { validateProjectAction } from '../engine/actionValidation'
@@ -522,7 +523,9 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         state.scheduleActivities
           .filter(
             (activity) =>
-              activity.sourceSystem === sourceSystem && activity.mappingStatus === 'manual',
+              activity.sourceSystem === sourceSystem &&
+              activity.mappingStatus === 'manual' &&
+              findOwningControlAccount(state.costSheetRows, activity.wbs) != null,
           )
           .map((activity) => [activity.sourceActivityId, activity.wbs] as const),
       )

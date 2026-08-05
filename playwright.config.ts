@@ -15,6 +15,7 @@ export default defineConfig({
     {
       command: 'npm run dev:server',
       url: 'http://127.0.0.1:3001/api/health',
+      env: { ...process.env, DEMO_AUTH: 'true' },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

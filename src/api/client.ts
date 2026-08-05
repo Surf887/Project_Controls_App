@@ -142,14 +142,18 @@ export function clearAuthSession() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers)
+  headers.set('Accept', 'application/json')
+  for (const [name, value] of Object.entries(authHeaders())) {
+    headers.set(name, value)
+  }
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      Accept: 'application/json',
-      ...authHeaders(),
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...init?.headers,
-    },
     ...init,
+    headers,
   })
 
   if (response.status === 409) {

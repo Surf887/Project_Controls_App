@@ -118,7 +118,7 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 ## Integrated schedule control
 
-The Schedule Control workspace imports a statused Primavera P6 CSV through a reviewed column-mapping stage. Activities and relationships are validated as one batch, source WBS codes are mapped to project control accounts, and every refresh retains import lineage and data-quality issues.
+The Schedule Control workspace imports a statused Primavera P6 CSV through a reviewed column-mapping stage. Activities and relationships are validated as one batch, source WBS codes are mapped to project control accounts, and every refresh retains import lineage and data-quality issues. Compatible column mappings and manual activity/WBS overrides are remembered on subsequent P6 refreshes.
 
 Mapped schedule progress drives control-account planned value, earned value, SPI, CPI, forecast finish, the schedule completion S-curve, EVM reports, and the monthly close workspace. Invalid batches are rejected atomically; unmatched WBS activities remain staged for manual mapping rather than silently posting.
 

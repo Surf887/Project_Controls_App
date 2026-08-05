@@ -437,6 +437,9 @@ export function buildP6CsvImport(text: string, options: P6CsvImportOptions): P6C
     warningCount,
     errorCount,
     issues,
+    columnMap: Object.fromEntries(
+      Object.entries(options.columnMap).filter((entry): entry is [string, string] => Boolean(entry[1])),
+    ),
   }
 
   return { batch, activities, relationships: acceptedRelationships }

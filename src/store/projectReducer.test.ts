@@ -48,5 +48,26 @@ describe('projectReducer stability', () => {
     expect(next.scheduleRelationships).toHaveLength(2)
     expect(next.scheduleImports[0]?.status).toBe('accepted')
     expect(next.auditLog[0]?.entityType).toBe('schedule')
+
+    const manuallyMapped = projectReducer(next, {
+      type: 'UPDATE_SCHEDULE_ACTIVITY_MAPPING',
+      payload: { activityId: next.scheduleActivities[0]!.id, wbs: 'A.02', actor: 'Planner' },
+    })
+    const refreshedImport = buildP6CsvImport(text, {
+      fileName: 'p6-refresh.csv',
+      dataDate: '2026-07-31',
+      importedBy: 'Planner',
+      knownWbs: seed.wbsNodes.map((node) => node.wbs),
+      columnMap: inspection.suggestedMap,
+      now: '2026-08-06T00:00:00.000Z',
+    })
+    const refreshed = projectReducer(manuallyMapped, {
+      type: 'IMPORT_SCHEDULE',
+      payload: refreshedImport,
+    })
+    expect(refreshed.scheduleActivities.find((activity) => activity.id === next.scheduleActivities[0]!.id)).toMatchObject({
+      wbs: 'A.02',
+      mappingStatus: 'manual',
+    })
   })
 })

@@ -64,4 +64,5 @@ export interface ScheduleImportBatch {
   warningCount: number
   errorCount: number
   issues: ScheduleImportIssue[]
+  columnMap: Record<string, string>
 }

@@ -95,6 +95,9 @@ const scheduleImportBatchSchema = z.object({
   warningCount: z.number().int().min(0).max(1_000_000),
   errorCount: z.number().int().min(0).max(1_000_000),
   issues: z.array(scheduleImportIssueSchema).max(100_000),
+  columnMap: z
+    .record(z.string().min(1).max(128), z.string().min(1).max(500))
+    .refine((mapping) => Object.keys(mapping).length <= 50, 'Too many schedule column mappings'),
 })
 
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()

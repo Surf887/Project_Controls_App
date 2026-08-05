@@ -201,14 +201,23 @@ export function ScheduleControlView() {
     }
     const text = await file.text()
     const inspection = inspectP6Csv(text)
+    const rememberedMap = Object.fromEntries(
+      Object.entries(latest?.columnMap ?? {}).filter(([, header]) =>
+        inspection.headers.includes(header),
+      ),
+    ) as P6ColumnMap
+    const nextMap = { ...inspection.suggestedMap, ...rememberedMap }
+    const missingAfterMemory = P6_FIELD_DEFINITIONS.filter(
+      (definition) => definition.required && !nextMap[definition.key],
+    ).length
     setPending({ fileName: file.name, text, inspection })
-    setColumnMap(inspection.suggestedMap)
+    setColumnMap(nextMap)
     setMessage(
       inspection.duplicateHeaders.length > 0
         ? `Resolve ${inspection.duplicateHeaders.length} duplicate CSV header(s) before importing.`
-        : inspection.missingRequiredFields.length > 0
-        ? `Map ${inspection.missingRequiredFields.length} required field(s) before importing.`
-        : `Detected ${inspection.rowCount} P6 activity row(s). Review the mapping before import.`,
+        : missingAfterMemory > 0
+        ? `Map ${missingAfterMemory} required field(s) before importing.`
+        : `Detected ${inspection.rowCount} P6 activity row(s). ${Object.keys(rememberedMap).length > 0 ? `Reused ${Object.keys(rememberedMap).length} saved column mappings. ` : ''}Review before import.`,
     )
   }
 

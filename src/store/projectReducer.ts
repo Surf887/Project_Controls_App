@@ -518,12 +518,26 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       const { batch, activities, relationships } = action.payload
       const accepted = batch.status !== 'rejected'
       const sourceSystem = batch.sourceSystem
+      const rememberedMappings = new Map(
+        state.scheduleActivities
+          .filter(
+            (activity) =>
+              activity.sourceSystem === sourceSystem && activity.mappingStatus === 'manual',
+          )
+          .map((activity) => [activity.sourceActivityId, activity.wbs] as const),
+      )
+      const mappedActivities = activities.map((activity) => {
+        const rememberedWbs = rememberedMappings.get(activity.sourceActivityId)
+        return rememberedWbs
+          ? { ...activity, wbs: rememberedWbs, mappingStatus: 'manual' as const }
+          : activity
+      })
       return {
         ...state,
         scheduleActivities: accepted
           ? [
               ...state.scheduleActivities.filter((activity) => activity.sourceSystem !== sourceSystem),
-              ...activities,
+              ...mappedActivities,
             ]
           : state.scheduleActivities,
         scheduleRelationships: accepted

@@ -28,6 +28,7 @@ describe('P6 CSV ingestion', () => {
     expect(result.batch.status).toBe('accepted')
     expect(result.batch.activityCount).toBe(3)
     expect(result.batch.relationshipCount).toBe(2)
+    expect(result.batch.columnMap.activityId).toBe('Activity ID')
     expect(result.activities.every((activity) => activity.mappingStatus === 'mapped')).toBe(true)
     expect(result.relationships[0]).toMatchObject({
       predecessorId: 'P6:ENG-100',

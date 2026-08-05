@@ -23,8 +23,14 @@ describe('validateProjectAction', () => {
   })
 
   it('blocks extraction and mapping edits after the period is locked', () => {
-    const state = createSeedState()
-    state.settings.reportingPeriod.locked = true
+    const base = createSeedState()
+    const state = {
+      ...base,
+      settings: {
+        ...base.settings,
+        reportingPeriod: { ...base.settings.reportingPeriod, locked: true },
+      },
+    }
 
     expect(() =>
       validateProjectAction(state, {

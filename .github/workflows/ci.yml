@@ -62,10 +62,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: npm audit (root)
-        run: npm audit --omit=dev --audit-level=high
-      - name: npm audit (server)
-        run: npm audit --omit=dev --audit-level=high --prefix server
+      - name: Audit production dependencies
+        run: npm run audit:prod
 
   # Verify the production image actually builds (client + server compile and the
   # multi-stage Dockerfile is valid). This is the gate that was missing when the

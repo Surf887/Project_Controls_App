@@ -17,8 +17,14 @@ describe('projectReducer stability', () => {
   })
 
   it('does not change extraction values while the reporting period is locked', () => {
-    const seed = createSeedState()
-    seed.settings.reportingPeriod.locked = true
+    const base = createSeedState()
+    const seed = {
+      ...base,
+      settings: {
+        ...base.settings,
+        reportingPeriod: { ...base.settings.reportingPeriod, locked: true },
+      },
+    }
     const values = seed.values.map((value) => ({ ...value, wbs: 'B.01' }))
     const next = projectReducer(seed, { type: 'SET_VALUES', payload: values })
     expect(next).toBe(seed)

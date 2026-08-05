@@ -878,17 +878,6 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
         </div>
       </section>
 
-      <section className="panel">
-        <ExtractionMappingEditor
-          costSheetRows={costSheetRows}
-          disabled={editingDisabled}
-          disabledReason={editingDisabledReason}
-          matchingCount={matchingMappingCount}
-          onSave={(draft) => onChangeMapping(selectedValue.id, draft)}
-          value={selectedValue}
-        />
-      </section>
-
       <section className="two-column">
         <div className="panel">
           <div className="panel-header">
@@ -1286,6 +1275,17 @@ function ReviewDesk({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="panel">
+        <ExtractionMappingEditor
+          costSheetRows={costSheetRows}
+          disabled={editingDisabled}
+          disabledReason={editingDisabledReason}
+          matchingCount={matchingMappingCount}
+          onSave={(draft) => onChangeMapping(selectedValue.id, draft)}
+          value={selectedValue}
+        />
       </section>
 
       <section className="two-column">

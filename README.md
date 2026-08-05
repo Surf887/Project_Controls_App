@@ -1,6 +1,6 @@
 # Project Controls Intelligence Platform
 
-Project controls workspace aligned with EcoSys / Oracle Unifier / AACE workflows. Runs as a full client + API stack: a React/Vite SPA backed by an Express + TypeScript API with a JSON-file or PostgreSQL project store, JWT/OIDC auth with RBAC, and an audited action reducer. A browser-only `localStorage` fallback exists for offline demos.
+Project controls workspace aligned with EcoSys / Oracle Unifier / AACE workflows. Runs as a full client + API stack: a React/Vite SPA backed by an Express + TypeScript API with a JSON-file or PostgreSQL project store, JWT/OIDC auth with RBAC, and an audited action reducer. A browser-only `localStorage` fallback exists for local or explicitly enabled offline demos; production builds fail closed when the API is unavailable.
 
 ## Quick start
 
@@ -15,7 +15,7 @@ npm run dev
 - **Frontend:** http://localhost:5173/ (Vite proxies `/api` → backend)
 - **API:** http://localhost:3001/api/health
 
-The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable the client falls back to `localStorage`.
+The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable, local development can fall back to `localStorage`; a production build requires `VITE_ALLOW_OFFLINE=true` to opt into that demo behavior.
 
 ### Frontend only (legacy local mode)
 

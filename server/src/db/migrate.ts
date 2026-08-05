@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { logger } from '../utils/logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const migrationsDir = path.join(__dirname, '..', 'db', 'migrations')
@@ -44,6 +45,12 @@ const migrations: Migration[] = [
 ]
 
 export function runMigrations() {
+  // These migrations only maintain the development JSON store. Postgres has
+  // its own transactional SQL migration runner.
+  if (process.env.DATABASE_URL) {
+    return
+  }
+
   const appliedFile = path.join(dataDir, '.migrations.json')
   let applied: string[] = []
   if (fs.existsSync(appliedFile)) {
@@ -57,7 +64,7 @@ export function runMigrations() {
     migration.up()
     applied.push(migration.id)
     fs.writeFileSync(appliedFile, JSON.stringify(applied, null, 2))
-    console.log(`[migrate] ${migration.id}: ${migration.description}`)
+    logger.info('json_migration_applied', { migrationId: migration.id, description: migration.description })
   }
 }
 

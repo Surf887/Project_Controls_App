@@ -53,8 +53,8 @@ jobs:
           CI: true
           DEMO_AUTH: 'true'
 
-  # Dependency vulnerability scan. Advisory (non-blocking) so a new upstream
-  # advisory doesn't block delivery, but surfaces in the run logs.
+  # Production dependency vulnerabilities are a release gate. Dev-tool
+  # advisories stay visible in Dependabot without blocking the runtime image.
   security:
     runs-on: ubuntu-latest
     steps:
@@ -64,10 +64,8 @@ jobs:
           node-version: '22'
       - name: npm audit (root)
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
       - name: npm audit (server)
         run: npm audit --omit=dev --audit-level=high --prefix server
-        continue-on-error: true
 
   # Verify the production image actually builds (client + server compile and the
   # multi-stage Dockerfile is valid). This is the gate that was missing when the

@@ -13,6 +13,7 @@ import { isPostgresStore, PostgresProjectStore } from './postgresProjectStore.js
 import { isPostgresEnabled, runSqlMigrations } from './postgres.js'
 import type { ProjectRecord, ProjectSummary } from './projectStoreTypes.js'
 import { VersionConflictError } from './store.js'
+import { logger } from '../utils/logger.js'
 
 export type { ProjectSummary, WorkflowValidationError }
 export { VersionConflictError } from './store.js'
@@ -66,7 +67,7 @@ export async function initDatabase() {
     store = new PostgresProjectStore()
     await store.init()
     postgresMode = true
-    console.log('[database] using Postgres')
+    logger.info('database_initialized', { store: 'postgres' })
   } else {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('DATABASE_URL is required in production')
@@ -74,7 +75,7 @@ export async function initDatabase() {
     store = new JsonProjectStore()
     store.init()
     postgresMode = false
-    console.log('[database] using JSON file store')
+    logger.info('database_initialized', { store: 'json' })
   }
 }
 

@@ -17,7 +17,9 @@ RUN npm run build && npm run build:server
 # ---- Runtime stage: slim, non-root ----
 FROM node:22-alpine AS runtime
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+  AUDIT_DIR=/app/server/data/audit \
+  BASELINE_DIR=/app/server/data/baselines
 
 # Only production server dependencies in the runtime image.
 COPY server/package.json server/package-lock.json ./server/
@@ -26,6 +28,11 @@ RUN npm ci --omit=dev --prefix server && npm cache clean --force
 # Compiled server and client assets.
 COPY --from=build /app/server/dist ./server/dist
 COPY --from=build /app/dist ./dist
+
+# Audit and baseline snapshots remain file-backed; make their mount point
+# writable by the non-root runtime user.
+RUN mkdir -p /app/server/data/audit /app/server/data/baselines \
+  && chown -R node:node /app/server/data
 
 # Run as the unprivileged built-in node user.
 USER node

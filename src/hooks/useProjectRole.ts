@@ -14,8 +14,8 @@ function normalizeRole(role: string | undefined | null): ProjectRole {
   if (role === 'viewer' || role === 'cost_controller' || role === 'approver' || role === 'admin') {
     return role
   }
-  // Unknown/absent role -> least-privileged default that can still operate.
-  return 'cost_controller'
+  // Unknown/absent role -> least-privileged default.
+  return 'viewer'
 }
 
 /**

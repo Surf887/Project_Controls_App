@@ -9,6 +9,7 @@ import {
 } from './auditService.js'
 
 const originalAuditDir = process.env.AUDIT_DIR
+const originalAuditSecret = process.env.AUDIT_HMAC_SECRET
 
 afterEach(() => {
   if (originalAuditDir) {
@@ -16,12 +17,18 @@ afterEach(() => {
   } else {
     delete process.env.AUDIT_DIR
   }
+  if (originalAuditSecret) {
+    process.env.AUDIT_HMAC_SECRET = originalAuditSecret
+  } else {
+    delete process.env.AUDIT_HMAC_SECRET
+  }
 })
 
 describe('auditService immutability', () => {
   it('appends events with hash chain', () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-audit-'))
     process.env.AUDIT_DIR = tempDir
+    process.env.AUDIT_HMAC_SECRET = 'test-audit-secret-one'
     const projectId = `test-${Date.now()}`
 
     appendImmutableAudit(projectId, {
@@ -37,6 +44,7 @@ describe('auditService immutability', () => {
     const events = listImmutableAudit(projectId)
     expect(events).toHaveLength(1)
     expect(events[0]!.prevHash).toBe('GENESIS')
+    expect(events[0]!.hashAlgorithm).toBe('hmac-sha256-v1')
     expect(events[0]!.hash).toMatch(/^[a-f0-9]{64}$/)
 
     appendImmutableAudit(projectId, {
@@ -52,5 +60,25 @@ describe('auditService immutability', () => {
     const chain = verifyAuditChain(projectId)
     expect(chain.ok).toBe(true)
     expect(listImmutableAudit(projectId)).toHaveLength(2)
+  })
+
+  it('cannot verify a chain without the signing secret', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-audit-'))
+    process.env.AUDIT_DIR = tempDir
+    process.env.AUDIT_HMAC_SECRET = 'test-audit-secret-one'
+    const projectId = `test-secret-${Date.now()}`
+
+    appendImmutableAudit(projectId, {
+      actor: 'Tester',
+      actorId: 'u-test',
+      team: 'QA',
+      entityType: 'project',
+      entityId: projectId,
+      action: 'SET_VALUES',
+      summary: 'Mapped extraction',
+    })
+
+    process.env.AUDIT_HMAC_SECRET = 'different-test-audit-secret'
+    expect(verifyAuditChain(projectId).ok).toBe(false)
   })
 })

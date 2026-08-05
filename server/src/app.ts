@@ -12,6 +12,14 @@ import { enterpriseRouter } from './routes/enterprise.js'
 import { platformRouter } from './routes/platform.js'
 import { authRouter } from './routes/auth.js'
 import { attachUser } from './middleware/auth.js'
+import { logger } from './utils/logger.js'
+
+type RequestWithId = express.Request & { requestId?: string }
+
+function requestIdFrom(req: express.Request): string {
+  const supplied = req.header('x-request-id')
+  return supplied && /^[a-zA-Z0-9._:-]{1,128}$/.test(supplied) ? supplied : randomUUID()
+}
 
 /**
  * CORS origins come from CORS_ORIGIN (comma-separated allowlist). In production
@@ -32,6 +40,23 @@ function corsOptions(): cors.CorsOptions {
 export function createApp() {
   const app = express()
   app.disable('x-powered-by')
+
+  app.use((req, res, next) => {
+    const requestId = requestIdFrom(req)
+    const startedAt = Date.now()
+    ;(req as RequestWithId).requestId = requestId
+    res.setHeader('x-request-id', requestId)
+    res.on('finish', () => {
+      logger.info('http_request', {
+        requestId,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      })
+    })
+    next()
+  })
 
   const trustProxy = trustProxySetting()
   if (trustProxy != null) {
@@ -65,7 +90,7 @@ export function createApp() {
     res.json({ ok: true, service: 'project-controls-api' })
   })
 
-  app.get('/api/health/ready', async (_req, res) => {
+  app.get('/api/health/ready', async (req, res) => {
     try {
       const { isUsingPostgres, pingDatabase } = await import('./db/database.js')
       if (isUsingPostgres()) {
@@ -73,7 +98,10 @@ export function createApp() {
       }
       res.json({ ok: true, postgres: isUsingPostgres() })
     } catch (error) {
-      console.error('[health/ready]', error)
+      logger.error('readiness_check_failed', {
+        requestId: (req as RequestWithId).requestId,
+        error: error instanceof Error ? error.message : 'unknown',
+      })
       res.status(503).json({ ok: false, error: 'Not ready' })
     }
   })
@@ -84,9 +112,9 @@ export function createApp() {
       if (isUsingPostgres()) {
         await pingDatabase()
       }
-      res.json({ ok: true, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
+      res.json({ ok: true, ready: true, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
     } catch {
-      res.status(503).json({ ok: false, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
+      res.status(503).json({ ok: false, ready: false, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
     }
   })
 
@@ -110,9 +138,14 @@ export function createApp() {
     res.status(404).json({ error: 'Not found' })
   })
 
-  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    const errorId = randomUUID()
-    console.error(`[error ${errorId}]`, error)
+  app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const errorId = (req as RequestWithId).requestId ?? randomUUID()
+    logger.error('unhandled_request_error', {
+      requestId: errorId,
+      method: req.method,
+      path: req.path,
+      error: error instanceof Error ? error.message : 'unknown',
+    })
     if (process.env.NODE_ENV === 'production') {
       res.status(500).json({ error: 'Internal server error', errorId })
       return

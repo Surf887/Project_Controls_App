@@ -6,7 +6,10 @@ import type { BasisOfEstimate, WbsNode } from '@pc/store/types.js'
 import { assertSafeId, resolveUnderRoot } from '../utils/safePath.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const baselineRoot = path.resolve(__dirname, '../../data/baselines')
+
+function baselineRoot(): string {
+  return process.env.BASELINE_DIR ?? path.resolve(__dirname, '../../data/baselines')
+}
 
 export interface BaselineSnapshot {
   id: string
@@ -24,7 +27,7 @@ export interface BaselineSnapshot {
 }
 
 function projectDir(projectId: string): string {
-  return resolveUnderRoot(baselineRoot, assertSafeId(projectId, 'projectId'))
+  return resolveUnderRoot(baselineRoot(), assertSafeId(projectId, 'projectId'))
 }
 
 function snapshotPath(projectId: string, snapshotId: string): string {

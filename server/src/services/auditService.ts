@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -31,11 +31,25 @@ export interface ImmutableAuditEvent {
   action: string
   summary: string
   prevHash: string
+  hashAlgorithm?: 'hmac-sha256-v1'
   hash: string
   payload?: Record<string, unknown>
 }
 
+function auditHmacSecret(): string {
+  const secret = process.env.AUDIT_HMAC_SECRET
+  if (secret) return secret
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('AUDIT_HMAC_SECRET is required in production')
+  }
+  return 'development-only-audit-secret'
+}
+
 function hashEntry(payload: Omit<ImmutableAuditEvent, 'hash'>): string {
+  return createHmac('sha256', auditHmacSecret()).update(JSON.stringify(payload)).digest('hex')
+}
+
+function legacyHashEntry(payload: Omit<ImmutableAuditEvent, 'hash'>): string {
   return createHash('sha256').update(JSON.stringify(payload)).digest('hex')
 }
 
@@ -87,6 +101,7 @@ export function appendImmutableAudit(
     at: new Date().toISOString(),
     ...partial,
     prevHash,
+    hashAlgorithm: 'hmac-sha256-v1' as const,
   }
 
   const event: ImmutableAuditEvent = {
@@ -138,7 +153,10 @@ export function verifyAuditChain(projectId: string): { ok: boolean; errors: stri
       errors.push(`Line ${index + 1}: prevHash mismatch`)
     }
     const { hash: _hash, ...rest } = event
-    const expected = hashEntry(rest as Omit<ImmutableAuditEvent, 'hash'>)
+    const expected =
+      event.hashAlgorithm === 'hmac-sha256-v1'
+        ? hashEntry(rest as Omit<ImmutableAuditEvent, 'hash'>)
+        : legacyHashEntry(rest as Omit<ImmutableAuditEvent, 'hash'>)
     if (event.hash !== expected) {
       errors.push(`Line ${index + 1}: hash integrity failure`)
     }

@@ -1,4 +1,5 @@
 import pg from 'pg'
+import { logger } from '../utils/logger.js'
 
 let pool: pg.Pool | null = null
 
@@ -34,27 +35,44 @@ export async function runSqlMigrations(): Promise<void> {
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
   const migrationsDir = path.join(__dirname, 'migrations')
-  const client = getPool()
+  if (!fs.existsSync(migrationsDir)) {
+    throw new Error(`Postgres migration assets not found: ${migrationsDir}`)
+  }
 
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      id TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `)
+  const client = await getPool().connect()
+  try {
+    // Only one replica may migrate at a time.
+    await client.query(`SELECT pg_advisory_lock(hashtext('project-controls-schema-migrations'))`)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        id TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `)
 
-  const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith('.sql')).sort()
+    const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith('.sql')).sort()
+    for (const file of files) {
+      const id = file.replace(/\.sql$/, '')
+      const applied = await client.query('SELECT 1 FROM schema_migrations WHERE id = $1', [id])
+      if (applied.rowCount && applied.rowCount > 0) {
+        continue
+      }
 
-  for (const file of files) {
-    const id = file.replace(/\.sql$/, '')
-    const applied = await client.query('SELECT 1 FROM schema_migrations WHERE id = $1', [id])
-    if (applied.rowCount && applied.rowCount > 0) {
-      continue
+      await client.query('BEGIN')
+      try {
+        const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8')
+        await client.query(sql)
+        await client.query('INSERT INTO schema_migrations (id) VALUES ($1)', [id])
+        await client.query('COMMIT')
+        logger.info('postgres_migration_applied', { migrationId: id })
+      } catch (error) {
+        await client.query('ROLLBACK')
+        throw error
+      }
     }
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8')
-    await client.query(sql)
-    await client.query('INSERT INTO schema_migrations (id) VALUES ($1)', [id])
-    console.log(`[postgres] applied migration ${id}`)
+  } finally {
+    await client.query(`SELECT pg_advisory_unlock(hashtext('project-controls-schema-migrations'))`).catch(() => {})
+    client.release()
   }
 }
 

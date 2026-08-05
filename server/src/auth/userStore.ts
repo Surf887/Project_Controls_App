@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { isPostgresEnabled, query } from '../db/postgres.js'
 import type { Role } from './roles.js'
+import { logger } from '../utils/logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const usersPath = process.env.USERS_PATH ?? path.resolve(__dirname, '../../data/users.json')
@@ -246,5 +247,5 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     password,
     provider: 'local',
   })
-  console.log(`[auth] bootstrapped initial admin user: ${normalizeEmail(email)}`)
+  logger.info('bootstrap_admin_created', { email: normalizeEmail(email) })
 }

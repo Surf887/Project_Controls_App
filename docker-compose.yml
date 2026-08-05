@@ -33,7 +33,10 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
-      AUDIT_HMAC_SECRET: ${AUDIT_HMAC_SECRET:-}
+      AUDIT_HMAC_SECRET: ${AUDIT_HMAC_SECRET:?set AUDIT_HMAC_SECRET in your .env}
+      CREDENTIALS_KEY: ${CREDENTIALS_KEY:?set CREDENTIALS_KEY in your .env}
+    volumes:
+      - pc_app_data:/app/server/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,3 +53,4 @@ services:
 
 volumes:
   pc_postgres_data:
+  pc_app_data:

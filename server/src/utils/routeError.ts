@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { Response } from 'express'
+import { logger } from './logger.js'
 
 export function isProductionEnv(): boolean {
   return process.env.NODE_ENV === 'production'
@@ -20,7 +21,12 @@ export function sendRouteError(
   fallback: string,
   extra?: Record<string, unknown>,
 ): void {
-  const errorId = randomUUID()
-  console.error(`[route-error ${errorId}]`, error)
+  const requestId = res.getHeader('x-request-id')
+  const errorId = typeof requestId === 'string' ? requestId : randomUUID()
+  logger.error('route_error', {
+    requestId: errorId,
+    status,
+    error: error instanceof Error ? error.message : 'unknown',
+  })
   res.status(status).json({ error: publicErrorMessage(error, fallback), errorId, ...extra })
 }

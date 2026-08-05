@@ -33,12 +33,13 @@ Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platfor
 
 ```bash
 cp .env.example .env        # then edit secrets
-# Compose requires POSTGRES_PASSWORD, JWT_SECRET (and reads the rest from .env)
+# Compose requires POSTGRES_PASSWORD, JWT_SECRET, AUDIT_HMAC_SECRET, and CREDENTIALS_KEY.
 docker compose up -d --build
 ```
 
 - App: `http://localhost:3001` (put a TLS-terminating proxy in front for real deployments)
 - Postgres runs internal-only (not published to the host).
+- Audit and baseline files persist in the `pc_app_data` volume; include that volume in backup/restore procedures.
 
 ## Database migrations
 

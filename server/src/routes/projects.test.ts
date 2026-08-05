@@ -19,9 +19,11 @@ describe('API routes', () => {
   const app = createApp()
 
   it('GET /api/health returns ok', async () => {
-    const res = await request(app).get('/api/health')
+    const res = await request(app).get('/api/health').set('x-request-id', 'health-test-1')
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
+    expect(res.body.ready).toBe(true)
+    expect(res.headers['x-request-id']).toBe('health-test-1')
   })
 
   it('GET /api/projects lists projects', async () => {

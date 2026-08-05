@@ -45,6 +45,8 @@ class AuthRequiredError extends Error {
   }
 }
 
+const offlineFallbackEnabled = import.meta.env.DEV || import.meta.env.VITE_ALLOW_OFFLINE === 'true'
+
 function demoRole(): string {
   return typeof localStorage !== 'undefined' ? localStorage.getItem('pc-role') ?? 'cost_controller' : 'cost_controller'
 }
@@ -172,10 +174,21 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
           return
         }
 
+        if (!offlineFallbackEnabled) {
+          backendRef.current = false
+          setBackendEnabled(false)
+          setCurrentUser(null)
+          setAuthRequired(true)
+          setError('The Project Controls API is unavailable. Data access is paused until the service reconnects.')
+          setReady(true)
+          return
+        }
+
         // Backend unreachable — work offline against local storage.
         backendRef.current = false
         setBackendEnabled(false)
         setAuthRequired(false)
+        setCurrentUser({ id: 'offline-demo', name: 'Offline demo', role: 'cost_controller' })
         hydrate(loadProjectState())
         setProjects([
           {

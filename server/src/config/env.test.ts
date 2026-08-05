@@ -12,6 +12,8 @@ describe('validateEnv', () => {
     delete process.env.OIDC_DEFAULT_ROLE
     delete process.env.ADMIN_PASSWORD
     delete process.env.USERS_PATH
+    delete process.env.AUDIT_HMAC_SECRET
+    delete process.env.CREDENTIALS_KEY
   })
 
   afterEach(() => {
@@ -39,6 +41,18 @@ describe('validateEnv', () => {
     process.env.DATABASE_URL = 'postgres://localhost/test'
     process.env.DISABLE_RATE_LIMIT = 'true'
     expect(() => validateEnv()).toThrow(/DISABLE_RATE_LIMIT/)
+  })
+
+  it('requires dedicated audit and credential secrets in production', () => {
+    process.env.NODE_ENV = 'production'
+    process.env.DATABASE_URL = 'postgres://localhost/test'
+    expect(() => validateEnv()).toThrow(/AUDIT_HMAC_SECRET/)
+
+    process.env.AUDIT_HMAC_SECRET = 'audit-secret-long-enough'
+    expect(() => validateEnv()).toThrow(/CREDENTIALS_KEY/)
+
+    process.env.CREDENTIALS_KEY = 'credential-secret-long-enough'
+    expect(() => validateEnv()).not.toThrow()
   })
 })
 

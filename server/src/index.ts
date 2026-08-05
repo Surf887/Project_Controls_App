@@ -8,6 +8,7 @@ import { runDueExportJobs } from './services/exportScheduler.js'
 import { generateClosePackPdfAsync } from './services/pdfExport.js'
 import { getJwtSecret } from './auth/jwt.js'
 import { ensureBootstrapAdmin } from './auth/userStore.js'
+import { logger } from './utils/logger.js'
 
 loadRootEnvFile()
 
@@ -24,19 +25,25 @@ async function runScheduledExports() {
   const count = await runDueExportJobs(async (projectId) => {
     const state = await getProjectById(projectId)
     await generateClosePackPdfAsync(state, 'Scheduled export')
-    console.log(`[export] generated close pack for ${projectId}`)
+    logger.info('scheduled_export_generated', { projectId })
   })
   if (count > 0) {
-    console.log(`[export] completed ${count} scheduled job(s)`)
+    logger.info('scheduled_exports_completed', { count })
   }
 }
 
-void runScheduledExports()
-const exportInterval = setInterval(() => void runScheduledExports(), 60 * 60 * 1000)
+function triggerScheduledExports() {
+  void runScheduledExports().catch((error) => {
+    logger.error('scheduled_exports_failed', { error: error instanceof Error ? error.message : 'unknown' })
+  })
+}
+
+triggerScheduledExports()
+const exportInterval = setInterval(triggerScheduledExports, 60 * 60 * 1000)
 
 const app = createApp()
 const server = app.listen(port, () => {
-  console.log(`Project Controls API listening on http://localhost:${port} (${isUsingPostgres() ? 'postgres' : 'json'})`)
+  logger.info('server_started', { port, store: isUsingPostgres() ? 'postgres' : 'json' })
 })
 
 let shuttingDown = false
@@ -44,14 +51,14 @@ let shuttingDown = false
 function shutdown(signal: string) {
   if (shuttingDown) return
   shuttingDown = true
-  console.log(`[shutdown] ${signal} received, draining connections`)
+  logger.info('shutdown_started', { signal })
   clearInterval(exportInterval)
   server.close(() => {
     closeDatabase()
     void closePool().finally(() => process.exit(0))
   })
   setTimeout(() => {
-    console.error('[shutdown] forced exit after timeout')
+    logger.error('shutdown_forced', { timeoutMs: 10_000 })
     process.exit(1)
   }, 10_000).unref()
 }

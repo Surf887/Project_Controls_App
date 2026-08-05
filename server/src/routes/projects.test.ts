@@ -4,6 +4,7 @@ import { pendingApplyCount } from '@pc/engine/applyExtractionsCore.js'
 import { createApp } from '../app.js'
 import { closeDatabase, initDatabase } from '../db/database.js'
 import { runMigrations } from '../db/migrate.js'
+import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '@pc/utils/p6CsvImport.js'
 
 describe('API routes', () => {
   beforeAll(async () => {
@@ -64,6 +65,30 @@ describe('API routes', () => {
     const res = await request(app).get(`/api/projects/${projectId}/compute/forecast`)
     expect(res.status).toBe(200)
     expect(res.body.totals.eacMostLikely).toBeGreaterThan(0)
+  })
+
+  it('POST actions imports a validated P6 schedule batch', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+    const projectId = active.body.state.meta.id as string
+    const text = sampleP6Csv()
+    const imported = buildP6CsvImport(text, {
+      fileName: 'p6-status.csv',
+      dataDate: '2026-06-30',
+      importedBy: 'Planner',
+      knownWbs: (active.body.state.costSheetRows as Array<{ parentId: string | null; wbs: string }>)
+        .filter((row) => row.parentId === null)
+        .map((row) => row.wbs),
+      columnMap: inspectP6Csv(text).suggestedMap,
+      now: '2026-08-05T00:00:00.000Z',
+    })
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .send({ type: 'IMPORT_SCHEDULE', payload: imported })
+
+    expect(res.status).toBe(200)
+    expect(res.body.state.scheduleActivities).toHaveLength(3)
+    expect(res.body.state.scheduleRelationships).toHaveLength(2)
   })
 
   it('GET /api/projects/:id/audit returns immutable log', async () => {

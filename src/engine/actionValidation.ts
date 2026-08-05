@@ -27,6 +27,52 @@ export function validateProjectAction(state: ProjectState, action: ProjectAction
       )
     }
   }
+  if (action.type === 'IMPORT_SCHEDULE') {
+    const { batch, activities, relationships } = action.payload
+    const ids = new Set(activities.map((activity) => activity.id))
+    if (ids.size !== activities.length) {
+      throw new ActionValidationError('Schedule import contains duplicate activity IDs.')
+    }
+    if (
+      batch.activityCount !== activities.length ||
+      batch.relationshipCount !== relationships.length ||
+      batch.mappedCount !== activities.filter((activity) => activity.mappingStatus !== 'unmapped').length ||
+      batch.warningCount !== batch.issues.filter((issue) => issue.severity === 'warning').length ||
+      batch.errorCount !== batch.issues.filter((issue) => issue.severity === 'error').length
+    ) {
+      throw new ActionValidationError('Schedule import counts do not match its payload.')
+    }
+    const inconsistentActivity = activities.find(
+      (activity) =>
+        activity.sourceBatchId !== batch.id ||
+        activity.sourceSystem !== batch.sourceSystem ||
+        (activity.mappingStatus !== 'unmapped' &&
+          !findOwningControlAccount(state.costSheetRows, activity.wbs)),
+    )
+    if (inconsistentActivity) {
+      throw new ActionValidationError(
+        `Schedule activity ${inconsistentActivity.sourceActivityId} has an invalid batch, source, or WBS mapping.`,
+      )
+    }
+    const invalidRelationship = relationships.find(
+      (relationship) =>
+        relationship.sourceBatchId !== batch.id ||
+        relationship.sourceSystem !== batch.sourceSystem ||
+        !ids.has(relationship.predecessorId) ||
+        !ids.has(relationship.successorId),
+    )
+    if (invalidRelationship) {
+      throw new ActionValidationError(`Schedule relationship ${invalidRelationship.id} references an invalid activity.`)
+    }
+  }
+  if (action.type === 'UPDATE_SCHEDULE_ACTIVITY_MAPPING') {
+    if (!state.scheduleActivities.some((activity) => activity.id === action.payload.activityId)) {
+      throw new ActionValidationError('Schedule activity not found.')
+    }
+    if (!findOwningControlAccount(state.costSheetRows, action.payload.wbs)) {
+      throw new ActionValidationError(`WBS ${action.payload.wbs} does not map to a control account.`)
+    }
+  }
 
   if (action.type === 'LOCK_REPORTING_PERIOD') {
     const pending = pendingApplyCount(state.values)

@@ -140,6 +140,10 @@ export const ACTION_MIN_ROLE = {
 
   SET_SELECTED_VALUE: 'viewer',
 
+  IMPORT_SCHEDULE: 'cost_controller',
+
+  UPDATE_SCHEDULE_ACTIVITY_MAPPING: 'cost_controller',
+
   APPLY_APPROVED_EXTRACTIONS: 'cost_controller',
 
 } as const satisfies Record<string, Role>

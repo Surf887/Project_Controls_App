@@ -12,7 +12,8 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
 | **Audit immutability** | Mutable in-state array (100 cap) | Append-only JSONL + hash chain | Postgres `audit_events` (no UPDATE) | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Simulated connectors UI | Adapter registry + sync jobs API | SAP/P6 OAuth, webhooks | iPaaS, message bus |
+| **Integrations** | Reviewed P6 CSV; other connectors simulated | Adapter registry + sync jobs API | SAP/P6 OAuth, XER, webhooks | iPaaS, message bus |
+| **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV mapping, control-account PV/EV | P6 XER/API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
 | **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
 | **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
 | **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
@@ -55,6 +56,14 @@ Maps product capabilities to implementation phases. The trust milestone establis
 - Types: ERP, schedule (P6), contracts, procurement, document control
 - Client connectors UI becomes config; execution moves server-side
 
+### Integrated schedule-control foundation
+
+- Canonical activities, relationships, import batches, and row-level issues: `src/data/schedule.ts`
+- Reviewed P6 CSV column mapping and atomic validation: `src/utils/p6CsvImport.ts`
+- Control-account PV/EV, SPI/CPI, finish variance, and completion curves: `src/engine/scheduleControl.ts`
+- Governed schedule workspace, manual WBS correction, monthly-close signal, and report pack
+- Current browser path is intentionally bounded; large schedules move to normalized Postgres tables and a streaming adapter in Phase 2
+
 ### Report packs
 
 - Server bundles: `server/src/services/exportService.ts`
@@ -67,12 +76,12 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 ## Phase 2 — Enterprise hardening
 
-1. Wire Postgres store when `DATABASE_URL` is set (dual-write migration from JSON)
-2. OIDC provider (`server/src/auth/providers/oidcProvider.ts`)
-3. Portfolio governance policies (approval thresholds, delegation)
-4. PDF close packs (puppeteer or pdfkit)
-5. Webhook delivery for approved forecast/change events
-6. Optimistic concurrency (`version` column, 409 on conflict)
+1. Normalize schedule activities, relationships, snapshots, and source mappings into Postgres tables
+2. Add P6 XER and authenticated API adapters with streaming/staged imports
+3. Add SAP commitments/actuals reconciliation against the same control-account dictionary
+4. Add Planview governance/milestone adapter and reusable source mapping profiles
+5. Complete server-side OIDC Authorization Code + PKCE and enterprise session controls
+6. Add portfolio governance policies, webhooks, APM, and external penetration testing
 
 ## Phase 3 — Production scale
 

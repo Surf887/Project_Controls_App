@@ -68,6 +68,7 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 |-------|---------|---------|
 | **Programme overview** | Owner / PMO health | Command Center, Portfolio Compare |
 | **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR) |
+| **Schedule control** | Baseline/current programme → cost accounts | P6 CSV import, relationship validation, critical/late activities, schedule-cost performance |
 | **Monthly control cycle** | Period close sequence | Accruals, Cost Sheet, Contingency, Forecast Engine, Forecast Approval |
 | **VOWD & performance** | Physical progress → EV | Rules of Credit, EVM, Predictive |
 | **Commitments & delivery** | PO · LLI · FX together | Long-Lead, Procurement, FX & Hedging |
@@ -115,6 +116,14 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 **Cost structure** — CBS hierarchy with direct/indirect nature, TECOP/NTR categories, burden rules, and loaded-budget view tied to cost sheet control accounts.
 
+## Integrated schedule control
+
+The Schedule Control workspace imports a statused Primavera P6 CSV through a reviewed column-mapping stage. Activities and relationships are validated as one batch, source WBS codes are mapped to project control accounts, and every refresh retains import lineage and data-quality issues.
+
+Mapped schedule progress drives control-account planned value, earned value, SPI, CPI, forecast finish, the schedule completion S-curve, EVM reports, and the monthly close workspace. Invalid batches are rejected atomically; unmatched WBS activities remain staged for manual mapping rather than silently posting.
+
+Use **Download P6 sample** in Schedule Control for the supported columns. The reviewed browser path is limited to 1,000 activities / 250 KB; larger programmes require the planned streaming adapter. Live P6 API and XER ingestion remain follow-up adapters on the same canonical schedule model.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).
@@ -141,7 +150,7 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 - Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
 - Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
 - Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
-- No P6/SAP/EcoSys live API feeds
+- P6 CSV status imports are supported; P6 XER/live API and SAP/EcoSys live feeds are not yet implemented
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 
 ## Reset demo data

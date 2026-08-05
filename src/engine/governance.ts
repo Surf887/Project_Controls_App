@@ -20,6 +20,7 @@ import { computeReserveSnapshots, totalContingencyExposure } from './contingency
 import { accrualTotals } from './accruals'
 import { invoicePipeline, subcontractMetrics } from './procurementReconcile'
 import { enrichCostSheetRows, lookupLabels, rollupCostSheetBySccs } from './sccs'
+import { controlAccountSchedulePerformance, latestAcceptedScheduleImport } from './scheduleControl'
 
 export function createAuditEntry(
   partial: Omit<AuditLogEntry, 'id' | 'at'> & { at?: string },
@@ -310,7 +311,10 @@ export function generateTeamReportCsv(
       break
     case 'evm_snapshot':
       rows = [['WBS', 'BAC', 'EV', 'AC', 'CPI', 'SPI', 'EAC']]
-      costSheetToEvmAccounts(state.costSheetRows).forEach((account) => {
+      costSheetToEvmAccounts(state.costSheetRows, {
+        scheduleActivities: state.scheduleActivities ?? [],
+        scheduleDataDate: latestAcceptedScheduleImport(state.scheduleImports ?? [])?.dataDate,
+      }).forEach((account) => {
         const result = computeEvmWithMethod(account, state.settings.evmEacMethod)
         rows.push([
           account.wbs,
@@ -323,6 +327,49 @@ export function generateTeamReportCsv(
         ])
       })
       break
+    case 'schedule_performance': {
+      const latest = latestAcceptedScheduleImport(state.scheduleImports ?? [])
+      const performance = latest
+        ? controlAccountSchedulePerformance(
+            state.scheduleActivities ?? [],
+            state.costSheetRows,
+            latest.dataDate,
+          )
+        : []
+      rows = [
+        [
+          'WBS',
+          'Description',
+          'Activities',
+          'Critical',
+          'Planned %',
+          'Actual %',
+          'PV',
+          'EV',
+          'AC',
+          'SPI',
+          'CPI',
+          'Forecast finish',
+          'Data date',
+        ],
+        ...performance.map((line) => [
+          line.wbs,
+          line.description,
+          String(line.activityCount),
+          String(line.criticalCount),
+          line.plannedProgress.toFixed(2),
+          line.actualProgress.toFixed(2),
+          String(line.pv),
+          String(line.ev),
+          String(line.ac),
+          line.spi.toFixed(3),
+          line.cpi.toFixed(3),
+          line.forecastFinish,
+          latest?.dataDate ?? '',
+        ]),
+      ]
+      break
+    }
     case 'audit_activity':
       rows = [['When', 'Actor', 'Team', 'Type', 'Entity', 'Action', 'Summary']]
       state.auditLog.forEach((entry) => {

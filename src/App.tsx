@@ -25,6 +25,7 @@ import { applyManualExtractionMapping } from './engine/manualMapping'
 // so lazy-loading it would just add a flash with no real chunk-size benefit.
 import { SCurveChart } from './views/charts'
 import { buildScurveFromCostSheet } from './engine/loading'
+import { latestAcceptedScheduleImport, scheduleSummary } from './engine/scheduleControl'
 import type { NavView } from './data/navigationModel'
 import { monthlyClosePath, pathForView, viewFromPath } from './routes/viewPaths'
 // Core shell stays eagerly loaded for instant first paint.
@@ -124,6 +125,9 @@ const RulesOfCreditView = lazy(() =>
   import('./views/rulesOfCredit').then((m) => ({ default: m.RulesOfCreditView })),
 )
 const WbsManager = lazy(() => import('./views/wbs').then((m) => ({ default: m.WbsManager })))
+const ScheduleControlView = lazy(() =>
+  import('./views/scheduleControl').then((m) => ({ default: m.ScheduleControlView })),
+)
 const MonthlyCloseWorkspace = lazy(() =>
   import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
 )
@@ -279,6 +283,16 @@ function App() {
   }
 
   const scurveData = useMemo(() => buildScurveFromCostSheet(state.costSheetRows), [state.costSheetRows])
+  const latestSchedule = latestAcceptedScheduleImport(state.scheduleImports)
+  const scheduleHealth = useMemo(
+    () =>
+      scheduleSummary(
+        state.scheduleActivities,
+        state.scheduleRelationships,
+        latestSchedule?.dataDate ?? null,
+      ),
+    [latestSchedule?.dataDate, state.scheduleActivities, state.scheduleRelationships],
+  )
 
   const metrics = useMemo(() => {
     const approved = values.filter((value) => value.approvalStatus === 'approved').length
@@ -675,6 +689,7 @@ function App() {
             metrics={metrics}
             reports={reports}
             scurveData={scurveData}
+            schedule={scheduleHealth}
             values={values}
             onOpenReview={() => setActiveView('review')}
             onOpenValidation={() => setActiveView('validation')}
@@ -740,6 +755,8 @@ function App() {
         {activeView === 'cost-structure' && <CostStructureView />}
 
         {activeView === 'sccs' && <SccsView />}
+
+        {activeView === 'schedule' && <ScheduleControlView />}
 
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 
@@ -816,12 +833,13 @@ interface DashboardProps {
   }
   reports: ReportDocument[]
   scurveData: ReturnType<typeof buildScurveFromCostSheet>
+  schedule: ReturnType<typeof scheduleSummary>
   values: ExtractedValue[]
   onOpenReview: () => void
   onOpenValidation: () => void
 }
 
-function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenValidation }: DashboardProps) {
+function Dashboard({ metrics, reports, scurveData, schedule, values, onOpenReview, onOpenValidation }: DashboardProps) {
   const pipelineStages = [
     { label: 'Received', count: reports.length, detail: 'contractor files' },
     { label: 'Extracted', count: values.length, detail: 'structured values' },
@@ -856,6 +874,18 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
           detail="AI extraction confidence"
         />
         <MetricCard label="Critical issues" value={metrics.criticalIssues.toString()} detail="must resolve before approval" tone="risk" />
+        <MetricCard
+          label="Schedule SPI"
+          value={schedule.activityCount > 0 ? schedule.spi.toFixed(2) : '—'}
+          detail={schedule.activityCount > 0 ? `${schedule.criticalCount} critical · ${schedule.lateCount} late` : 'P6 schedule not imported'}
+          tone={schedule.activityCount > 0 && schedule.spi < 1 ? 'risk' : 'default'}
+        />
+        <MetricCard
+          label="Forecast finish"
+          value={schedule.forecastFinish ?? '—'}
+          detail={schedule.activityCount > 0 ? `${schedule.finishVarianceDays >= 0 ? '+' : ''}${schedule.finishVarianceDays} days vs baseline` : 'Awaiting schedule data'}
+          tone={schedule.finishVarianceDays > 0 ? 'risk' : 'default'}
+        />
       </section>
 
       <section className="panel">
@@ -987,7 +1017,7 @@ function Ingestion({
             <li>CSV tabular contractor cost and progress exports</li>
             <li>Browser-side parsing; no document leaves the machine</li>
             <li>Warnings generated for low confidence, unmapped codes, and risk terms</li>
-            <li>OCR, P6, ERP, CAD, and PDF extraction remain future integration work</li>
+            <li>P6 CSV status imports are supported in Schedule Control; live APIs, OCR, ERP, CAD, and PDF extraction remain integration work</li>
           </ul>
         </div>
       </section>

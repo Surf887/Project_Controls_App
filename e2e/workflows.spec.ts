@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { sampleP6Csv } from '../src/utils/p6CsvImport'
 
 test.describe('Monthly close workspace', () => {
   test('loads guided close hub with continue CTA', async ({ page }) => {
@@ -52,6 +53,25 @@ test.describe('Manual SCCS mapping', () => {
 
     await page.getByRole('button', { name: 'Restore automatic' }).click()
     await expect(page.getByRole('button', { name: 'Restore automatic' })).toBeDisabled()
+  })
+})
+
+test.describe('Integrated schedule control', () => {
+  test('imports a P6 CSV and links activities to cost accounts', async ({ page }) => {
+    await page.goto('/schedule-control')
+    await expect(page.getByTestId('schedule-control-view')).toBeVisible()
+
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'p6-status.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(sampleP6Csv()),
+    })
+    await expect(page.getByTestId('p6-mapping-review')).toBeVisible()
+    await page.getByLabel('Schedule data date').fill('2026-06-30')
+    await page.getByTestId('import-p6-schedule').click()
+
+    await expect(page.getByTestId('schedule-activity-table')).toContainText('CON-210')
+    await expect(page.getByTestId('schedule-cost-performance')).toContainText('A.02')
   })
 })
 

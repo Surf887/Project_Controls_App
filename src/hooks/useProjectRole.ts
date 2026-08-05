@@ -48,6 +48,8 @@ export function canPerformAction(actionType: string, role: ProjectRole): boolean
     UNLOCK_REPORTING_PERIOD: 'admin',
     APPROVE_CONTINGENCY_DRAW: 'approver',
     SYNC_COMMITMENTS: 'cost_controller',
+    IMPORT_SCHEDULE: 'cost_controller',
+    UPDATE_SCHEDULE_ACTIVITY_MAPPING: 'cost_controller',
   }
   const minRole = minRoleByAction[actionType] ?? 'cost_controller'
   return ROLE_RANK[role] >= ROLE_RANK[minRole]

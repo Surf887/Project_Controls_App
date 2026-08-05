@@ -36,6 +36,67 @@ const extractedValueSchema = z
   })
   .passthrough()
 
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const scheduleSourceSchema = z.enum(['p6_csv', 'p6_xer', 'planview', 'manual'])
+const scheduleActivitySchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceActivityId: z.string().min(1).max(128),
+  sourceWbs: z.string().max(256),
+  wbs: z.string().min(1).max(256),
+  name: z.string().min(1).max(1000),
+  activityType: z.enum(['task', 'start_milestone', 'finish_milestone', 'level_of_effort']),
+  status: z.enum(['not_started', 'in_progress', 'completed']),
+  calendar: z.string().max(200),
+  baselineStart: isoDateSchema,
+  baselineFinish: isoDateSchema,
+  currentStart: isoDateSchema,
+  currentFinish: isoDateSchema,
+  actualStart: isoDateSchema.optional(),
+  actualFinish: isoDateSchema.optional(),
+  remainingDurationDays: z.number().finite().min(0).max(100_000),
+  totalFloatDays: z.number().finite().min(-100_000).max(100_000),
+  percentComplete: z.number().finite().min(0).max(100),
+  physicalPercentComplete: z.number().finite().min(0).max(100),
+  plannedLaborHours: z.number().finite().min(0).max(1_000_000_000),
+  actualLaborHours: z.number().finite().min(0).max(1_000_000_000),
+  primaryResource: z.string().max(200).optional(),
+  sourceSystem: scheduleSourceSchema,
+  sourceBatchId: z.string().min(1).max(256),
+  mappingStatus: z.enum(['mapped', 'manual', 'unmapped']),
+})
+const scheduleRelationshipSchema = z.object({
+  id: z.string().min(1).max(512),
+  predecessorId: z.string().min(1).max(256),
+  successorId: z.string().min(1).max(256),
+  type: z.enum(['FS', 'SS', 'FF', 'SF']),
+  lagDays: z.number().finite().min(-100_000).max(100_000),
+  sourceSystem: scheduleSourceSchema,
+  sourceBatchId: z.string().min(1).max(256),
+})
+const scheduleImportIssueSchema = z.object({
+  id: z.string().min(1).max(256),
+  row: z.number().int().min(0).max(10_000_000),
+  severity: z.enum(['warning', 'error']),
+  field: z.string().min(1).max(128),
+  message: z.string().min(1).max(2000),
+  sourceActivityId: z.string().max(128).optional(),
+})
+const scheduleImportBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceSystem: scheduleSourceSchema,
+  fileName: z.string().min(1).max(500),
+  dataDate: isoDateSchema,
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['accepted', 'accepted_with_warnings', 'rejected']),
+  activityCount: z.number().int().min(0).max(1_000_000),
+  relationshipCount: z.number().int().min(0).max(5_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  issues: z.array(scheduleImportIssueSchema).max(100_000),
+})
+
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()
 const changeItemSchema = z.object({ id: z.string(), title: z.string() }).passthrough()
 const forecastPackageSchema = z.object({ id: z.string(), status: z.string() }).passthrough()
@@ -139,6 +200,22 @@ const actionSchemas = [
   z.object({ type: z.literal('SET_REPORTS'), payload: z.array(z.record(z.string(), z.unknown())) }),
   z.object({ type: z.literal('SET_VALUES'), payload: z.array(extractedValueSchema).max(10_000) }),
   z.object({ type: z.literal('SET_SELECTED_VALUE'), payload: z.string().min(1) }),
+  z.object({
+    type: z.literal('IMPORT_SCHEDULE'),
+    payload: z.object({
+      batch: scheduleImportBatchSchema,
+      activities: z.array(scheduleActivitySchema).max(1_000_000),
+      relationships: z.array(scheduleRelationshipSchema).max(5_000_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_SCHEDULE_ACTIVITY_MAPPING'),
+    payload: z.object({
+      activityId: z.string().min(1).max(256),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),
 ] as const satisfies ReadonlyArray<z.ZodTypeAny>
 

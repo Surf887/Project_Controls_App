@@ -41,7 +41,7 @@ export interface AuditLogEntry {
   at: string
   actor: string
   team: string
-  entityType: 'forecast' | 'change' | 'cost_sheet' | 'settings' | 'accrual' | 'report'
+  entityType: 'forecast' | 'change' | 'cost_sheet' | 'settings' | 'accrual' | 'report' | 'schedule'
   entityId: string
   action: string
   summary: string
@@ -57,6 +57,7 @@ export interface TeamReportTemplate {
     | 'change_pipeline'
     | 'forecast_movement'
     | 'evm_snapshot'
+    | 'schedule_performance'
     | 'audit_activity'
     | 'commitment_report'
     | 'invoice_status'
@@ -122,6 +123,13 @@ export const teamReportTemplates: TeamReportTemplate[] = [
     audience: 'Performance team',
     description: 'CPI, SPI, EAC by WBS for current period',
     template: 'evm_snapshot',
+  },
+  {
+    id: 'rpt-schedule',
+    name: 'Schedule and cost performance',
+    audience: 'Project controls / leadership',
+    description: 'P6 activities linked to control-account PV, EV, SPI, CPI, and forecast finish',
+    template: 'schedule_performance',
   },
   {
     id: 'rpt-audit',

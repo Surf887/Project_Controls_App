@@ -17,6 +17,7 @@ import { sumBac, sumCostSheetMetric } from '../engine/costAggregation'
 import { computeForecast } from '../engine/forecast'
 import { computeEvmWithMethod, costSheetToEvmAccounts } from '../engine/evmFromCostSheet'
 import { buildScurveFromCostSheet } from '../engine/loading'
+import { latestAcceptedScheduleImport } from '../engine/scheduleControl'
 import { useProjectStore } from '../store/projectStore'
 import { CashFlowChart, ResourceHistogram, SCurveChart } from './charts'
 
@@ -264,6 +265,7 @@ function ProgressBar({ label, value, tone }: { label: string; value: number; ton
 
 export function ControlsIntelligence() {
   const { state } = useProjectStore()
+  const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports)
   const forecastByWbs = useMemo(
     () => new Map(computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities).map((row) => [row.wbs, row.eacMostLikely])),
     [state.changes, state.costSheetRows, state.opportunities, state.risks],
@@ -273,6 +275,8 @@ export function ControlsIntelligence() {
       costSheetToEvmAccounts(state.costSheetRows, {
         templates: state.ruleOfCreditTemplates,
         progressCredits: state.progressCredits,
+        scheduleActivities: state.scheduleActivities,
+        scheduleDataDate: scheduleImport?.dataDate,
       }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
       ),
@@ -281,7 +285,9 @@ export function ControlsIntelligence() {
       state.costSheetRows,
       state.progressCredits,
       state.ruleOfCreditTemplates,
+      state.scheduleActivities,
       state.settings.evmEacMethod,
+      scheduleImport?.dataDate,
     ],
   )
   const scurve = useMemo(() => buildScurveFromCostSheet(state.costSheetRows), [state.costSheetRows])
@@ -400,12 +406,16 @@ export function ControlsIntelligence() {
 
 export function PredictiveIntelligence() {
   const { state } = useProjectStore()
+  const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports)
   const results = useMemo(
     () =>
-      costSheetToEvmAccounts(state.costSheetRows).map((account) =>
+      costSheetToEvmAccounts(state.costSheetRows, {
+        scheduleActivities: state.scheduleActivities,
+        scheduleDataDate: scheduleImport?.dataDate,
+      }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod),
       ),
-    [state.costSheetRows, state.settings.evmEacMethod],
+    [scheduleImport?.dataDate, state.costSheetRows, state.scheduleActivities, state.settings.evmEacMethod],
   )
   const signals = buildPredictiveSignals(results)
 

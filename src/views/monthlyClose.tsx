@@ -9,6 +9,7 @@ import { useProjectRole } from '../hooks/useProjectRole'
 import { pathForView } from '../routes/viewPaths'
 import { useProjectStore } from '../store/projectStore'
 import { fetchClosePack } from '../api/client'
+import { latestAcceptedScheduleImport, scheduleSummary } from '../engine/scheduleControl'
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -41,6 +42,20 @@ export function MonthlyCloseWorkspace() {
   const sccsRollup = useMemo(
     () => rollupCostSheetBySccs(enrichCostSheetRows(state.costSheetRows)).slice(0, 4),
     [state.costSheetRows],
+  )
+  const latestSchedule = latestAcceptedScheduleImport(state.scheduleImports)
+  const schedule = useMemo(
+    () =>
+      scheduleSummary(
+        state.scheduleActivities,
+        state.scheduleRelationships,
+        latestSchedule?.dataDate ?? null,
+      ),
+    [
+      latestSchedule?.dataDate,
+      state.scheduleActivities,
+      state.scheduleRelationships,
+    ],
   )
 
   const metrics = useMemo(() => {
@@ -126,6 +141,33 @@ export function MonthlyCloseWorkspace() {
           <span>VAC</span>
           <strong>{formatUsd(metrics.vac)}</strong>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Schedule → cost control</span>
+            <h3>P6 status at the reporting cut-off</h3>
+          </div>
+          <Link className="ghost-button" to="/schedule-control">
+            Open integrated schedule
+          </Link>
+        </div>
+        {schedule.activityCount === 0 ? (
+          <p className="empty-state">Import and validate a P6 CSV before closing the reporting period.</p>
+        ) : (
+          <div className="ingestion-apply-insight">
+            <p>
+              <strong>SPI {schedule.spi.toFixed(2)}</strong> at {schedule.dataDate};{' '}
+              {schedule.criticalCount} critical, {schedule.lateCount} late, and {schedule.unmappedCount} unmapped
+              activities.
+            </p>
+            <p className="muted">
+              Forecast finish {schedule.forecastFinish} ({schedule.finishVarianceDays > 0 ? '+' : ''}
+              {schedule.finishVarianceDays} days against baseline).
+            </p>
+          </div>
+        )}
       </section>
 
       <section className="panel ingestion-apply-panel" data-testid="ingestion-apply">

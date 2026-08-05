@@ -2,6 +2,7 @@ import { computeForecast, totalForecastSnapshot } from '@pc/engine/forecast.js'
 import { buildPoExposures, computeFxRiskUsd } from '@pc/engine/forex.js'
 import { costSheetToEvmAccounts, computeEvmWithMethod } from '@pc/engine/evmFromCostSheet.js'
 import type { ProjectState } from '@pc/store/types.js'
+import { latestAcceptedScheduleImport } from '@pc/engine/scheduleControl.js'
 
 export function forecastFxAdverseUsd(state: ProjectState): number {
   if (!state.settings.fx.includeFxInForecast) {
@@ -26,9 +27,12 @@ export function computeProjectForecast(state: ProjectState) {
 export function computeProjectEvm(state: ProjectState) {
   const { snapshots } = computeProjectForecast(state)
   const forecastByWbs = new Map(snapshots.map((row) => [row.wbs, row.eacMostLikely]))
+  const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports ?? [])
   const accounts = costSheetToEvmAccounts(state.costSheetRows, {
     templates: state.ruleOfCreditTemplates,
     progressCredits: state.progressCredits,
+    scheduleActivities: state.scheduleActivities ?? [],
+    scheduleDataDate: scheduleImport?.dataDate,
   }).map((account) =>
     computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
   )

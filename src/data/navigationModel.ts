@@ -39,6 +39,7 @@ export type NavView =
   | 'accruals'
   | 'cost-structure'
   | 'sccs'
+  | 'schedule'
   | 'rules-of-credit'
   | 'long-lead'
   | 'ingestion'
@@ -83,6 +84,13 @@ export const navGroups: NavGroup[] = [
       { id: 'wbs', label: 'WBS Manager', eyebrow: 'Control accounts · CapEx tags' },
       { id: 'cost-structure', label: 'Cost Structure', eyebrow: 'CBS · TECOP/NTR · burden' },
       { id: 'sccs', label: 'ISO 19008 SCCS', eyebrow: 'PBS · SAB · COR · mapping' },
+    ],
+  },
+  {
+    group: 'Schedule control',
+    rationale: 'P6 baseline, current programme, critical path, and control-account integration',
+    items: [
+      { id: 'schedule', label: 'Integrated Schedule', eyebrow: 'P6 · critical path · cost linkage' },
     ],
   },
   {

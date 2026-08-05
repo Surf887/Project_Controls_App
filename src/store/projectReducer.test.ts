@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createSeedState } from '../store/seedState'
 import { projectReducer } from '../store/projectReducer'
+import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '../utils/p6CsvImport'
 
 describe('projectReducer stability', () => {
   it('does not mutate cost sheet on HYDRATE', () => {
@@ -28,5 +29,24 @@ describe('projectReducer stability', () => {
     const values = seed.values.map((value) => ({ ...value, wbs: 'B.01' }))
     const next = projectReducer(seed, { type: 'SET_VALUES', payload: values })
     expect(next).toBe(seed)
+  })
+
+  it('atomically replaces the current schedule source on import', () => {
+    const seed = createSeedState()
+    const text = sampleP6Csv()
+    const inspection = inspectP6Csv(text)
+    const imported = buildP6CsvImport(text, {
+      fileName: 'p6.csv',
+      dataDate: '2026-06-30',
+      importedBy: 'Planner',
+      knownWbs: seed.wbsNodes.map((node) => node.wbs),
+      columnMap: inspection.suggestedMap,
+      now: '2026-08-05T00:00:00.000Z',
+    })
+    const next = projectReducer(seed, { type: 'IMPORT_SCHEDULE', payload: imported })
+    expect(next.scheduleActivities).toHaveLength(3)
+    expect(next.scheduleRelationships).toHaveLength(2)
+    expect(next.scheduleImports[0]?.status).toBe('accepted')
+    expect(next.auditLog[0]?.entityType).toBe('schedule')
   })
 })

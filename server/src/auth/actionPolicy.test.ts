@@ -22,6 +22,12 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('cost_controller', 'SET_COST_SHEET')).toBe(true)
   })
 
+  it('requires cost_controller for schedule imports and mappings', () => {
+    expect(canPerformActionType('viewer', 'IMPORT_SCHEDULE')).toBe(false)
+    expect(canPerformActionType('cost_controller', 'IMPORT_SCHEDULE')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'UPDATE_SCHEDULE_ACTIVITY_MAPPING')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

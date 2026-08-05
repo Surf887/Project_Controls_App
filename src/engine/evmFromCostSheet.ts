@@ -4,6 +4,8 @@ import type { ProgressCreditEntry, RuleOfCreditTemplate } from '../store/types'
 import { PERIODS } from '../data/costSheet'
 import { controlAccountRows } from './costAggregation'
 import { wbsEarnedPercent } from './rulesOfCredit'
+import type { ScheduleActivity } from '../data/schedule'
+import { controlAccountSchedulePerformance } from './scheduleControl'
 
 export type EvmEacMethod = 'bac_cpi' | 'ac_plus_remaining' | 'engine_most_likely'
 
@@ -12,23 +14,38 @@ export function costSheetToEvmAccounts(
   options?: {
     templates?: RuleOfCreditTemplate[]
     progressCredits?: ProgressCreditEntry[]
+    scheduleActivities?: ScheduleActivity[]
+    scheduleDataDate?: string
   },
 ): EvmAccount[] {
   const templates = options?.templates ?? []
   const progressCredits = options?.progressCredits ?? []
+  const scheduleByWbs = new Map(
+    options?.scheduleActivities && options.scheduleDataDate
+      ? controlAccountSchedulePerformance(
+          options.scheduleActivities,
+          rows,
+          options.scheduleDataDate,
+        ).map((line) => [line.wbs, line] as const)
+      : [],
+  )
 
   return controlAccountRows(rows).map((row) => {
       const bac = row.originalBudget + row.approvedChanges
       const ac = row.actualsToDate
-      const plannedProgress = PERIODS.filter((_, index) => index <= 5).length / PERIODS.length
+      const schedule = scheduleByWbs.get(row.wbs)
+      const plannedProgress = schedule
+        ? schedule.plannedProgress / 100
+        : PERIODS.filter((_, index) => index <= 5).length / PERIODS.length
 
       const rocEarned = wbsEarnedPercent(row.wbs, templates, progressCredits)
-      const earnedRatio =
-        rocEarned != null
-          ? rocEarned / 100
-          : bac === 0
-            ? 0
-            : Math.min(ac / bac, 0.95)
+      let earnedRatio = bac === 0 ? 0 : Math.min(ac / bac, 0.95)
+      if (schedule) {
+        earnedRatio = schedule.actualProgress / 100
+      }
+      if (rocEarned != null) {
+        earnedRatio = rocEarned / 100
+      }
 
       const pv = bac * plannedProgress
       const ev = bac * earnedRatio

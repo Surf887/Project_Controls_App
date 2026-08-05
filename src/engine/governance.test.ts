@@ -99,4 +99,11 @@ describe('governance workflows', () => {
     expect(report.content).toContain('ID')
     expect(report.content.split('\n').length).toBeGreaterThan(report.preview.split('\n').length - 1)
   })
+
+  it('generates an enterprise schedule-performance report template', () => {
+    const template = teamReportTemplates.find((entry) => entry.template === 'schedule_performance')!
+    const report = generateTeamReportCsv(template, state, 'Planner')
+    expect(report.content).toContain('Forecast finish')
+    expect(report.content).toContain('Data date')
+  })
 })

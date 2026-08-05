@@ -8,6 +8,7 @@ export const viewPaths: Record<NavView, string> = {
   wbs: '/wbs',
   'cost-structure': '/cost-structure',
   sccs: '/cost-structure/sccs',
+  schedule: '/schedule-control',
   accruals: '/accruals',
   costsheet: '/cost-sheet',
   contingency: '/contingency',

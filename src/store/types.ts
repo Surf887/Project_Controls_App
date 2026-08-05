@@ -38,6 +38,7 @@ import type {
 } from '../data/governance'
 import type { ConnectorConfig, SyncJobResult } from '../integrations/connectors'
 import type { Vendor } from '../data/vendors'
+import type { ScheduleActivity, ScheduleImportBatch, ScheduleRelationship } from '../data/schedule'
 
 export type { ApprovalStep, WorkflowStatus } from '../data/governance'
 export type ReserveType = 'contingency' | 'management_reserve'
@@ -297,6 +298,9 @@ export interface ProjectState {
   reports: ReportDocument[]
   values: ExtractedValue[]
   selectedValueId: string
+  scheduleActivities: ScheduleActivity[]
+  scheduleRelationships: ScheduleRelationship[]
+  scheduleImports: ScheduleImportBatch[]
   ingestionApplications?: IngestionApplySummary[]
   /** Append-only ledger of extraction postings (active + reversed). */
   ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
@@ -366,6 +370,15 @@ export type ProjectAction =
   | { type: 'SET_REPORTS'; payload: ReportDocument[] }
   | { type: 'SET_VALUES'; payload: ExtractedValue[] }
   | { type: 'SET_SELECTED_VALUE'; payload: string }
+  | {
+      type: 'IMPORT_SCHEDULE'
+      payload: {
+        batch: ScheduleImportBatch
+        activities: ScheduleActivity[]
+        relationships: ScheduleRelationship[]
+      }
+    }
+  | { type: 'UPDATE_SCHEDULE_ACTIVITY_MAPPING'; payload: { activityId: string; wbs: string; actor: string } }
   | { type: 'APPLY_APPROVED_EXTRACTIONS'; payload: { actor: string } }
 
 /** One approved extraction posted into the cost model during a bulk apply. */

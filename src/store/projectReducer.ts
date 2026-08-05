@@ -31,14 +31,25 @@ function normalizeState(state: ProjectState): ProjectState {
   const needsSettings = !state.settings.reportingPeriod || !state.settings.fx
   const needsSccs = state.costSheetRows.some((row) => row.parentId === null && !row.sccs?.composite)
   const needsPostings = state.ingestionPostings == null
+  const needsSchedule =
+    state.scheduleActivities == null ||
+    state.scheduleRelationships == null ||
+    state.scheduleImports == null
 
-  if (!needsSettings && !needsSccs && !needsPostings) {
+  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule) {
     return state
   }
 
   return {
     ...state,
     ...(needsPostings ? { ingestionPostings: [] } : {}),
+    ...(needsSchedule
+      ? {
+          scheduleActivities: state.scheduleActivities ?? [],
+          scheduleRelationships: state.scheduleRelationships ?? [],
+          scheduleImports: state.scheduleImports ?? [],
+        }
+      : {}),
     ...(needsSettings
       ? {
           settings: {
@@ -72,6 +83,9 @@ function applyContingencyIfNeeded(state: ProjectState): ProjectState {
 }
 
 export function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
+  if (action.type !== 'HYDRATE' && action.type !== 'RESET') {
+    state = normalizeState(state)
+  }
   switch (action.type) {
     case 'HYDRATE':
       return normalizeState(action.payload)
@@ -500,6 +514,60 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       return applyValuesUpdate(state, action.payload, 'Cost Controller')
     case 'SET_SELECTED_VALUE':
       return { ...state, selectedValueId: action.payload }
+    case 'IMPORT_SCHEDULE': {
+      const { batch, activities, relationships } = action.payload
+      const accepted = batch.status !== 'rejected'
+      const sourceSystem = batch.sourceSystem
+      return {
+        ...state,
+        scheduleActivities: accepted
+          ? [
+              ...state.scheduleActivities.filter((activity) => activity.sourceSystem !== sourceSystem),
+              ...activities,
+            ]
+          : state.scheduleActivities,
+        scheduleRelationships: accepted
+          ? [
+              ...state.scheduleRelationships.filter(
+                (relationship) => relationship.sourceSystem !== sourceSystem,
+              ),
+              ...relationships,
+            ]
+          : state.scheduleRelationships,
+        scheduleImports: [batch, ...state.scheduleImports].slice(0, 50),
+        auditLog: appendAudit(state, {
+          actor: batch.importedBy,
+          team: 'Planning & scheduling',
+          entityType: 'schedule',
+          entityId: batch.id,
+          action: batch.status,
+          summary:
+            batch.status === 'rejected'
+              ? `Rejected schedule import ${batch.fileName} (${batch.errorCount} errors).`
+              : `Imported ${batch.activityCount} schedule activities from ${batch.fileName}.`,
+        }),
+      }
+    }
+    case 'UPDATE_SCHEDULE_ACTIVITY_MAPPING': {
+      const activity = state.scheduleActivities.find((entry) => entry.id === action.payload.activityId)
+      if (!activity) return state
+      return {
+        ...state,
+        scheduleActivities: state.scheduleActivities.map((entry) =>
+          entry.id === action.payload.activityId
+            ? { ...entry, wbs: action.payload.wbs, mappingStatus: 'manual' as const }
+            : entry,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Planning & scheduling',
+          entityType: 'schedule',
+          entityId: activity.id,
+          action: 'mapped',
+          summary: `Mapped schedule activity ${activity.sourceActivityId} to WBS ${action.payload.wbs}.`,
+        }),
+      }
+    }
     default:
       return state
   }

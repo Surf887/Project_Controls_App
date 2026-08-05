@@ -50,28 +50,41 @@ export function clearStoredState() {
   window.localStorage.removeItem(storageKey)
 }
 
-export function parseCsv(text: string): Record<string, string>[] {
+export interface ParsedCsvTable {
+  headers: string[]
+  normalizedHeaders: string[]
+  rows: Record<string, string>[]
+}
+
+export function parseCsvTable(text: string): ParsedCsvTable {
   const lines = text
     .replace(/^\uFEFF/, '')
     .split(/\r?\n/)
     .filter((line) => line.trim().length > 0)
 
   if (lines.length < 2) {
-    return []
+    return { headers: [], normalizedHeaders: [], rows: [] }
   }
 
-  const headers = splitCsvLine(lines[0]).map(normalizeHeader)
+  const headers = splitCsvLine(lines[0]).map((header) => header.trim())
+  const normalizedHeaders = headers.map(normalizeHeader)
 
-  return lines.slice(1).map((line) => {
+  const rows = lines.slice(1).map((line) => {
     const cells = splitCsvLine(line)
     const row: Record<string, string> = {}
 
-    headers.forEach((header, index) => {
+    normalizedHeaders.forEach((header, index) => {
       row[header] = cells[index]?.trim() ?? ''
     })
 
     return row
   })
+
+  return { headers, normalizedHeaders, rows }
+}
+
+export function parseCsv(text: string): Record<string, string>[] {
+  return parseCsvTable(text).rows
 }
 
 export function buildCsvImport(fileName: string, text: string, existingReportCount: number) {
@@ -199,7 +212,7 @@ export function sampleCsvContent() {
   ].join('\n')
 }
 
-function splitCsvLine(line: string) {
+export function splitCsvLine(line: string) {
   const cells: string[] = []
   let current = ''
   let inQuotes = false
@@ -233,7 +246,7 @@ function splitCsvLine(line: string) {
   return cells
 }
 
-function normalizeHeader(header: string) {
+export function normalizeHeader(header: string) {
   return header.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 

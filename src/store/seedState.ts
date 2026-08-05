@@ -128,6 +128,9 @@ export function createSeedState(): ProjectState {
     reports: seededReportDocuments,
     values: enrichExtractedValues(seededExtractedValues),
     selectedValueId: seededExtractedValues[0]?.id ?? '',
+    scheduleActivities: [],
+    scheduleRelationships: [],
+    scheduleImports: [],
     ingestionPostings: [],
   }
 

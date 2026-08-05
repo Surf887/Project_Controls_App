@@ -3,6 +3,7 @@ import { createSeedState } from '@pc/store/seedState.js'
 import { validateProjectAction, ActionValidationError } from '@pc/engine/actionValidation.js'
 import { applyProjectAction } from '@pc/store/projectReducer.js'
 import type { ExtractedValue } from '@pc/data/projectData.js'
+import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '@pc/utils/p6CsvImport.js'
 
 describe('validateProjectAction', () => {
   it('blocks LOCK_REPORTING_PERIOD when approved extractions are pending apply', () => {
@@ -55,5 +56,29 @@ describe('validateProjectAction', () => {
     )
 
     expect(() => validateProjectAction(state, { type: 'SET_VALUES', payload: values })).toThrow(/does not map/)
+  })
+
+  it('accepts a consistent P6 batch and rejects forged import counts', () => {
+    const state = createSeedState()
+    const text = sampleP6Csv()
+    const imported = buildP6CsvImport(text, {
+      fileName: 'p6.csv',
+      dataDate: '2026-06-30',
+      importedBy: 'Planner',
+      knownWbs: state.wbsNodes.map((node) => node.wbs),
+      columnMap: inspectP6Csv(text).suggestedMap,
+      now: '2026-08-05T00:00:00.000Z',
+    })
+
+    expect(() => validateProjectAction(state, { type: 'IMPORT_SCHEDULE', payload: imported })).not.toThrow()
+    expect(() =>
+      validateProjectAction(state, {
+        type: 'IMPORT_SCHEDULE',
+        payload: {
+          ...imported,
+          batch: { ...imported.batch, activityCount: imported.batch.activityCount + 1 },
+        },
+      }),
+    ).toThrow(/counts/)
   })
 })

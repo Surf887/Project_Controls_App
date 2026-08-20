@@ -3,6 +3,11 @@ import { logger } from '../utils/logger.js'
 
 let pool: pg.Pool | null = null
 
+function positiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 export function isPostgresEnabled(): boolean {
   return Boolean(process.env.DATABASE_URL)
 }
@@ -12,7 +17,17 @@ export function getPool(): pg.Pool {
     throw new Error('DATABASE_URL not configured')
   }
   if (!pool) {
-    pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+    pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: Math.trunc(positiveNumber(process.env.DB_POOL_MAX, 10)),
+      idleTimeoutMillis: positiveNumber(process.env.DB_IDLE_TIMEOUT_MS, 30_000),
+      connectionTimeoutMillis: positiveNumber(process.env.DB_CONNECT_TIMEOUT_MS, 10_000),
+      statement_timeout: positiveNumber(process.env.DB_STATEMENT_TIMEOUT_MS, 30_000),
+      ssl:
+        process.env.DATABASE_SSL === 'true'
+          ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+          : undefined,
+    })
   }
   return pool
 }

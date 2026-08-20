@@ -32,6 +32,8 @@ Copy `.env.example` to `.env` and set, at minimum, for production:
 
 Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platform's secret manager — never commit `.env`.
 
+For managed PostgreSQL set `DATABASE_SSL=true` and retain certificate verification unless your platform explicitly requires otherwise. Pool size and connect/statement timeouts are configurable with `DB_POOL_MAX`, `DB_CONNECT_TIMEOUT_MS`, and `DB_STATEMENT_TIMEOUT_MS`.
+
 ## Run with Docker Compose
 
 ```bash
@@ -47,6 +49,10 @@ docker compose up -d --build
 ## Database migrations
 
 SQL migrations in `server/src/db/migrations/*.sql` run automatically at startup when `DATABASE_URL` is set. Review them before first deploy. Take a backup before deploying a release that adds migrations.
+
+## First boot and project access
+
+An empty production database creates one blank project from `BOOTSTRAP_PROJECT_NAME`; demo projects are never seeded. The bootstrap administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Every non-admin user—including newly provisioned OIDC users—must receive an explicit project membership through `POST /api/platform/projects/:projectId/roles` before project data is visible. This deny-by-default behavior is intentional.
 
 ## Health checks
 

@@ -278,7 +278,7 @@ export const registerUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(200),
   role: roleSchema,
-  password: z.string().min(8).max(200),
+  password: z.string().min(12).max(200),
 })
 
 export const projectRoleSchema = z.object({

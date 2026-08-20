@@ -35,7 +35,7 @@ describePostgres('Postgres project store integration', () => {
 
   it('applies every SQL migration and seeds readable projects', async () => {
     const migrations = await query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations')
-    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(4)
+    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(5)
 
     const projects = await store.listProjectsAsync()
     const active = await store.getActiveProjectRecordAsync()

@@ -12,13 +12,13 @@ Engines wired to this grain: forecast roll-ups, EVM, governance/portfolio, S-cur
 
 ## CI
 
-`.github/workflows/ci.yml` runs client test/build and server test/smoke on every push/PR.
+`.github/workflows/ci.yml` gates client/server tests and builds, PostgreSQL integration, browser workflows, dependency security, and the production Docker image.
 
 ## Server
 
-- Auth/RBAC: `server/src/auth/rbac.ts`, `server/src/middleware/auth.ts` (Bearer token or `x-pc-role` header for demo)
+- Auth/RBAC: Secure HttpOnly production sessions, per-project roles, and demo headers only when explicitly enabled outside production
 - Schema validation: Zod on `POST .../actions`
-- Migrations: `server/src/db/migrate.ts` (JSON store; SQL placeholders for Postgres)
+- Migrations: transactional PostgreSQL migrations with startup advisory locking; JSON migration path is development-only
 - Route tests: `server/src/routes/projects.test.ts`
 - Smoke: `npm run smoke --prefix server`
 
@@ -40,10 +40,10 @@ Engines wired to this grain: forecast roll-ups, EVM, governance/portfolio, S-cur
 npm run test:e2e
 ```
 
-Playwright workflows: monthly close, cost sheet, forecast approval, WBS, changes, mobile nav.
+Playwright workflows: monthly close, cost sheet, forecast approval, WBS, manual mapping, P6 schedule integration, immutable audit, supported-scope gating, changes, and mobile navigation.
 
-## Next (Postgres / IdP)
+## Next (enterprise integrations / IdP)
 
-- Replace JSON store with Postgres + run SQL migrations
-- Wire corporate IdP; remove demo role headers
-- PDF generation (currently close summary exports as text placeholder)
+- Complete corporate OIDC Authorization Code + PKCE rollout
+- Add live P6/SAP/Planview adapters and high-volume normalized schedule storage
+- Add distributed tracing/error tracking and shared-store rate limiting for multi-replica deployments

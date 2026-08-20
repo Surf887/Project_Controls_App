@@ -92,6 +92,10 @@ projectsRouter.post('/:projectId/actions', guardProjectAction, async (req, res) 
       return
     }
     const action = parsed.data as ProjectAction
+    if (process.env.NODE_ENV === 'production' && req.headers['if-match'] == null) {
+      res.status(428).json({ error: 'If-Match state version is required for production mutations' })
+      return
+    }
     let expectedVersion: number | undefined
     try {
       expectedVersion = parseIfMatchVersion(req.headers['if-match'])

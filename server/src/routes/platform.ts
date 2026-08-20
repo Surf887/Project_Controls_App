@@ -145,7 +145,7 @@ platformRouter.post('/integrations/sync', requireAdmin, async (req, res) => {
     direction: 'inbound',
     projectId: parsed.data.projectId,
   })
-  res.json({ job })
+  res.status(job.status === 'failed' ? 422 : 200).json({ job })
 })
 
 platformRouter.get('/integrations/adapters', requireRole('viewer'), (req, res) => {

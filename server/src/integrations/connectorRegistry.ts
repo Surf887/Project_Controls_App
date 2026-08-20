@@ -129,6 +129,23 @@ export function validatePartialLoad(rows: Array<{ wbs: string; amount: number }>
 }
 
 function sapSync(request: SyncJobRequest): Promise<SyncJobResult> {
+  if (
+    process.env.NODE_ENV === 'production' ||
+    process.env.ENABLE_SIMULATED_INTEGRATIONS !== 'true'
+  ) {
+    return Promise.resolve({
+      jobId: `JOB-${Date.now()}`,
+      connectorId: request.connectorId,
+      domain: request.domain,
+      status: 'failed',
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      recordsProcessed: 0,
+      recordsSkipped: 0,
+      validationWarnings: [],
+      errors: ['SAP adapter is not configured for live data; simulated sync is disabled.'],
+    })
+  }
   const sampleRows = [
     { wbs: 'A.01', amount: 1200000 },
     { wbs: 'A.01.01', amount: 500000 },

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { navGroups } from '../data/navigationModel'
 import { monthlyClosePath, pathForView } from '../routes/viewPaths'
 import { costControlLogCount, costControlLogPath } from '../data/costControlLogs'
+import { isViewEnabled } from '../config/features'
 
 interface CommandPaletteProps {
   open: boolean
@@ -15,7 +16,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   const items = useMemo(() => {
     const navItems = navGroups.flatMap((group) =>
-      group.items.map((item) => ({
+      group.items.filter((item) => isViewEnabled(item.id)).map((item) => ({
         id: item.id,
         label: item.label,
         eyebrow: `${group.group} · ${item.eyebrow}`,

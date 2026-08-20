@@ -88,6 +88,10 @@ export function IntegrationsView() {
 
   return (
     <div className="view-stack">
+      <section className="callout risk">
+        Demonstration module: connection tests and sync results on this screen are simulated and do not import live
+        SAP, P6, Aconex, SharePoint, or Snowflake records.
+      </section>
       {message && (
         <section className="panel">
           <p>{message}</p>

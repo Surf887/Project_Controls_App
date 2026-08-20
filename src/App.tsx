@@ -38,6 +38,7 @@ import { signIn } from './api/client'
 import { LoginScreen } from './views/login'
 import { ExtractionMappingEditor, type ExtractionMappingDraft } from './components/ExtractionMappingEditor'
 import { useProjectRole } from './hooks/useProjectRole'
+import { isViewEnabled } from './config/features'
 
 // Route-level code splitting: each routed view is loaded on demand so the
 // initial bundle stays small. Named exports are adapted to the default export
@@ -199,6 +200,19 @@ function confidenceClass(confidence: number) {
 
 function statusClass(status: ReviewStatus | ApprovalStatus | ReportDocument['status']) {
   return status.replace('_', '-')
+}
+
+function UnsupportedProductionFeature() {
+  return (
+    <section className="panel">
+      <span className="eyebrow">Not enabled in this deployment</span>
+      <h2>Illustrative module disabled</h2>
+      <p className="empty-state">
+        This capability is not backed by a production data source. An administrator may enable it explicitly for
+        demonstrations, but it is excluded from the supported production scope.
+      </p>
+    </section>
+  )
 }
 
 function App() {
@@ -782,7 +796,7 @@ function App() {
 
         {activeView === 'forex' && <ForexView />}
 
-        {activeView === 'integrations' && <IntegrationsView />}
+        {activeView === 'integrations' && (isViewEnabled('integrations') ? <IntegrationsView /> : <UnsupportedProductionFeature />)}
 
         {activeView === 'risks' && <RiskOpportunityRegister />}
 
@@ -804,15 +818,15 @@ function App() {
 
         {activeView === 'predictive' && <PredictiveIntelligence />}
 
-        {activeView === 'engineering' && <EngineeringIntelligence />}
+        {activeView === 'engineering' && (isViewEnabled('engineering') ? <EngineeringIntelligence /> : <UnsupportedProductionFeature />)}
 
-        {activeView === 'model' && <ModelIntelligence />}
+        {activeView === 'model' && (isViewEnabled('model') ? <ModelIntelligence /> : <UnsupportedProductionFeature />)}
 
-        {activeView === 'reality' && <RealityIntelligence />}
+        {activeView === 'reality' && (isViewEnabled('reality') ? <RealityIntelligence /> : <UnsupportedProductionFeature />)}
 
         {activeView === 'governance' && <Governance />}
 
-        {activeView === 'decisions' && <Decisions />}
+        {activeView === 'decisions' && (isViewEnabled('decisions') ? <Decisions /> : <UnsupportedProductionFeature />)}
         </Suspense>
       </section>
 

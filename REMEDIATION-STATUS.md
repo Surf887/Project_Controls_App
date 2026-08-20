@@ -4,9 +4,9 @@ Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Statu
 
 ## Current verdict
 
-The codebase is suitable for a **controlled, single-instance production pilot** after the deployment-specific gates below are completed. It is **not yet ready for an unrestricted enterprise launch**: the audit and baseline stores are still file-backed, several product areas are explicitly simulated, and penetration testing, restore testing, APM, and identity-provider rollout are operational prerequisites rather than repository changes.
+The supported scope is **deployment-ready for a same-origin, PostgreSQL-backed production release** after the deployment-specific gates below are completed. Simulated modules are excluded by default. Horizontal scale, regulated/compliance sign-off, live enterprise adapters, and unrestricted enterprise rollout still require the operational and integration follow-ups listed below.
 
-This pass also closes two gaps found after the original audit: production images now include SQL migration assets and writable persistent audit/baseline storage, and production clients fail closed instead of silently exposing the offline demo when the API is unavailable.
+This pass also closes gaps found after the original audit: production images include SQL migration assets, governance records are PostgreSQL-backed, browser sessions use HttpOnly cookies, unsupported simulated modules fail closed, and production clients do not expose offline demo data when the API is unavailable.
 
 ## P0 — Critical blockers (all fixed)
 
@@ -20,7 +20,7 @@ This pass also closes two gaps found after the original audit: production images
 
 ## P1 — High (fixed)
 
-- ✅ Audit chain is HMAC-keyed (`AUDIT_HMAC_SECRET`) with in-process serialized appends.
+- ✅ Canonical HMAC audit events are stored in PostgreSQL and commit atomically with project-state mutations; the file chain remains a local-development fallback.
 - ✅ Fail-fast in production when `DATABASE_URL` is unset; JSON writes are atomic.
 - ✅ Zod validation on all mutating routes; `If-Match` validated as a positive integer.
 - ✅ Top-level React error boundary; 409 conflicts surfaced (no silent edit loss); token expiry handling.
@@ -33,8 +33,10 @@ This pass also closes two gaps found after the original audit: production images
 - ✅ Path-traversal guard on `projectId`; production admin-password length check.
 - ✅ Fixed a fresh-checkout seeding bug (migration pre-created an empty store, blocking seed) that would have hung server tests/CI on a clean clone.
 - ✅ SQL migrations are copied into the runtime image, run transactionally, and serialized across replicas with a Postgres advisory lock.
-- ✅ Production image provides a persistent writable volume for file-backed audit and baseline records.
+- ✅ Production baseline snapshots and immutable audit events use PostgreSQL; no application data volume is required.
 - ✅ Production client disables offline/local seed fallback unless `VITE_ALLOW_OFFLINE=true` is explicitly set.
+- ✅ Browser credentials use Secure, HttpOnly, SameSite=Strict cookies; JWTs are no longer persisted in browser storage.
+- ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
 
@@ -51,16 +53,15 @@ This pass also closes two gaps found after the original audit: production images
 These are either operational (not code we can complete here) or larger initiatives:
 
 - **ESLint/Prettier + coverage gates in CI.** Config and a baseline cleanup require adding devDependencies (a lockfile change) and fixing the existing lint backlog — do this as a dedicated pass, then flip the CI jobs to blocking.
-- **Metrics, tracing, error tracking** (Prometheus/OpenTelemetry/Sentry). Hooks/log correlation are in place; wiring an APM/error SDK is the next step.
+- **Tracing and error tracking** (OpenTelemetry/Sentry). Structured logs, request correlation, health probes, and protected Prometheus metrics are in place.
 - **Shared-store rate limiting** (e.g. Redis) for multi-replica deployments — current limiter is per-instance.
-- **Database-backed audit and baselines.** The current HMAC chain and snapshots persist on the `pc_app_data` volume and are appropriate only for the documented single-instance topology; move them into append-only Postgres/object storage before horizontal scaling.
 - **DB normalization / event sourcing.** State is stored as a versioned JSONB blob today; splitting cost sheet/registers into relational tables is a Phase-2/3 effort.
 - **Full OIDC Authorization-Code + PKCE** server-side flow (current flow verifies a client-supplied ID token at the exchange endpoint).
 - **Expanded test coverage** for the remaining routes/services and UI components; add a coverage tool + threshold.
 - **Operational / compliance:** TLS termination + reverse proxy config for your environment, automated backup scheduling, third-party penetration test, SOC 2 control mapping, and (if needed) Kubernetes/horizontal-scale topology. `LICENSE` choice is left to the repository owner.
-- **Feature truthfulness:** intelligence views and connector handshakes still contain simulated data/behavior. Keep them clearly labeled or disabled for users who could interpret them as live integrations.
+- **Feature truthfulness:** simulated connectors and illustrative intelligence are disabled by default and cannot report simulated SAP success in production. Keep feature flags off outside explicit demonstrations.
 - **Enterprise source adapters:** P6 XER/live API, normalized high-volume schedule storage, SAP actuals/commitments, Planview governance data, and PDF/OCR extraction remain the next integration increments.
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 79 client/domain tests pass; server bundle + typecheck pass; 69 server tests pass locally; and all 9 Playwright workflows pass with demo auth. CI additionally executes two Postgres migration/concurrency tests and builds the production Docker image (the local cloud runner provides neither service). The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 80 client/domain tests pass; server bundle + typecheck pass; 75 server tests pass locally; and all 10 Playwright workflows pass. CI executes three PostgreSQL migration/concurrency/governance tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

@@ -5,6 +5,17 @@ import type { AuthUser } from '../auth/rbac.js'
 import { closePool, query, runSqlMigrations } from './postgres.js'
 import { PostgresProjectStore } from './postgresProjectStore.js'
 import { VersionConflictError } from './store.js'
+import {
+  appendPostgresAudit,
+  listImmutableAuditAsync,
+  verifyAuditChainAsync,
+} from '../services/auditService.js'
+import {
+  createBaselineSnapshot,
+  getBaselineSnapshot,
+  listBaselineSnapshots,
+  lockBaselineSnapshot,
+} from '../services/baselineService.js'
 
 const describePostgres = process.env.DATABASE_URL ? describe : describe.skip
 
@@ -48,11 +59,41 @@ describePostgres('Postgres project store integration', () => {
         current.version,
         applyProjectAction,
         (state, nextAction) => validateProjectAction(state, nextAction),
-        () => undefined,
+        (client, auditedProjectId, auditedActor, auditedAction, version) =>
+          appendPostgresAudit(client, auditedProjectId, {
+            actor: auditedActor.name,
+            actorId: auditedActor.id,
+            team: auditedActor.role,
+            entityType: 'project',
+            entityId: auditedProjectId,
+            action: auditedAction.type,
+            summary: `Dispatched ${auditedAction.type}`,
+            payload: { actionType: auditedAction.type, version },
+          }).then(() => undefined),
       )
 
     const updated = await apply()
     expect(updated.version).toBe(current.version + 1)
+    const audit = await listImmutableAuditAsync(projectId)
+    expect(audit[0]?.action).toBe('SET_META')
+    expect((await verifyAuditChainAsync(projectId)).ok).toBe(true)
     await expect(apply()).rejects.toBeInstanceOf(VersionConflictError)
+  })
+
+  it('persists and locks baseline snapshots in Postgres', async () => {
+    const current = await store.getActiveProjectRecordAsync()
+    const snapshot = await createBaselineSnapshot({
+      projectId: current.state.meta.id,
+      label: 'Integration baseline',
+      createdBy: actor.name,
+      createdById: actor.id,
+      costSheetRows: current.state.costSheetRows,
+      wbsNodes: current.state.wbsNodes,
+      basisOfEstimate: current.state.basisOfEstimate,
+    })
+
+    expect((await listBaselineSnapshots(current.state.meta.id)).some((item) => item.id === snapshot.id)).toBe(true)
+    expect((await getBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('sanctioned')
+    expect((await lockBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('locked')
   })
 })

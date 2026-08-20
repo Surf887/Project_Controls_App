@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { getActiveProject, getProjectById } from '../db/database.js'
 import { attachProjectRole, requireRole } from '../middleware/auth.js'
-import { listImmutableAudit, verifyAuditChain } from '../services/auditService.js'
+import { listImmutableAuditAsync, verifyAuditChainAsync } from '../services/auditService.js'
 import {
   createBaselineSnapshot,
   getBaselineSnapshot,
@@ -18,28 +18,30 @@ export const enterpriseRouter = Router({ mergeParams: true })
 
 enterpriseRouter.use(attachProjectRole)
 
-enterpriseRouter.get('/audit', requireRole('viewer'), (req, res) => {
+enterpriseRouter.get('/audit', requireRole('viewer'), async (req, res) => {
   try {
     const projectId = param(req.params.projectId)
-    const events = listImmutableAudit(projectId)
-    const integrity = verifyAuditChain(projectId)
+    const [events, integrity] = await Promise.all([
+      listImmutableAuditAsync(projectId),
+      verifyAuditChainAsync(projectId),
+    ])
     res.json({ events, integrity })
   } catch (error) {
     sendRouteError(res, error, 500, 'Audit read failed')
   }
 })
 
-enterpriseRouter.get('/baselines', requireRole('viewer'), (req, res) => {
+enterpriseRouter.get('/baselines', requireRole('viewer'), async (req, res) => {
   try {
-    res.json({ snapshots: listBaselineSnapshots(param(req.params.projectId)) })
+    res.json({ snapshots: await listBaselineSnapshots(param(req.params.projectId)) })
   } catch (error) {
     sendRouteError(res, error, 500, 'Baseline list failed')
   }
 })
 
-enterpriseRouter.get('/baselines/:snapshotId', requireRole('viewer'), (req, res) => {
+enterpriseRouter.get('/baselines/:snapshotId', requireRole('viewer'), async (req, res) => {
   try {
-    const snapshot = getBaselineSnapshot(param(req.params.projectId), param(req.params.snapshotId))
+    const snapshot = await getBaselineSnapshot(param(req.params.projectId), param(req.params.snapshotId))
     if (!snapshot) {
       res.status(404).json({ error: 'Baseline snapshot not found' })
       return
@@ -59,7 +61,7 @@ enterpriseRouter.post('/baselines', requireRole('approver'), async (req, res) =>
     }
     const projectId = param(req.params.projectId)
     const state = await getProjectById(projectId)
-    const snapshot = createBaselineSnapshot({
+    const snapshot = await createBaselineSnapshot({
       projectId,
       label: parsed.data.label ?? `Baseline ${new Date().toISOString().slice(0, 10)}`,
       createdBy: req.user?.name ?? 'System',
@@ -76,9 +78,9 @@ enterpriseRouter.post('/baselines', requireRole('approver'), async (req, res) =>
   }
 })
 
-enterpriseRouter.post('/baselines/:snapshotId/lock', requireRole('admin'), (req, res) => {
+enterpriseRouter.post('/baselines/:snapshotId/lock', requireRole('admin'), async (req, res) => {
   try {
-    const snapshot = lockBaselineSnapshot(param(req.params.projectId), param(req.params.snapshotId))
+    const snapshot = await lockBaselineSnapshot(param(req.params.projectId), param(req.params.snapshotId))
     if (!snapshot) {
       res.status(404).json({ error: 'Baseline snapshot not found' })
       return

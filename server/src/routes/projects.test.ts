@@ -27,6 +27,19 @@ describe('API routes', () => {
     expect(res.headers['x-request-id']).toBe('health-test-1')
   })
 
+  it('protects Prometheus metrics with a bearer token', async () => {
+    process.env.METRICS_TOKEN = 'metrics-test-token-long'
+    const denied = await request(app).get('/api/metrics')
+    expect(denied.status).toBe(401)
+
+    const allowed = await request(app)
+      .get('/api/metrics')
+      .set('Authorization', 'Bearer metrics-test-token-long')
+    expect(allowed.status).toBe(200)
+    expect(allowed.text).toContain('project_controls_http_requests_total')
+    delete process.env.METRICS_TOKEN
+  })
+
   it('GET /api/projects lists projects', async () => {
     const res = await request(app).get('/api/projects')
     expect(res.status).toBe(200)

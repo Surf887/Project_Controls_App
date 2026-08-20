@@ -2,7 +2,12 @@ import type { ProjectAction, ProjectState } from '@pc/store/types.js'
 import { applyProjectAction } from '@pc/store/projectReducer.js'
 import { validateProjectAction } from '@pc/engine/actionValidation.js'
 import type { AuthUser } from '../auth/rbac.js'
-import { appendImmutableAudit } from '../services/auditService.js'
+import type { PoolClient } from 'pg'
+import {
+  appendImmutableAudit,
+  appendPostgresAudit,
+  type ImmutableAuditInput,
+} from '../services/auditService.js'
 import {
   assertChangeWorkflowTransition,
   assertForecastWorkflowTransition,
@@ -21,8 +26,8 @@ export { VersionConflictError } from './store.js'
 let store: JsonProjectStore | PostgresProjectStore = new JsonProjectStore()
 let postgresMode = false
 
-function auditHook(projectId: string, actor: AuthUser, action: ProjectAction, version: number) {
-  appendImmutableAudit(projectId, {
+function auditInput(projectId: string, actor: AuthUser, action: ProjectAction, version: number): ImmutableAuditInput {
+  return {
     actor: actor.name,
     actorId: actor.id,
     team: actor.role,
@@ -31,7 +36,21 @@ function auditHook(projectId: string, actor: AuthUser, action: ProjectAction, ve
     action: action.type,
     summary: `Dispatched ${action.type}`,
     payload: { actionType: action.type, version },
-  })
+  }
+}
+
+function fileAuditHook(projectId: string, actor: AuthUser, action: ProjectAction, version: number) {
+  appendImmutableAudit(projectId, auditInput(projectId, actor, action, version))
+}
+
+async function postgresAuditHook(
+  client: PoolClient,
+  projectId: string,
+  actor: AuthUser,
+  action: ProjectAction,
+  version: number,
+) {
+  await appendPostgresAudit(client, projectId, auditInput(projectId, actor, action, version))
 }
 
 function validateWorkflowGate(current: ProjectState, action: ProjectAction, actor?: AuthUser): void {
@@ -132,7 +151,7 @@ export async function applyAction(
       expectedVersion,
       applyProjectAction,
       validateWorkflowGate,
-      auditHook,
+      postgresAuditHook,
     )
   }
   return store.applyAction(
@@ -142,7 +161,7 @@ export async function applyAction(
     expectedVersion,
     applyProjectAction,
     validateWorkflowGate,
-    auditHook,
+    fileAuditHook,
   )
 }
 

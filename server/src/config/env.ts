@@ -24,6 +24,9 @@ export function validateEnv(): void {
     if (process.env.DISABLE_RATE_LIMIT === 'true') {
       throw new Error('DISABLE_RATE_LIMIT must not be enabled in production')
     }
+    if (process.env.ENABLE_SIMULATED_INTEGRATIONS === 'true') {
+      throw new Error('ENABLE_SIMULATED_INTEGRATIONS must not be enabled in production')
+    }
     if (process.env.USERS_PATH) {
       throw new Error('USERS_PATH must not be set in production — use Postgres users table')
     }
@@ -37,6 +40,10 @@ export function validateEnv(): void {
 
   if (process.env.OIDC_DEFAULT_ROLE && !VALID_ROLES.includes(process.env.OIDC_DEFAULT_ROLE as Role)) {
     throw new Error(`Invalid OIDC_DEFAULT_ROLE: ${process.env.OIDC_DEFAULT_ROLE}`)
+  }
+
+  if (process.env.METRICS_TOKEN && process.env.METRICS_TOKEN.length < 16) {
+    throw new Error('METRICS_TOKEN must be at least 16 characters when configured')
   }
 
   const oidcIssuer = process.env.OIDC_ISSUER

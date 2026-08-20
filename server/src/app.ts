@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
-import { randomUUID } from 'node:crypto'
+import { randomUUID, timingSafeEqual } from 'node:crypto'
 import path from 'node:path'
 import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -13,12 +13,22 @@ import { platformRouter } from './routes/platform.js'
 import { authRouter } from './routes/auth.js'
 import { attachUser } from './middleware/auth.js'
 import { logger } from './utils/logger.js'
+import { beginRequestMetric, renderPrometheusMetrics } from './utils/metrics.js'
 
 type RequestWithId = express.Request & { requestId?: string }
 
 function requestIdFrom(req: express.Request): string {
   const supplied = req.header('x-request-id')
   return supplied && /^[a-zA-Z0-9._:-]{1,128}$/.test(supplied) ? supplied : randomUUID()
+}
+
+function validMetricsCredential(req: express.Request): boolean {
+  const expected = process.env.METRICS_TOKEN
+  if (!expected) return false
+  const supplied = req.header('authorization')?.replace(/^Bearer\s+/i, '') ?? ''
+  const left = Buffer.from(supplied)
+  const right = Buffer.from(expected)
+  return left.length === right.length && timingSafeEqual(left, right)
 }
 
 /**
@@ -44,9 +54,11 @@ export function createApp() {
   app.use((req, res, next) => {
     const requestId = requestIdFrom(req)
     const startedAt = Date.now()
+    const finishMetric = beginRequestMetric(req.method, req.path)
     ;(req as RequestWithId).requestId = requestId
     res.setHeader('x-request-id', requestId)
     res.on('finish', () => {
+      finishMetric(res.statusCode)
       logger.info('http_request', {
         requestId,
         method: req.method,
@@ -88,6 +100,18 @@ export function createApp() {
 
   app.get('/api/health/live', (_req, res) => {
     res.json({ ok: true, service: 'project-controls-api' })
+  })
+
+  app.get('/api/metrics', (req, res) => {
+    if (!process.env.METRICS_TOKEN) {
+      res.status(404).json({ error: 'Not found' })
+      return
+    }
+    if (!validMetricsCredential(req)) {
+      res.status(401).json({ error: 'Authentication required' })
+      return
+    }
+    res.type('text/plain; version=0.0.4').send(renderPrometheusMetrics())
   })
 
   app.get('/api/health/ready', async (req, res) => {

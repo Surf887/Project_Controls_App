@@ -44,7 +44,7 @@ describe('auditService immutability', () => {
     const events = listImmutableAudit(projectId)
     expect(events).toHaveLength(1)
     expect(events[0]!.prevHash).toBe('GENESIS')
-    expect(events[0]!.hashAlgorithm).toBe('hmac-sha256-v1')
+    expect(events[0]!.hashAlgorithm).toBe('hmac-sha256-v2')
     expect(events[0]!.hash).toMatch(/^[a-f0-9]{64}$/)
 
     appendImmutableAudit(projectId, {

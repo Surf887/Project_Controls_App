@@ -1,4 +1,4 @@
-import type { Pool } from 'pg'
+import type { Pool, PoolClient } from 'pg'
 import type { PortfolioProjectSnapshot } from '@pc/data/governance.js'
 import type { ProjectAction, ProjectState } from '@pc/store/types.js'
 import { createSeedState } from '@pc/store/seedState.js'
@@ -210,7 +210,13 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
     expectedVersion: number | undefined,
     applyReducer: (state: ProjectState, action: ProjectAction) => ProjectState,
     validate: (state: ProjectState, action: ProjectAction, actor?: AuthUser) => void,
-    onAudit: (projectId: string, actor: AuthUser, action: ProjectAction, version: number) => void,
+    onAudit: (
+      client: PoolClient,
+      projectId: string,
+      actor: AuthUser,
+      action: ProjectAction,
+      version: number,
+    ) => void | Promise<void>,
   ) {
     // Serialize concurrent writers and make the read-check-write atomic: take a
     // row lock (FOR UPDATE) inside a transaction and write with a version-
@@ -253,11 +259,10 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
         updatedAt,
         projectId,
       ])
-      await client.query('COMMIT')
-
       if (actor && action.type !== 'HYDRATE') {
-        onAudit(projectId, actor, action, nextVersion)
+        await onAudit(client, projectId, actor, action, nextVersion)
       }
+      await client.query('COMMIT')
 
       return { state: next, version: nextVersion }
     } catch (error) {

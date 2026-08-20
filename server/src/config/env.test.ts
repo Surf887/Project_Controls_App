@@ -14,6 +14,8 @@ describe('validateEnv', () => {
     delete process.env.USERS_PATH
     delete process.env.AUDIT_HMAC_SECRET
     delete process.env.CREDENTIALS_KEY
+    delete process.env.METRICS_TOKEN
+    delete process.env.ENABLE_SIMULATED_INTEGRATIONS
   })
 
   afterEach(() => {
@@ -43,6 +45,13 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow(/DISABLE_RATE_LIMIT/)
   })
 
+  it('rejects simulated integrations in production', () => {
+    process.env.NODE_ENV = 'production'
+    process.env.DATABASE_URL = 'postgres://localhost/test'
+    process.env.ENABLE_SIMULATED_INTEGRATIONS = 'true'
+    expect(() => validateEnv()).toThrow(/ENABLE_SIMULATED_INTEGRATIONS/)
+  })
+
   it('requires dedicated audit and credential secrets in production', () => {
     process.env.NODE_ENV = 'production'
     process.env.DATABASE_URL = 'postgres://localhost/test'
@@ -53,6 +62,11 @@ describe('validateEnv', () => {
 
     process.env.CREDENTIALS_KEY = 'credential-secret-long-enough'
     expect(() => validateEnv()).not.toThrow()
+  })
+
+  it('rejects a short metrics bearer token', () => {
+    process.env.METRICS_TOKEN = 'short'
+    expect(() => validateEnv()).toThrow(/METRICS_TOKEN/)
   })
 })
 

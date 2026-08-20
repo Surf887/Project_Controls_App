@@ -50,6 +50,9 @@ function YAxis({ max, steps = 5 }: { max: number; steps?: number }) {
 
 export function SCurveChart({ data }: { data?: typeof sCurveData } = {}) {
   const series = data ?? sCurveData
+  if (series.length < 2) {
+    return <p className="empty-state">No cost-loaded control accounts are available for an S-curve.</p>
+  }
   const n = series.length
   const max = 110
 

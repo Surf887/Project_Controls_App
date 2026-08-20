@@ -1,11 +1,13 @@
 import type { Pool, PoolClient } from 'pg'
+import { randomUUID } from 'node:crypto'
 import type { PortfolioProjectSnapshot } from '@pc/data/governance.js'
 import type { ProjectAction, ProjectState } from '@pc/store/types.js'
-import { createSeedState } from '@pc/store/seedState.js'
+import { createBlankProjectState, createSeedState } from '@pc/store/seedState.js'
 import type { AuthUser } from '../auth/rbac.js'
 import { getPool } from './postgres.js'
 import { VersionConflictError } from './store.js'
 import type { ApplyActionResult, ProjectRecord, ProjectStoreAdapter, ProjectSummary } from './projectStoreTypes.js'
+import { assertSafeId } from '../utils/safePath.js'
 
 export class PostgresProjectStore implements ProjectStoreAdapter {
   private pool!: Pool
@@ -36,7 +38,17 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
 
   private async seed() {
     const now = new Date().toISOString()
-    const primary = createSeedState()
+    const production = process.env.NODE_ENV === 'production'
+    const bootstrapName = process.env.BOOTSTRAP_PROJECT_NAME?.trim()
+    if (production && !bootstrapName) {
+      throw new Error('BOOTSTRAP_PROJECT_NAME is required when initializing an empty production database')
+    }
+    const primary = production
+      ? createBlankProjectState(
+          assertSafeId(process.env.BOOTSTRAP_PROJECT_ID ?? `proj-${randomUUID()}`, 'BOOTSTRAP_PROJECT_ID'),
+          bootstrapName!,
+        )
+      : createSeedState()
 
     await this.pool.query(
       `INSERT INTO portfolios (id, name, policy) VALUES ('default', 'Default portfolio', '{}') ON CONFLICT DO NOTHING`,
@@ -55,7 +67,9 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
 
     await insertProject(primary, true)
 
-    for (const project of primary.portfolioProjects.filter((p: PortfolioProjectSnapshot) => !p.isActive)) {
+    for (const project of production
+      ? []
+      : primary.portfolioProjects.filter((p: PortfolioProjectSnapshot) => !p.isActive)) {
       const benchmark = createSeedState()
       benchmark.meta = {
         id: project.id,

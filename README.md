@@ -145,11 +145,10 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 
 ## Scope limits (v1)
 
-- Active project is single-project at a time; portfolio compare shows seeded benchmark projects alongside the live one
-- Persistence is either JSON file or PostgreSQL (set `DATABASE_URL`); project state is stored as a versioned JSONB blob in Postgres today — splitting cost sheet / registers into relational tables is the next enterprise step
-- Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
-- Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
-- Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
+- Active project is single-project at a time; portfolio comparison shows only configured snapshots. Seeded benchmarks are development/demo data and are never created in production.
+- PostgreSQL is mandatory in production; the JSON/file store is a local-development fallback. Project state remains a versioned JSONB document while immutable audit events and baseline snapshots use dedicated PostgreSQL tables.
+- Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with per-project RBAC. Demo role switching is hard-disabled in production; OIDC remains optional.
+- Simulated connectors and illustrative intelligence modules are disabled by default (`VITE_ENABLE_SIMULATED_FEATURES=false`, `ENABLE_SIMULATED_INTEGRATIONS=false`)
 - P6 CSV status imports are supported; P6 XER/live API and SAP/EcoSys live feeds are not yet implemented
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 

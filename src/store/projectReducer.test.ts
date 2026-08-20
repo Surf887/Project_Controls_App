@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { createSeedState } from '../store/seedState'
+import { createBlankProjectState, createSeedState } from '../store/seedState'
 import { projectReducer } from '../store/projectReducer'
 import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '../utils/p6CsvImport'
 
 describe('projectReducer stability', () => {
+  it('creates a truthful empty project for production bootstrap', () => {
+    const blank = createBlankProjectState('proj-new', 'New Project')
+    expect(blank.meta.name).toBe('New Project')
+    expect(blank.costSheetRows).toEqual([])
+    expect(blank.scheduleActivities).toEqual([])
+    expect(blank.reports).toEqual([])
+    expect(blank.portfolioProjects).toEqual([])
+    expect(blank.fxRates).toEqual([])
+    expect(blank.settings.reportingPeriod.locked).toBe(false)
+    expect(blank.cbsNodes.length).toBeGreaterThan(0)
+  })
+
   it('does not mutate cost sheet on HYDRATE', () => {
     const seed = createSeedState()
     const hydrated = projectReducer(seed, { type: 'HYDRATE', payload: seed })

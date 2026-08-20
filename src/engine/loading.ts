@@ -52,6 +52,7 @@ export function buildScurveFromCostSheet(
   }>,
 ) {
   const scoped = controlAccountRows(rows as CostRow[])
+  if (scoped.length === 0) return []
 
   const totalBudget = scoped.reduce((sum, row) => sum + row.originalBudget + row.approvedChanges, 0) || 1
 

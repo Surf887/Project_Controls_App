@@ -147,3 +147,78 @@ export function createSeedState(): ProjectState {
     costSheetRows: applyContingencyDrawsToCostSheet(base.costSheetRows, contingencyDraws),
   }
 }
+
+/** Empty, truthful production bootstrap; reference dictionaries remain available for setup. */
+export function createBlankProjectState(id: string, name: string): ProjectState {
+  const seed = createSeedState()
+  const now = new Date()
+  const reportingPeriod = now.toLocaleString('en-US', {
+    month: 'short',
+    year: '2-digit',
+    timeZone: 'UTC',
+  }).replace(' ', '-')
+  return {
+    ...seed,
+    meta: { id, name, baselineLabel: 'Working baseline' },
+    settings: {
+      ...seed.settings,
+      contingencyRules: { ...seed.settings.contingencyRules },
+      fx: { ...seed.settings.fx },
+      reportingPeriod: { period: reportingPeriod, locked: false },
+    },
+    basisOfEstimate: {
+      scope: '',
+      methodology: '',
+      designBasis: '',
+      allowances: '',
+      exclusions: '',
+      risksOpportunities: '',
+      lastUpdated: new Date().toISOString().slice(0, 10),
+      preparedBy: '',
+    },
+    wbsNodes: [],
+    costSheetRows: [],
+    deliverables: [],
+    changes: [],
+    risks: [],
+    opportunities: [],
+    issues: [],
+    actions: [],
+    decisions: [],
+    lessons: [],
+    claims: [],
+    vendors: [],
+    purchaseOrders: [],
+    contracts: [],
+    rfqBids: [],
+    invoices: [],
+    subcontracts: [],
+    fieldDailyReports: [],
+    fieldObservations: [],
+    turnoverChecklists: [],
+    expeditingMilestones: [],
+    workFronts: [],
+    productivityTrend: [],
+    commissioningSystems: [],
+    punchList: [],
+    contingencyDraws: [],
+    fxRates: [],
+    connectors: [],
+    syncJobs: [],
+    progressCredits: [],
+    longLeadItems: [],
+    costAccruals: [],
+    forecastApprovals: [],
+    portfolioProjects: [],
+    auditLog: [],
+    generatedTeamReports: [],
+    reports: [],
+    values: [],
+    selectedValueId: '',
+    scheduleActivities: [],
+    scheduleRelationships: [],
+    scheduleImports: [],
+    ingestionApplications: [],
+    ingestionPostings: [],
+  }
+}

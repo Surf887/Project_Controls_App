@@ -235,11 +235,16 @@ export async function verifyUserPassword(user: UserRecord, password: string): Pr
 export async function ensureBootstrapAdmin(): Promise<void> {
   const email = process.env.ADMIN_EMAIL
   const password = process.env.ADMIN_PASSWORD
-  if (!email || !password) return
+  if ((await countUsers()) > 0) return
+  if (!email || !password) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD are required when initializing an empty production user store')
+    }
+    return
+  }
   if (process.env.NODE_ENV === 'production' && password.length < 12) {
     throw new Error('ADMIN_PASSWORD must be at least 12 characters in production')
   }
-  if ((await countUsers()) > 0) return
   await createUser({
     email,
     name: process.env.ADMIN_NAME ?? 'Administrator',

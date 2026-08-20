@@ -9,6 +9,7 @@ function formatUsd(value: number) {
 export function PortfolioCompareView() {
   const { state, dispatch } = useProjectStore()
   const projects = useMemo(() => syncActivePortfolioProject(state), [state])
+  const bestCpi = projects.length > 0 ? Math.max(...projects.map((project) => project.cpi)).toFixed(2) : '—'
 
   return (
     <div className="view-stack">
@@ -27,7 +28,7 @@ export function PortfolioCompareView() {
         />
         <MetricTile
           label="Best CPI (portfolio)"
-          value={Math.max(...projects.map((p) => p.cpi)).toFixed(2)}
+          value={bestCpi}
           detail="Highest cost performance index"
         />
         <MetricTile
@@ -66,6 +67,13 @@ export function PortfolioCompareView() {
               </tr>
             </thead>
             <tbody>
+              {projects.length === 0 && (
+                <tr>
+                  <td colSpan={11}>
+                    <p className="empty-state">No portfolio snapshots are configured for this project.</p>
+                  </td>
+                </tr>
+              )}
               {projects.map((project) => (
                 <tr key={project.id} className={project.isActive ? 'row-active' : ''}>
                   <td>

@@ -26,6 +26,7 @@ Copy `.env.example` to `.env` and set, at minimum, for production:
 | `CORS_ORIGIN` | Allowlist of client origins; cross-origin is denied if unset in prod. |
 | `WEBHOOK_SECRET` | Required to accept inbound webhooks (HMAC verification). |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run bootstrap admin (password ≥12 chars in prod). |
+| `BOOTSTRAP_PROJECT_NAME` | Creates one empty project when the production projects database is empty; demo data is never seeded in production. |
 | `METRICS_TOKEN` | Optional ≥16-character bearer token enabling `GET /api/metrics`. |
 | `TRUST_PROXY` | Trusted reverse-proxy hop count (normally `1`) for correct client IP/rate limiting. |
 
@@ -35,7 +36,7 @@ Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platfor
 
 ```bash
 cp .env.example .env        # then edit secrets
-# Compose requires POSTGRES_PASSWORD, JWT_SECRET, AUDIT_HMAC_SECRET, and CREDENTIALS_KEY.
+# Compose also requires bootstrap admin credentials and BOOTSTRAP_PROJECT_NAME.
 docker compose up -d --build
 ```
 

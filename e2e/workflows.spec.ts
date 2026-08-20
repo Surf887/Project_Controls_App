@@ -80,6 +80,14 @@ test.describe('Integrated schedule control', () => {
   })
 })
 
+test.describe('Supported production scope', () => {
+  test('blocks direct access to simulated connector modules by default', async ({ page }) => {
+    await page.goto('/admin/integrations')
+    await expect(page.getByRole('heading', { name: 'Illustrative module disabled' })).toBeVisible()
+    await expect(page.getByText(/not backed by a production data source/i)).toBeVisible()
+  })
+})
+
 test.describe('Change approval', () => {
   test('change register loads', async ({ page }) => {
     await page.goto('/changes')

@@ -39,6 +39,9 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
+- ✅ Empty production databases create one explicit blank project; demo projects, benchmark metrics, extracted reports, and FX rates are development-only.
+- ✅ The audit workspace verifies the server HMAC chain and labels the reducer history separately.
+- ✅ WBS imports create structure/baseline only and reject invalid currency, parent, duplicate, and negative-budget data without fabricating financials.
 
 ## P2 — Medium/Low (addressed)
 
@@ -64,4 +67,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 80 client/domain tests pass; server bundle + typecheck pass; 75 server tests pass locally; and all 10 Playwright workflows pass. CI executes three PostgreSQL migration/concurrency/governance tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 83 client/domain tests pass; server bundle + typecheck pass; 75 server tests pass locally; and all 11 Playwright workflows pass. CI executes three PostgreSQL migration/concurrency/governance tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

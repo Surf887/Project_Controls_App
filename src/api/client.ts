@@ -28,6 +28,22 @@ export interface AuthConfig {
   oidcEnabled: boolean
 }
 
+export interface ImmutableAuditEvent {
+  seq: number
+  id: string
+  projectId: string
+  at: string
+  actor: string
+  actorId: string
+  team: string
+  entityType: string
+  entityId: string
+  action: string
+  summary: string
+  prevHash: string
+  hash: string
+}
+
 /** Error carrying the HTTP status so callers can branch (e.g. 401 -> re-login). */
 export class ApiError extends Error {
   status: number
@@ -294,6 +310,13 @@ export async function fetchForecastTotals(projectId: string): Promise<ForecastTo
 
 export async function fetchEvmSummary(projectId: string) {
   return request(`/projects/${encodeURIComponent(projectId)}/compute/evm`)
+}
+
+export async function fetchImmutableAudit(projectId: string): Promise<{
+  events: ImmutableAuditEvent[]
+  integrity: { ok: boolean; errors: string[] }
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/audit`)
 }
 
 export interface ClosePackFile {

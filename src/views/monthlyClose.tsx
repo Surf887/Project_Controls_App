@@ -154,7 +154,7 @@ export function MonthlyCloseWorkspace() {
           </Link>
         </div>
         {schedule.activityCount === 0 ? (
-          <p className="empty-state">Import and validate a P6 CSV before closing the reporting period.</p>
+          <p className="empty-state">No P6 schedule is loaded; schedule controls remain advisory for this close.</p>
         ) : (
           <div className="ingestion-apply-insight">
             <p>

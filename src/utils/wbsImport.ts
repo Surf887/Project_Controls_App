@@ -55,6 +55,17 @@ export function buildWbsImport(text: string): WbsImportResult {
   if (rows.length === 0) {
     return { error: 'WBS CSV needs a header row and at least one data row.', nodes: [], costRows: [] }
   }
+  const unsupportedCurrency = rows.find((row) => {
+    const currency = readCell(row, ['currency'])
+    return currency && currency.toUpperCase() !== 'USD'
+  })
+  if (unsupportedCurrency) {
+    return {
+      error: `WBS import currently supports USD only; convert ${readCell(unsupportedCurrency, ['currency'])} budgets before import.`,
+      nodes: [],
+      costRows: [],
+    }
+  }
 
   const nodes: WbsNode[] = rows.map((row, index) => {
     const wbs = readCell(row, ['wbs', 'code', 'id']) || `WBS-${index + 1}`
@@ -64,8 +75,6 @@ export function buildWbsImport(text: string): WbsImportResult {
     const phase = parsePhase(readCell(row, ['phase']))
     const discipline = readCell(row, ['discipline', 'disc']) || 'General'
     const originalBudget = parseBudget(readCell(row, ['originalbudget', 'budget', 'bac']))
-    const currencyRaw = readCell(row, ['currency']) || 'USD'
-
     if (!VALID_COST_TYPES.includes(costType)) {
       return {
         id: wbs,
@@ -103,9 +112,25 @@ export function buildWbsImport(text: string): WbsImportResult {
       phase,
       discipline,
       originalBudget,
-      currency: currencyRaw.toUpperCase() === 'USD' ? 'USD' : 'USD',
+      currency: 'USD',
     }
   })
+
+  const codes = new Set(nodes.map((node) => node.wbs))
+  if (codes.size !== nodes.length) {
+    return { error: 'WBS CSV contains duplicate WBS codes.', nodes: [], costRows: [] }
+  }
+  const invalidParent = nodes.find((node) => node.parentWbs && !codes.has(node.parentWbs))
+  if (invalidParent) {
+    return {
+      error: `Parent WBS ${invalidParent.parentWbs} for ${invalidParent.wbs} is not present in the file.`,
+      nodes: [],
+      costRows: [],
+    }
+  }
+  if (nodes.some((node) => node.originalBudget < 0)) {
+    return { error: 'WBS budgets cannot be negative.', nodes: [], costRows: [] }
+  }
 
   const costRows: CostRow[] = nodes.map((node) =>
     buildRow({
@@ -121,15 +146,15 @@ export function buildWbsImport(text: string): WbsImportResult {
       currency: 'USD',
       originalBudget: node.originalBudget,
       approvedChanges: 0,
-      commitments: Math.round(node.originalBudget * 0.65),
-      eac: Math.round(node.originalBudget * 1.02),
-      periods: PERIODS.map((period, index) => ({
+      commitments: 0,
+      eac: node.originalBudget,
+      periods: PERIODS.map((period) => ({
         period,
-        actual: index < 5 ? Math.round(node.originalBudget * 0.04) : 0,
-        forecast: index >= 5 ? Math.round(node.originalBudget * 0.06) : 0,
-        locked: index < 5,
+        actual: 0,
+        forecast: 0,
+        locked: false,
       })),
-      notes: `Imported ${node.costType} · ${node.phase}`,
+      notes: `Imported structure and baseline budget only · ${node.costType} · ${node.phase}`,
       lastModifiedBy: 'WBS import',
       lastModifiedAt: new Date().toLocaleString(),
       isExpanded: levelFromWbs(node.wbs) <= 1,

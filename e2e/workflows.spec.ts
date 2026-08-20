@@ -86,6 +86,13 @@ test.describe('Supported production scope', () => {
     await expect(page.getByRole('heading', { name: 'Illustrative module disabled' })).toBeVisible()
     await expect(page.getByText(/not backed by a production data source/i)).toBeVisible()
   })
+
+  test('shows the server-verified immutable audit separately from workflow history', async ({ page }) => {
+    await page.goto('/audit')
+    await expect(page.getByRole('heading', { name: 'HMAC-verified action history' })).toBeVisible()
+    await expect(page.getByText('Chain verified')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Project-state activity for in-app drill-down' })).toBeVisible()
+  })
 })
 
 test.describe('Change approval', () => {

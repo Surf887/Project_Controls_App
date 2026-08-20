@@ -38,7 +38,7 @@ import { signIn } from './api/client'
 import { LoginScreen } from './views/login'
 import { ExtractionMappingEditor, type ExtractionMappingDraft } from './components/ExtractionMappingEditor'
 import { useProjectRole } from './hooks/useProjectRole'
-import { isViewEnabled } from './config/features'
+import { isViewEnabled, simulatedFeaturesEnabled } from './config/features'
 
 // Route-level code splitting: each routed view is loaded on demand so the
 // initial bundle stays small. Named exports are adapted to the default export
@@ -638,17 +638,21 @@ function App() {
                     >
                       Open lineage
                     </button>
-                    <button
-                      className="topbar-menu-item"
-                      role="menuitem"
-                      type="button"
-                      onClick={() => {
-                        void resetDemoState()
-                        setMoreOpen(false)
-                      }}
-                    >
-                      Reset demo
-                    </button>
+                    {demoAuthAvailable && currentUser?.role === 'admin' && (
+                      <button
+                        className="topbar-menu-item"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Reset all demo project data? This cannot be undone.')) {
+                            void resetDemoState()
+                          }
+                          setMoreOpen(false)
+                        }}
+                      >
+                        Reset demo
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -1018,9 +1022,11 @@ function Ingestion({
               <button className="ghost-button" onClick={onDownloadSample} type="button">
                 Download sample CSV
               </button>
-              <button className="ghost-button" onClick={onSimulateUpload} type="button">
-                Simulate document only
-              </button>
+              {simulatedFeaturesEnabled && (
+                <button className="ghost-button" onClick={onSimulateUpload} type="button">
+                  Simulate document only
+                </button>
+              )}
             </div>
           </div>
           <p className="upload-message">{uploadMessage}</p>
@@ -1416,16 +1422,14 @@ function Validation({ values, onSelect }: { values: ExtractedValue[]; onSelect: 
         <div className="panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">Rules engine</span>
-              <h3>Validation checks</h3>
+              <span className="eyebrow">Rule catalog · reference</span>
+              <h3>Configured validation checks</h3>
             </div>
           </div>
           <div className="rule-list">
             {validationRules.map((rule) => (
               <article className="rule-card" key={rule.id}>
-                <span className={`badge badge-${rule.result === 'fail' ? 'risk' : rule.result === 'warning' ? 'watch' : 'good'}`}>
-                  {rule.result}
-                </span>
+                <span className="badge badge-watch">Reference rule</span>
                 <h4>{rule.name}</h4>
                 <p>{rule.description}</p>
                 <small>Affects: {rule.affectedFields.join(', ')}</small>
@@ -1498,7 +1502,7 @@ function Lineage({ value }: { value: ExtractedValue }) {
         </div>
 
         <div className="panel source-preview">
-          <span className="eyebrow">Source preview</span>
+          <span className="eyebrow">Structured preview · not the source document</span>
           <div className="sheet-preview">
             <div className="sheet-row header">
               <span>WBS</span>

@@ -158,7 +158,7 @@ export function ExportCentreView() {
             {loading ? 'Generating…' : 'Download full close pack'}
           </button>
           <button className="ghost-button" type="button" onClick={printLeadershipSummary} data-testid="export-close-summary">
-            Print PDF summary
+            Print summary (HTML)
           </button>
           {backendEnabled && (
             <button className="ghost-button" type="button" onClick={() => void downloadServerPdf()} disabled={loading} data-testid="export-close-pdf">

@@ -20,6 +20,7 @@ import { buildScurveFromCostSheet } from '../engine/loading'
 import { latestAcceptedScheduleImport } from '../engine/scheduleControl'
 import { useProjectStore } from '../store/projectStore'
 import { CashFlowChart, ResourceHistogram, SCurveChart } from './charts'
+import { simulatedFeaturesEnabled } from '../config/features'
 
 function statusBadgeClass(status: ItemStatus | 'in_place' | 'partial' | 'planned') {
   switch (status) {
@@ -341,15 +342,17 @@ export function ControlsIntelligence() {
       </section>
 
       <section className="two-column">
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">Resource histogram</span>
-              <h3>Man-hours by discipline</h3>
+        {simulatedFeaturesEnabled && (
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Illustrative resource profile</span>
+                <h3>Sample man-hours by discipline</h3>
+              </div>
             </div>
+            <ResourceHistogram />
           </div>
-          <ResourceHistogram />
-        </div>
+        )}
         <div className="panel">
           <div className="panel-header">
             <div>

@@ -4,7 +4,7 @@ Operational guide for running the Project Controls Intelligence Platform in prod
 
 ## Architecture at a glance
 
-A single container image (`Dockerfile`) builds and serves both the React client (static assets) and the Express/TypeScript API. State persists in PostgreSQL (required in production). See `ENTERPRISE-ARCHITECTURE.md` for the layering.
+A single container image (`Dockerfile`) builds and serves both the React client (static assets) and the Express/TypeScript API. Project state, immutable audit events, and baseline snapshots persist in PostgreSQL (required in production). See `ENTERPRISE-ARCHITECTURE.md` for the layering.
 
 ## Prerequisites
 
@@ -26,6 +26,8 @@ Copy `.env.example` to `.env` and set, at minimum, for production:
 | `CORS_ORIGIN` | Allowlist of client origins; cross-origin is denied if unset in prod. |
 | `WEBHOOK_SECRET` | Required to accept inbound webhooks (HMAC verification). |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run bootstrap admin (password ≥12 chars in prod). |
+| `METRICS_TOKEN` | Optional ≥16-character bearer token enabling `GET /api/metrics`. |
+| `TRUST_PROXY` | Trusted reverse-proxy hop count (normally `1`) for correct client IP/rate limiting. |
 
 Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platform's secret manager — never commit `.env`.
 
@@ -39,7 +41,7 @@ docker compose up -d --build
 
 - App: `http://localhost:3001` (put a TLS-terminating proxy in front for real deployments)
 - Postgres runs internal-only (not published to the host).
-- Audit and baseline files persist in the `pc_app_data` volume; include that volume in backup/restore procedures.
+- Audit events and baseline snapshots are included in PostgreSQL backups.
 
 ## Database migrations
 
@@ -55,6 +57,8 @@ SQL migrations in `server/src/db/migrations/*.sql` run automatically at startup 
 
 Run the app behind a reverse proxy (nginx, Caddy, Traefik, or a cloud LB) that terminates TLS and forwards to port 3001. Recommended proxy settings: HSTS, HTTP→HTTPS redirect, and forwarding `X-Forwarded-*`. Set `CORS_ORIGIN` to your public client origin. Example nginx location:
 
+The supported production topology serves the SPA and `/api` on the same site so the Secure, HttpOnly, SameSite=Strict session cookie remains CSRF-resistant. A cross-site client/API split requires a separate cookie/CSRF design and is not enabled by default.
+
 ```nginx
 location / {
     proxy_pass http://app:3001;
@@ -66,7 +70,7 @@ location / {
 
 ## Backups & disaster recovery
 
-Use `scripts/backup.sh` (pg_dump + audit/baseline archive) on a schedule (cron/systemd timer). Test restores periodically. Retain per your data-retention policy. For the audit log specifically, treat backups as compliance artifacts.
+Use `scripts/backup.sh` (`pg_dump`, plus the JSON/file fallback directory when present) on a schedule. Test restores periodically and verify the audit chain after restoration. Retain backups per your data-retention policy.
 
 ```bash
 DATABASE_URL=postgres://... ./scripts/backup.sh /var/backups/project-controls
@@ -76,11 +80,15 @@ DATABASE_URL=postgres://... ./scripts/backup.sh /var/backups/project-controls
 
 The server handles `SIGTERM`/`SIGINT`: it stops accepting connections, drains in-flight requests, closes the DB pool, then exits (with a forced-exit timeout). This makes rolling deploys safe.
 
-For horizontal scaling (multiple replicas): move the rate-limit store to a shared backend (e.g. Redis) — the default in-memory limiter is per-instance. Postgres handles shared state; the JSON file store is single-instance only.
+For horizontal scaling (multiple replicas): move the rate-limit store to a shared backend (e.g. Redis) — the default in-memory limiter is per-instance. PostgreSQL handles shared project, audit, and baseline state; the JSON file store is development-only.
 
 ## Observability
 
-Logs are structured JSON (one line per event) at `LOG_LEVEL` (`info`/`warn`/`error`); each request gets an `x-request-id` echoed in responses and used as the error correlation id. Ship stdout to your log platform. Metrics/tracing/error-tracking (Prometheus/OTel/Sentry) are recommended next steps — see `REMEDIATION-STATUS.md`.
+Logs are structured JSON (one line per event) at `LOG_LEVEL` (`info`/`warn`/`error`); each request gets an `x-request-id` echoed in responses and used as the error correlation id. Ship stdout to your log platform. When `METRICS_TOKEN` is configured, scrape `GET /api/metrics` with `Authorization: Bearer <token>`. Distributed tracing and external error tracking remain deployment integrations.
+
+## Supported production scope
+
+Illustrative intelligence and simulated connector modules are excluded by default. Keep `VITE_ENABLE_SIMULATED_FEATURES=false` and `ENABLE_SIMULATED_INTEGRATIONS=false` in production. The supported ingestion scope is reviewed CSV/P6 CSV plus manual mapping; live SAP/P6 APIs and document OCR must not be represented as active until real adapters are deployed.
 
 ## Rollback
 

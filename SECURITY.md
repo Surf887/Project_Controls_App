@@ -10,13 +10,14 @@ The latest release on the default branch receives security fixes.
 
 ## Security controls implemented
 
-- **Authentication** — HMAC-signed (HS256) session tokens with a mandatory ≥16-char `JWT_SECRET` (the server refuses to start without it in production); bcrypt password hashing; optional OIDC via an explicit ID-token → session exchange (`POST /api/platform/auth/oidc`). Demo auth is hard-disabled in production.
+- **Authentication** — HMAC-signed (HS256) sessions with a mandatory ≥16-char `JWT_SECRET`; production credentials persist in a Secure, HttpOnly, SameSite=Strict cookie rather than browser storage; bcrypt password hashing; optional OIDC via an explicit ID-token → session exchange. Demo auth is hard-disabled in production.
 - **Authorization** — role-based access (viewer/cost_controller/approver/admin) enforced on every mutating route, plus per-project membership enforcement (`ENFORCE_PROJECT_MEMBERSHIP`, default on in production) to prevent cross-project IDOR. A path-safety guard validates project identifiers.
 - **Input validation** — Zod schemas validate request payloads on mutating endpoints; the action envelope is type- and role-checked.
 - **Transport / HTTP** — Helmet headers, deny-by-default CORS allowlist in production, baseline + login rate limiting, `x-powered-by` disabled, capped JSON body size, and production error masking with a correlation id.
 - **Webhooks** — inbound webhooks require a valid HMAC-SHA256 signature (`WEBHOOK_SECRET` / per-connector secret).
-- **Data integrity** — tamper-evident audit chain keyed with `AUDIT_HMAC_SECRET`; optimistic-concurrency writes are atomic (transactional, version-conditional on Postgres; atomic file replace on the JSON store).
+- **Data integrity** — canonical HMAC audit chain keyed with `AUDIT_HMAC_SECRET`; project-state and audit writes commit in one PostgreSQL transaction; baseline snapshots and audit events are database-backed in production; optimistic concurrency is version-conditional.
 - **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
+- **Observability** — structured request/error logs carry correlation IDs; optional Prometheus metrics require a dedicated bearer token.
 
 ## Known follow-ups
 

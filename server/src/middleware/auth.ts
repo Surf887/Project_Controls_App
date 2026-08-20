@@ -34,8 +34,13 @@ export function enforceProjectMembership(): boolean {
  */
 export const attachUser: RequestHandler = async (req, _res, next) => {
   const auth = req.headers.authorization
-  if (auth?.startsWith('Bearer ')) {
-    const token = auth.slice(7).trim()
+  const cookieToken = req.headers.cookie
+    ?.split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith('pc_session='))
+    ?.slice('pc_session='.length)
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : cookieToken
+  if (token) {
 
     const claims = await verifySessionToken(token)
     if (claims) {

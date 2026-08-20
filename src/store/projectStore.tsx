@@ -123,10 +123,18 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
     }
 
     if (!api.hasToken()) {
-      if (config?.demoAuthEnabled) {
-        await api.signIn(demoRole()).catch(() => undefined)
-      } else {
-        throw new AuthRequiredError()
+      try {
+        const restoredUser = await api.restoreSession()
+        setCurrentUser(restoredUser)
+      } catch (restoreError) {
+        if (!(restoreError instanceof api.ApiError) || restoreError.status !== 401) {
+          throw restoreError
+        }
+        if (config?.demoAuthEnabled) {
+          await api.signIn(demoRole())
+        } else {
+          throw new AuthRequiredError()
+        }
       }
     }
 
@@ -167,8 +175,10 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
         if (bootstrapError instanceof AuthRequiredError) {
           // Backend is reachable but we need credentials — show the login
           // screen instead of silently falling back to local storage.
+          api.clearAuthSession()
           backendRef.current = false
           setBackendEnabled(false)
+          setCurrentUser(null)
           setAuthRequired(true)
           setReady(true)
           return

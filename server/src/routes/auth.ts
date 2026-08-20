@@ -13,10 +13,30 @@ import {
 } from '../auth/userStore.js'
 import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
 import { loginSchema, oidcLoginSchema, registerUserSchema } from '../validation/schemas.js'
+import type { Response } from 'express'
 
 export const authRouter = Router()
 
 const SESSION_TTL_SEC = Number(process.env.SESSION_TTL_SEC ?? 3600)
+
+function setSessionCookie(res: Response, token: string) {
+  res.cookie('pc_session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api',
+    maxAge: SESSION_TTL_SEC * 1000,
+  })
+}
+
+function clearSessionCookie(res: Response) {
+  res.clearCookie('pc_session', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api',
+  })
+}
 
 /**
  * Public: lets the client decide which login options to present (password is
@@ -53,6 +73,7 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
     return
   }
   const token = await signSessionToken(user, SESSION_TTL_SEC)
+  setSessionCookie(res, token)
   res.json({ token, user: toPublicUser(user), expiresIn: SESSION_TTL_SEC })
 })
 
@@ -87,6 +108,7 @@ authRouter.post('/oidc', loginLimiter, async (req, res) => {
     return
   }
   const token = await signSessionToken(user, SESSION_TTL_SEC)
+  setSessionCookie(res, token)
   res.json({ token, user: toPublicUser(user), expiresIn: SESSION_TTL_SEC })
 })
 
@@ -109,6 +131,11 @@ authRouter.get('/me', requireRole('viewer'), (req, res) => {
   res.json({ user: req.user, globalRole: req.globalRole })
 })
 
+authRouter.post('/logout', (_req, res) => {
+  clearSessionCookie(res)
+  res.status(204).send()
+})
+
 authRouter.get('/users', requireAdmin, async (_req, res) => {
   res.json({ users: await listUsers() })
 })
@@ -125,5 +152,6 @@ authRouter.post('/token', async (req, res) => {
   const { userId, role } = req.body as { userId?: string; role?: Role }
   const user = DEMO_USERS.find((u) => u.id === userId || u.role === role) ?? DEMO_USERS[1]!
   const token = await signSessionToken(user, SESSION_TTL_SEC)
+  setSessionCookie(res, token)
   res.json({ token, user, expiresIn: SESSION_TTL_SEC })
 })

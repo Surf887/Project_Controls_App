@@ -92,6 +92,25 @@ describe('password auth flow', () => {
     expect(ok.body.user.passwordHash).toBeUndefined()
   })
 
+  it('restores and clears an HttpOnly cookie session', async () => {
+    const app = mod.app.createApp()
+    const agent = request.agent(app)
+    const login = await agent
+      .post('/api/platform/auth/login')
+      .send({ email: 'admin@example.com', password: 'admin-password-123' })
+    expect(login.status).toBe(200)
+    const cookie = String(login.headers['set-cookie'])
+    expect(cookie).toContain('HttpOnly')
+    expect(cookie).toContain('SameSite=Strict')
+
+    const restored = await agent.get('/api/platform/auth/me')
+    expect(restored.status).toBe(200)
+    expect(restored.body.user.role).toBe('admin')
+
+    expect((await agent.post('/api/platform/auth/logout')).status).toBe(204)
+    expect((await agent.get('/api/platform/auth/me')).status).toBe(401)
+  })
+
   it('admin can register a user who can then log in; non-admin cannot register', async () => {
     const app = mod.app.createApp()
     const login = await request(app)

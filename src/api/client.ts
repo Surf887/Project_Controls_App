@@ -1,6 +1,7 @@
 import type { ProjectAction, ProjectState } from '../store/types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
+let sessionToken: string | null = null
 
 export interface ProjectSummary {
   id: string
@@ -40,8 +41,11 @@ export class ApiError extends Error {
 }
 
 function persistSession(data: AuthSession) {
+  sessionToken = data.token
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('pc-token', data.token)
+    // The signed credential is retained in memory and in the server-issued
+    // HttpOnly cookie, never in persistent browser storage.
+    localStorage.removeItem('pc-token')
     localStorage.setItem('pc-role', data.user.role)
     localStorage.setItem('pc-user', JSON.stringify(data.user))
     // Persist an absolute expiry (ms epoch) derived from expiresIn (seconds) so
@@ -56,7 +60,7 @@ function persistSession(data: AuthSession) {
 }
 
 export function hasToken(): boolean {
-  return typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('pc-token'))
+  return Boolean(sessionToken)
 }
 
 /** Absolute session expiry as ms-epoch, or null if unknown/not set. */
@@ -78,9 +82,8 @@ function authHeaders(): Record<string, string> {
   if (typeof localStorage === 'undefined') {
     return import.meta.env.VITE_DEMO_AUTH === 'true' ? { 'x-pc-role': 'cost_controller' } : {}
   }
-  const token = localStorage.getItem('pc-token')
-  if (token) {
-    return { Authorization: `Bearer ${token}` }
+  if (sessionToken) {
+    return { Authorization: `Bearer ${sessionToken}` }
   }
   // x-pc-role is a local-demo convenience only; the server ignores it unless
   // DEMO_AUTH is enabled (never in production).
@@ -94,6 +97,16 @@ function authHeaders(): Record<string, string> {
 /** Public: which login options the server supports. */
 export async function getAuthConfig(): Promise<AuthConfig> {
   return request('/platform/auth/config')
+}
+
+/** Restore an authenticated browser session from the HttpOnly session cookie. */
+export async function restoreSession(): Promise<AuthUser> {
+  const data = await request<{ user: AuthUser }>('/platform/auth/me')
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('pc-user', JSON.stringify(data.user))
+    localStorage.removeItem('pc-token')
+  }
+  return data.user
 }
 
 /** Real password login. */
@@ -133,6 +146,11 @@ export function getStoredUser(): AuthUser | null {
 }
 
 export function clearAuthSession() {
+  sessionToken = null
+  void fetch(`${API_BASE}/platform/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => undefined)
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('pc-token')
     localStorage.removeItem('pc-role')
@@ -154,6 +172,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers,
+    credentials: 'include',
   })
 
   if (response.status === 409) {
@@ -187,6 +206,7 @@ export async function checkHealth(): Promise<{ ok: boolean; version: string; pos
 export async function downloadClosePackPdf(projectId: string): Promise<Blob> {
   const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectId)}/exports/close-pack.pdf`, {
     headers: authHeaders(),
+    credentials: 'include',
   })
   if (!response.ok) {
     throw new Error('PDF download failed')

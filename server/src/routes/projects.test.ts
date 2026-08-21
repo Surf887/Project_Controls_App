@@ -104,6 +104,34 @@ describe('API routes', () => {
     expect(res.body.state.scheduleRelationships).toHaveLength(2)
   })
 
+  it('ingests a privacy-first document into draft forecast drivers', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+    const projectId = active.body.state.meta.id as string
+    const ingested = await request(app)
+      .post(`/api/projects/${projectId}/documents/ingest`)
+      .set('x-pc-role', 'cost_controller')
+      .field('provider', 'local')
+      .attach(
+        'file',
+        Buffer.from('Contractor forecast overrun for A.01 is USD 2.4 million with 60% probability.'),
+        { filename: 'forecast.txt', contentType: 'text/plain' },
+      )
+
+    expect(ingested.status).toBe(201)
+    expect(ingested.body.document.status).toBe('review_required')
+    expect(ingested.body.drivers[0]).toMatchObject({
+      status: 'draft',
+      sourceType: 'document',
+      mostLikelyUsd: 2_400_000,
+      probability: 0.6,
+    })
+
+    const listed = await request(app)
+      .get(`/api/projects/${projectId}/documents`)
+      .set('x-pc-role', 'viewer')
+    expect(listed.body.documents.some((document: { id: string }) => document.id === ingested.body.document.id)).toBe(true)
+  })
+
   it('GET /api/projects/:id/audit returns immutable log', async () => {
     const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     const projectId = active.body.state.meta.id as string

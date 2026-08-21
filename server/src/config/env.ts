@@ -30,11 +30,14 @@ export function validateEnv(): void {
     if (process.env.USERS_PATH) {
       throw new Error('USERS_PATH must not be set in production — use Postgres users table')
     }
-    for (const name of ['AUDIT_HMAC_SECRET', 'CREDENTIALS_KEY'] as const) {
+    for (const name of ['AUDIT_HMAC_SECRET', 'CREDENTIALS_KEY', 'DOCUMENT_ENCRYPTION_KEY'] as const) {
       const value = process.env[name]
       if (!value || value.length < 16) {
         throw new Error(`${name} must be set to at least 16 characters in production`)
       }
+    }
+    if (!process.env.DOCUMENT_SCAN_ENDPOINT) {
+      throw new Error('DOCUMENT_SCAN_ENDPOINT is required in production')
     }
   }
 

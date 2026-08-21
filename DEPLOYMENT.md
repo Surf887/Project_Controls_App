@@ -29,6 +29,8 @@ Copy `.env.example` to `.env` and set, at minimum, for production:
 | `BOOTSTRAP_PROJECT_NAME` | Creates one empty project when the production projects database is empty; demo data is never seeded in production. |
 | `METRICS_TOKEN` | Optional ≥16-character bearer token enabling `GET /api/metrics`. |
 | `TRUST_PROXY` | Trusted reverse-proxy hop count (normally `1`) for correct client IP/rate limiting. |
+| `DOCUMENT_ENCRYPTION_KEY` | Dedicated source-document AES-256-GCM key. |
+| `DOCUMENT_SCAN_ENDPOINT` | Private malware-scanning gateway; required before document ingestion is enabled. |
 
 Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platform's secret manager — never commit `.env`.
 
@@ -95,7 +97,13 @@ Logs are structured JSON (one line per event) at `LOG_LEVEL` (`info`/`warn`/`err
 
 ## Supported production scope
 
-Illustrative intelligence and simulated connector modules are excluded by default. Keep `VITE_ENABLE_SIMULATED_FEATURES=false` and `ENABLE_SIMULATED_INTEGRATIONS=false` in production. The supported ingestion scope is reviewed CSV/P6 CSV plus manual mapping; live SAP/P6 APIs and document OCR must not be represented as active until real adapters are deployed.
+Illustrative intelligence and simulated connector modules are excluded by default. Keep `VITE_ENABLE_SIMULATED_FEATURES=false` and `ENABLE_SIMULATED_INTEGRATIONS=false` in production. The supported ingestion scope is reviewed CSV/P6 CSV, manual mapping, and configured OCR providers; live SAP/P6 APIs remain excluded.
+
+## OCR provider deployment
+
+`OCR_DEFAULT_PROVIDER=local` is the privacy-first default. Text-layer PDFs, text, and CSV are processed in the application. For scanned PDFs/images, configure a private `OCR_LOCAL_ENDPOINT` (recommended) or mount local Tesseract language data with `OCR_LOCAL_TESSDATA_PATH`.
+
+Azure Document Intelligence requires `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY`. AWS Textract uses the standard AWS credential chain and `AWS_REGION`. Selecting either cloud provider sends document content to that provider; complete the relevant data-processing, residency, retention, and private-network review first.
 
 ## Rollback
 

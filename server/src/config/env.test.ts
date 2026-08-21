@@ -16,6 +16,8 @@ describe('validateEnv', () => {
     delete process.env.CREDENTIALS_KEY
     delete process.env.METRICS_TOKEN
     delete process.env.ENABLE_SIMULATED_INTEGRATIONS
+    delete process.env.DOCUMENT_ENCRYPTION_KEY
+    delete process.env.DOCUMENT_SCAN_ENDPOINT
   })
 
   afterEach(() => {
@@ -61,6 +63,12 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow(/CREDENTIALS_KEY/)
 
     process.env.CREDENTIALS_KEY = 'credential-secret-long-enough'
+    expect(() => validateEnv()).toThrow(/DOCUMENT_ENCRYPTION_KEY/)
+
+    process.env.DOCUMENT_ENCRYPTION_KEY = 'document-secret-long-enough'
+    expect(() => validateEnv()).toThrow(/DOCUMENT_SCAN_ENDPOINT/)
+
+    process.env.DOCUMENT_SCAN_ENDPOINT = 'http://scanner.internal/scan'
     expect(() => validateEnv()).not.toThrow()
   })
 

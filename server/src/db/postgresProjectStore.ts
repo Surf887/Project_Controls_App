@@ -273,6 +273,21 @@ export class PostgresProjectStore implements ProjectStoreAdapter {
         updatedAt,
         projectId,
       ])
+      if (action.type === 'UPDATE_FORECAST_DRIVER' || action.type === 'DECIDE_FORECAST_DRIVER') {
+        const driverId =
+          action.type === 'UPDATE_FORECAST_DRIVER' ? action.payload.id : action.payload.driverId
+        const document = next.sourceDocuments?.find((entry) =>
+          entry.draftDrivers.some((driver) => driver.id === driverId),
+        )
+        if (document) {
+          await client.query(
+            `UPDATE source_documents
+             SET status = $3, draft_drivers = $4::jsonb
+             WHERE project_id = $1 AND id = $2`,
+            [projectId, document.id, document.status, JSON.stringify(document.draftDrivers)],
+          )
+        }
+      }
       if (actor && action.type !== 'HYDRATE') {
         await onAudit(client, projectId, actor, action, nextVersion)
       }

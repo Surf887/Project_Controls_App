@@ -16,6 +16,12 @@ import {
   listBaselineSnapshots,
   lockBaselineSnapshot,
 } from '../services/baselineService.js'
+import {
+  createSourceDocument,
+  getSourceDocumentContent,
+  listSourceDocuments,
+} from '../services/documentStore.js'
+import type { SourceDocument } from '@pc/data/documentIntelligence.js'
 
 const describePostgres = process.env.DATABASE_URL ? describe : describe.skip
 
@@ -35,7 +41,7 @@ describePostgres('Postgres project store integration', () => {
 
   it('applies every SQL migration and seeds readable projects', async () => {
     const migrations = await query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations')
-    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(5)
+    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(6)
 
     const projects = await store.listProjectsAsync()
     const active = await store.getActiveProjectRecordAsync()
@@ -95,5 +101,27 @@ describePostgres('Postgres project store integration', () => {
     expect((await listBaselineSnapshots(current.state.meta.id)).some((item) => item.id === snapshot.id)).toBe(true)
     expect((await getBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('sanctioned')
     expect((await lockBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('locked')
+  })
+
+  it('persists encrypted source documents in Postgres', async () => {
+    process.env.DOCUMENT_ENCRYPTION_KEY = 'postgres-document-test-key'
+    const current = await store.getActiveProjectRecordAsync()
+    const document: SourceDocument = {
+      id: `DOC-${Date.now()}`,
+      projectId: current.state.meta.id,
+      fileName: 'forecast.txt',
+      mimeType: 'text/plain',
+      sizeBytes: 20,
+      sha256: `${Date.now()}`.padStart(64, '0'),
+      provider: 'local',
+      status: 'uploaded',
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: actor.name,
+      draftDrivers: [],
+    }
+    const content = Buffer.from('private forecast USD 1m')
+    await createSourceDocument(document, content)
+    expect((await listSourceDocuments(current.state.meta.id)).some((entry) => entry.id === document.id)).toBe(true)
+    expect((await getSourceDocumentContent(current.state.meta.id, document.id))?.equals(content)).toBe(true)
   })
 })

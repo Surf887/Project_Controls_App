@@ -164,6 +164,17 @@ export function createApp() {
 
   app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const errorId = (req as RequestWithId).requestId ?? randomUUID()
+    const uploadCode =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : ''
+    if (uploadCode.startsWith('LIMIT_')) {
+      res.status(uploadCode === 'LIMIT_FILE_SIZE' ? 413 : 400).json({
+        error: uploadCode === 'LIMIT_FILE_SIZE' ? 'Document exceeds the 10 MB upload limit' : 'Invalid document upload',
+        errorId,
+      })
+      return
+    }
     logger.error('unhandled_request_error', {
       requestId: errorId,
       method: req.method,

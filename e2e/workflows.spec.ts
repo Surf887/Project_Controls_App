@@ -84,10 +84,11 @@ test.describe('Privacy-first document intelligence', () => {
   test('extracts a local OCR draft without changing forecast approval state', async ({ page }) => {
     await page.goto('/submissions/documents')
     await expect(page.getByTestId('document-intelligence-view')).toBeVisible()
+    const nonce = Date.now()
     await page.locator('input[type="file"]').setInputFiles({
-      name: 'contractor-forecast.txt',
+      name: `contractor-forecast-${nonce}.txt`,
       mimeType: 'text/plain',
-      buffer: Buffer.from('Contractor forecast overrun for A.01 is USD 1.8 million with 65% probability.'),
+      buffer: Buffer.from(`Contractor forecast overrun for A.01 is USD 1.8 million with 65% probability. Reference ${nonce}.`),
     })
     await expect(page.getByText(/Extracted 1 draft forecast driver/i)).toBeVisible()
     await expect(page.getByTestId('forecast-driver-ledger')).toContainText(/contractor forecast overrun/i)

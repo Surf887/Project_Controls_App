@@ -154,6 +154,14 @@ export const ACTION_MIN_ROLE = {
 
   DELETE_MAPPING_PROFILE: 'admin',
 
+  IMPORT_COST_TRANSACTION_BATCH: 'cost_controller',
+
+  UPDATE_COST_TRANSACTION_MAPPING: 'cost_controller',
+
+  DECIDE_COST_TRANSACTION_BATCH: 'approver',
+
+  POST_COST_TRANSACTION_BATCH: 'cost_controller',
+
   APPLY_APPROVED_EXTRACTIONS: 'cost_controller',
 
 } as const satisfies Record<string, Role>

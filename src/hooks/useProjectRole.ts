@@ -55,6 +55,10 @@ export function canPerformAction(actionType: string, role: ProjectRole): boolean
     DECIDE_FORECAST_DRIVER: 'approver',
     UPSERT_MAPPING_PROFILE: 'cost_controller',
     DELETE_MAPPING_PROFILE: 'admin',
+    IMPORT_COST_TRANSACTION_BATCH: 'cost_controller',
+    UPDATE_COST_TRANSACTION_MAPPING: 'cost_controller',
+    DECIDE_COST_TRANSACTION_BATCH: 'approver',
+    POST_COST_TRANSACTION_BATCH: 'cost_controller',
   }
   const minRole = minRoleByAction[actionType] ?? 'cost_controller'
   return ROLE_RANK[role] >= ROLE_RANK[minRole]

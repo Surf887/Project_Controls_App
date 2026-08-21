@@ -41,6 +41,13 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('admin', 'DELETE_MAPPING_PROFILE')).toBe(true)
   })
 
+  it('separates Snowflake staging, approval, and posting duties', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_COST_TRANSACTION_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_COST_TRANSACTION_BATCH')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_COST_TRANSACTION_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'POST_COST_TRANSACTION_BATCH')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

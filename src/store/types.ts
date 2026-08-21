@@ -42,6 +42,7 @@ import type { ScheduleActivity, ScheduleImportBatch, ScheduleRelationship } from
 import type { ForecastDriver } from '../data/forecastDrivers'
 import type { SourceDocument } from '../data/documentIntelligence'
 import type { MappingProfile } from '../data/mappingProfiles'
+import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
 
 export type { ApprovalStep, WorkflowStatus } from '../data/governance'
 export type ReserveType = 'contingency' | 'management_reserve'
@@ -307,6 +308,8 @@ export interface ProjectState {
   forecastDrivers: ForecastDriver[]
   sourceDocuments: SourceDocument[]
   mappingProfiles: MappingProfile[]
+  costTransactions: CostTransaction[]
+  costTransactionBatches: CostTransactionBatch[]
   ingestionApplications?: IngestionApplySummary[]
   /** Append-only ledger of extraction postings (active + reversed). */
   ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
@@ -389,6 +392,19 @@ export type ProjectAction =
   | { type: 'UPDATE_FORECAST_DRIVER'; payload: ForecastDriver }
   | { type: 'UPSERT_MAPPING_PROFILE'; payload: MappingProfile }
   | { type: 'DELETE_MAPPING_PROFILE'; payload: { profileId: string; actor: string } }
+  | {
+      type: 'IMPORT_COST_TRANSACTION_BATCH'
+      payload: { batch: CostTransactionBatch; transactions: CostTransaction[] }
+    }
+  | {
+      type: 'UPDATE_COST_TRANSACTION_MAPPING'
+      payload: { transactionId: string; wbs: string; actor: string }
+    }
+  | {
+      type: 'DECIDE_COST_TRANSACTION_BATCH'
+      payload: { batchId: string; decision: 'approved' | 'rejected'; actor: string; comment?: string }
+    }
+  | { type: 'POST_COST_TRANSACTION_BATCH'; payload: { batchId: string; actor: string } }
   | {
       type: 'DECIDE_FORECAST_DRIVER'
       payload: {

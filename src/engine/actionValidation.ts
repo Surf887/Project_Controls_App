@@ -165,6 +165,69 @@ export function validateProjectAction(state: ProjectState, action: ProjectAction
       throw new ActionValidationError('Active mapping profiles must map every required canonical field.')
     }
   }
+  if (action.type === 'IMPORT_COST_TRANSACTION_BATCH') {
+    const { batch, transactions } = action.payload
+    const profile = state.mappingProfiles.find((entry) => entry.id === batch.profileId)
+    if (
+      !profile ||
+      profile.status !== 'active' ||
+      profile.targetDomain !== 'cost_transaction' ||
+      profile.version !== batch.profileVersion
+    ) {
+      throw new ActionValidationError('Cost transaction batch requires the active mapped profile version.')
+    }
+    if (
+      batch.rowCount !== transactions.length ||
+      batch.mappedCount !== transactions.filter((transaction) => transaction.mappingStatus === 'mapped').length ||
+      batch.duplicateCount !== transactions.filter((transaction) => transaction.duplicate).length ||
+      batch.errorCount !== batch.issues.filter((issue) => issue.severity === 'error').length ||
+      batch.warningCount !== batch.issues.filter((issue) => issue.severity === 'warning').length ||
+      transactions.some(
+        (transaction) =>
+          transaction.batchId !== batch.id ||
+          transaction.sourceSystem !== batch.sourceSystem ||
+          transaction.status !== 'staged',
+      )
+    ) {
+      throw new ActionValidationError('Cost transaction batch counts or transaction metadata are inconsistent.')
+    }
+  }
+  if (action.type === 'UPDATE_COST_TRANSACTION_MAPPING') {
+    const transaction = state.costTransactions.find((entry) => entry.id === action.payload.transactionId)
+    if (!transaction || transaction.status === 'posted') {
+      throw new ActionValidationError('Cost transaction is unavailable for mapping.')
+    }
+    if (!findOwningControlAccount(state.costSheetRows, action.payload.wbs)) {
+      throw new ActionValidationError(`WBS ${action.payload.wbs} does not map to a control account.`)
+    }
+  }
+  if (action.type === 'DECIDE_COST_TRANSACTION_BATCH') {
+    const batch = state.costTransactionBatches.find((entry) => entry.id === action.payload.batchId)
+    const transactions = state.costTransactions.filter((entry) => entry.batchId === action.payload.batchId)
+    if (!batch || batch.status !== 'staged') {
+      throw new ActionValidationError('Cost transaction batch is not awaiting approval.')
+    }
+    if (
+      action.payload.decision === 'approved' &&
+      (batch.errorCount > 0 ||
+        transactions.some(
+          (transaction) =>
+            !transaction.duplicate &&
+            (transaction.mappingStatus !== 'mapped' || transaction.currency !== 'USD'),
+        ))
+    ) {
+      throw new ActionValidationError('Resolve batch errors and WBS mappings before approval.')
+    }
+  }
+  if (action.type === 'POST_COST_TRANSACTION_BATCH') {
+    const batch = state.costTransactionBatches.find((entry) => entry.id === action.payload.batchId)
+    if (!batch || batch.status !== 'approved') {
+      throw new ActionValidationError('Only approved cost transaction batches can be posted.')
+    }
+    if (state.settings.reportingPeriod?.locked) {
+      throw new ActionValidationError('Cannot post cost transactions while the reporting period is locked.')
+    }
+  }
 
   if (action.type === 'LOCK_REPORTING_PERIOD') {
     const pending = pendingApplyCount(state.values)

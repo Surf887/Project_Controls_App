@@ -12,6 +12,7 @@ import { reconcileContingencyInState } from '../engine/projectReconcile'
 import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
 import { applyApprovedExtractions } from '../engine/ingestionPosting'
 import { findOwningControlAccount } from '../engine/applyExtractionsCore'
+import { postCostTransactionBatch } from '../engine/costTransactionStaging'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
 import { applyValuesUpdate } from '../engine/extractionIntegrity'
 import { validateProjectAction } from '../engine/actionValidation'
@@ -39,8 +40,18 @@ function normalizeState(state: ProjectState): ProjectState {
   const needsDocumentIntelligence =
     state.forecastDrivers == null || state.sourceDocuments == null
   const needsMappingProfiles = state.mappingProfiles == null
+  const needsCostTransactions =
+    state.costTransactions == null || state.costTransactionBatches == null
 
-  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule && !needsDocumentIntelligence && !needsMappingProfiles) {
+  if (
+    !needsSettings &&
+    !needsSccs &&
+    !needsPostings &&
+    !needsSchedule &&
+    !needsDocumentIntelligence &&
+    !needsMappingProfiles &&
+    !needsCostTransactions
+  ) {
     return state
   }
 
@@ -61,6 +72,12 @@ function normalizeState(state: ProjectState): ProjectState {
         }
       : {}),
     ...(needsMappingProfiles ? { mappingProfiles: [] } : {}),
+    ...(needsCostTransactions
+      ? {
+          costTransactions: state.costTransactions ?? [],
+          costTransactionBatches: state.costTransactionBatches ?? [],
+        }
+      : {}),
     ...(needsSettings
       ? {
           settings: {
@@ -721,6 +738,83 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           entityId: profile.id,
           action: 'deleted',
           summary: `Deleted mapping profile ${profile.name}.`,
+        }),
+      }
+    }
+    case 'IMPORT_COST_TRANSACTION_BATCH': {
+      const replacementIds = new Set(
+        action.payload.transactions
+          .filter((transaction) => !transaction.duplicate)
+          .map((transaction) => transaction.externalId),
+      )
+      return {
+        ...state,
+        costTransactions: [
+          ...action.payload.transactions,
+          ...state.costTransactions.filter(
+            (transaction) =>
+              transaction.sourceSystem !== action.payload.batch.sourceSystem ||
+              !replacementIds.has(transaction.externalId),
+          ),
+        ],
+        costTransactionBatches: [
+          action.payload.batch,
+          ...state.costTransactionBatches.filter((batch) => batch.id !== action.payload.batch.id),
+        ].slice(0, 100),
+        auditLog: appendAudit(state, {
+          actor: action.payload.batch.importedBy,
+          team: 'Cost integration',
+          entityType: 'accrual',
+          entityId: action.payload.batch.id,
+          action: action.payload.batch.status,
+          summary: `Staged ${action.payload.batch.rowCount} mapped cost transaction(s) from ${action.payload.batch.dataset}.`,
+        }),
+      }
+    }
+    case 'UPDATE_COST_TRANSACTION_MAPPING':
+      return {
+        ...state,
+        costTransactions: state.costTransactions.map((transaction) =>
+          transaction.id === action.payload.transactionId
+            ? { ...transaction, wbs: action.payload.wbs, mappingStatus: 'mapped' as const }
+            : transaction,
+        ),
+      }
+    case 'DECIDE_COST_TRANSACTION_BATCH': {
+      const batch = state.costTransactionBatches.find((entry) => entry.id === action.payload.batchId)
+      if (!batch) return state
+      return {
+        ...state,
+        costTransactions: state.costTransactions.map((transaction) =>
+          transaction.batchId === batch.id && !transaction.duplicate
+            ? { ...transaction, status: action.payload.decision }
+            : transaction,
+        ),
+        costTransactionBatches: state.costTransactionBatches.map((entry) =>
+          entry.id === batch.id ? { ...entry, status: action.payload.decision } : entry,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Cost integration approval',
+          entityType: 'accrual',
+          entityId: batch.id,
+          action: action.payload.decision,
+          summary: `${action.payload.decision} Snowflake cost transaction batch ${batch.id}.`,
+        }),
+      }
+    }
+    case 'POST_COST_TRANSACTION_BATCH': {
+      const posted = postCostTransactionBatch(state, action.payload.batchId, action.payload.actor)
+      if (posted === state) return state
+      return {
+        ...posted,
+        auditLog: appendAudit(posted, {
+          actor: action.payload.actor,
+          team: 'Cost control',
+          entityType: 'cost_sheet',
+          entityId: action.payload.batchId,
+          action: 'posted',
+          summary: `Posted approved Snowflake transaction batch ${action.payload.batchId}.`,
         }),
       }
     }

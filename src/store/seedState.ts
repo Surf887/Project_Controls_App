@@ -134,6 +134,8 @@ export function createSeedState(): ProjectState {
     forecastDrivers: [],
     sourceDocuments: [],
     mappingProfiles: [],
+    costTransactions: [],
+    costTransactionBatches: [],
     ingestionPostings: [],
   }
 
@@ -224,6 +226,8 @@ export function createBlankProjectState(id: string, name: string): ProjectState 
     forecastDrivers: [],
     sourceDocuments: [],
     mappingProfiles: [],
+    costTransactions: [],
+    costTransactionBatches: [],
     ingestionApplications: [],
     ingestionPostings: [],
   }

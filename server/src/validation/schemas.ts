@@ -188,6 +188,54 @@ const mappingProfileSchema = z.object({
   updatedAt: z.string().datetime(),
   updatedBy: z.string().min(1).max(200),
 })
+const costTransactionIssueSchema = z.object({
+  row: z.number().int().min(0).max(10_000_000),
+  externalId: z.string().max(500).optional(),
+  field: z.string().min(1).max(128),
+  severity: z.enum(['warning', 'error']),
+  message: z.string().min(1).max(2000),
+})
+const costTransactionSchema = z.object({
+  id: z.string().min(1).max(1000),
+  batchId: z.string().min(1).max(256),
+  sourceSystem: z.enum(['snowflake', 'csv', 'api']),
+  externalId: z.string().min(1).max(500),
+  projectCode: z.string().max(256),
+  wbs: z.string().min(1).max(256),
+  sourceWbs: z.string().max(256),
+  cbs: z.string().max(128).optional(),
+  recordType: z.enum(['actual', 'commitment', 'accrual', 'invoice']),
+  postingDate: isoDateSchema,
+  fiscalPeriod: z.string().min(1).max(64),
+  amount: z.number().finite().min(-1_000_000_000_000).max(1_000_000_000_000),
+  currency: z.string().min(3).max(8),
+  poNumber: z.string().max(256).optional(),
+  vendor: z.string().max(500).optional(),
+  description: z.string().max(2000).optional(),
+  sourceUpdatedAt: isoDateSchema.optional(),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  mappingStatus: z.enum(['mapped', 'unmapped']),
+  duplicate: z.boolean(),
+  postedAt: z.string().datetime().optional(),
+  postedBy: z.string().max(200).optional(),
+})
+const costTransactionBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceSystem: z.enum(['snowflake', 'csv', 'api']),
+  profileId: z.string().min(1).max(256),
+  profileVersion: z.number().int().min(1).max(1_000_000),
+  dataset: z.string().min(1).max(500),
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  rowCount: z.number().int().min(0).max(1_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  duplicateCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  watermark: z.string().max(500).optional(),
+  issues: z.array(costTransactionIssueSchema).max(100_000),
+})
 
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()
 const changeItemSchema = z.object({ id: z.string(), title: z.string() }).passthrough()
@@ -333,6 +381,37 @@ const actionSchemas = [
       actor: z.string().min(1).max(200),
     }),
   }),
+  z.object({
+    type: z.literal('IMPORT_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batch: costTransactionBatchSchema,
+      transactions: z.array(costTransactionSchema).max(10_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_COST_TRANSACTION_MAPPING'),
+    payload: z.object({
+      transactionId: z.string().min(1).max(1000),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('DECIDE_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+      comment: z.string().max(4000).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('POST_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),
 ] as const satisfies ReadonlyArray<z.ZodTypeAny>
 
@@ -434,6 +513,13 @@ export const connectorOAuthSchema = z.record(z.string().max(128), z.string().max
   (obj) => Object.keys(obj).length <= 20,
   'Too many OAuth fields',
 )
+
+export const snowflakeStageSchema = z.object({
+  profileId: z.string().min(1).max(256),
+  limit: z.number().int().min(1).max(1_000).optional(),
+  watermarkColumn: z.string().min(1).max(256).optional(),
+  afterWatermark: z.string().max(500).optional(),
+})
 
 export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterUserInput = z.infer<typeof registerUserSchema>

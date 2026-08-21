@@ -92,7 +92,7 @@ test.describe('Privacy-first document intelligence', () => {
     })
     await expect(page.getByText(/Extracted 1 draft forecast driver/i)).toBeVisible()
     await expect(page.getByTestId('forecast-driver-ledger')).toContainText(/contractor forecast overrun/i)
-    await expect(page.getByRole('button', { name: 'Approve forecast impact' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Approve forecast impact' }).last()).toBeDisabled()
   })
 })
 

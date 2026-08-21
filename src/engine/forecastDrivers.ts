@@ -182,6 +182,22 @@ export function supplementalForecastDrivers(state: ProjectState): ForecastDriver
   )
 }
 
+export function deterministicSupplementalTotal(state: ProjectState): number {
+  return supplementalForecastDrivers(state)
+    .filter(
+      (driver) =>
+        driver.treatment === 'deterministic' &&
+        driver.status !== 'rejected' &&
+        driver.status !== 'superseded' &&
+        ((driver.sourceType !== 'document' && driver.sourceType !== 'manual') ||
+          driver.status === 'approved'),
+    )
+    .reduce((sum, driver) => {
+      const sign = driver.impactDirection === 'saving' ? -1 : 1
+      return sum + sign * driver.mostLikelyUsd
+    }, 0)
+}
+
 export function supersededRiskIds(state: ProjectState): Set<string> {
   return new Set([
     ...state.issues

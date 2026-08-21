@@ -4,7 +4,11 @@ import { runMonteCarlo } from '../engine/scenario'
 import { useProjectStore } from '../store/projectStore'
 import { defaultScenarioInputs, type ScenarioInputs } from '../store/types'
 import { CdfChart, HistogramChart, TornadoChart } from './monteCarloCharts'
-import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
+import {
+  deterministicSupplementalTotal,
+  supplementalForecastDrivers,
+  supersededRiskIds,
+} from '../engine/forecastDrivers'
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -31,14 +35,27 @@ export function ForecastWhatIf() {
   )
 
   const monteCarlo = useMemo(
-    () =>
-      runMonteCarlo(
-        baseTotals.eacMostLikely,
+    () => {
+      const supplemental = supplementalForecastDrivers(state)
+      const simulationBase =
+        baseTotals.eacBase +
+        baseTotals.approvedChangesDelta +
+        baseTotals.fxExposure +
+        deterministicSupplementalTotal(state)
+      return runMonteCarlo(
+        simulationBase,
         state.changes,
         state.risks,
         inputs,
-      ),
-    [baseTotals.eacMostLikely, inputs, state.changes, state.risks],
+        2000,
+        {
+          opportunities: state.opportunities,
+          supplementalDrivers: supplemental,
+          supersededRiskIds: supersededRiskIds(state),
+        },
+      )
+    },
+    [baseTotals, inputs, state],
   )
 
   function updateInput<K extends keyof ScenarioInputs>(key: K, value: number) {

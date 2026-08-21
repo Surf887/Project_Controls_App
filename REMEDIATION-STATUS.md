@@ -43,6 +43,7 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Privacy-first document intelligence: malware scanning, encrypted PostgreSQL storage, local PDF/text/Tesseract/private-service OCR, optional Azure/AWS providers, page evidence, and governed forecast-driver approval.
 - ✅ Unified forecast-driver ledger links changes, risks, opportunities, issues, claims, and documents while suppressing linked double counting.
 - ✅ Deterministic and Monte Carlo models consume the same governed driver set; the probabilistic model no longer re-adds pending/risk exposure already present in its base.
+- ✅ Dynamic Mapping Studio versions arbitrary company/Snowflake/CSV/OCR/API schemas, safe transformations and value lookups, previews canonical output, and detects schema drift.
 - ✅ Empty production databases create one explicit blank project; demo projects, benchmark metrics, extracted reports, and FX rates are development-only.
 - ✅ The audit workspace verifies the server HMAC chain and labels the reducer history separately.
 - ✅ WBS imports create structure/baseline only and reject invalid currency, parent, duplicate, and negative-budget data without fabricating financials.
@@ -71,4 +72,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 90 client/domain tests pass; server bundle + typecheck pass; 83 server tests pass locally; and all 13 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 93 client/domain tests pass; server bundle + typecheck pass; 85 server tests pass locally; and all 14 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

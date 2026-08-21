@@ -39,6 +39,8 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
+- ✅ Privacy-first document intelligence: malware scanning, encrypted PostgreSQL storage, local PDF/text/Tesseract/private-service OCR, optional Azure/AWS providers, page evidence, and governed forecast-driver approval.
+- ✅ Unified forecast-driver ledger links changes, risks, opportunities, issues, claims, and documents while suppressing linked double counting.
 - ✅ Empty production databases create one explicit blank project; demo projects, benchmark metrics, extracted reports, and FX rates are development-only.
 - ✅ The audit workspace verifies the server HMAC chain and labels the reducer history separately.
 - ✅ WBS imports create structure/baseline only and reject invalid currency, parent, duplicate, and negative-budget data without fabricating financials.
@@ -63,8 +65,8 @@ These are either operational (not code we can complete here) or larger initiativ
 - **Expanded test coverage** for the remaining routes/services and UI components; add a coverage tool + threshold.
 - **Operational / compliance:** TLS termination + reverse proxy config for your environment, automated backup scheduling, third-party penetration test, SOC 2 control mapping, and (if needed) Kubernetes/horizontal-scale topology. `LICENSE` choice is left to the repository owner.
 - **Feature truthfulness:** simulated connectors and illustrative intelligence are disabled by default and cannot report simulated SAP success in production. Keep feature flags off outside explicit demonstrations.
-- **Enterprise source adapters:** P6 XER/live API, normalized high-volume schedule storage, SAP actuals/commitments, Planview governance data, and PDF/OCR extraction remain the next integration increments.
+- **Enterprise source adapters:** P6 XER/live API, normalized high-volume schedule storage, SAP actuals/commitments, and Planview governance data remain the next integration increments.
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 83 client/domain tests pass; server bundle + typecheck pass; 75 server tests pass locally; and all 11 Playwright workflows pass. CI executes three PostgreSQL migration/concurrency/governance tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 85 client/domain tests pass; server bundle + typecheck pass; 83 server tests pass locally; and all 12 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

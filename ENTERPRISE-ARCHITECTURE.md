@@ -10,10 +10,11 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Multi-project / portfolio** | 3-project compare, active sync | Portfolio API, roll-up policies | PMO dashboards, cross-project RBAC | Federated portfolios, JV structures |
 | **Role-based permissions** | Demo `x-pc-role` header | `actionPolicy.ts` aligned to reducer | OIDC/JWT, project-scoped roles | SoD, attribute-based access |
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
-| **Audit immutability** | Mutable in-state array (100 cap) | Append-only JSONL + hash chain | Postgres `audit_events` (no UPDATE) | WORM storage, SIEM export |
+| **Audit immutability** | Workflow history in state | Canonical HMAC chain | PostgreSQL `audit_events` with atomic state/audit commits | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
 | **Integrations** | Reviewed P6 CSV; other connectors simulated | Adapter registry + sync jobs API | SAP/P6 OAuth, XER, webhooks | iPaaS, message bus |
 | **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV mapping, control-account PV/EV | P6 XER/API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
+| **Document intelligence** | Private local text/PDF OCR + optional Azure/AWS | Encrypted source store, evidence, review and forecast-driver ledger | Layout/table models, provider policy, batch queues | Domain-trained extraction and model monitoring |
 | **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
 | **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
 | **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
@@ -63,6 +64,15 @@ Maps product capabilities to implementation phases. The trust milestone establis
 - Control-account PV/EV, SPI/CPI, finish variance, and completion curves: `src/engine/scheduleControl.ts`
 - Governed schedule workspace, manual WBS correction, monthly-close signal, and report pack
 - Current browser path is intentionally bounded; large schedules move to normalized Postgres tables and a streaming adapter in Phase 2
+
+### Document-to-forecast intelligence
+
+- Local extraction is default; scanned content can use a private OCR service or local Tesseract data
+- Azure Document Intelligence and AWS Textract are explicit opt-in providers
+- Malware scan, MIME signature validation, SHA-256 deduplication, and AES-256-GCM encrypted PostgreSQL storage
+- All quantified findings enter as draft forecast drivers with page evidence
+- Cost-control review and approver decision are separate RBAC actions; only approved drivers affect EAC
+- Unified driver ledger excludes linked risk/issue/change/claim duplication
 
 ### Report packs
 

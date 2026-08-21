@@ -90,7 +90,7 @@ test.describe('Privacy-first document intelligence', () => {
       buffer: Buffer.from('Contractor forecast overrun for A.01 is USD 1.8 million with 65% probability.'),
     })
     await expect(page.getByText(/Extracted 1 draft forecast driver/i)).toBeVisible()
-    await expect(page.getByTestId('forecast-driver-ledger')).toContainText('contractor forecast overrun')
+    await expect(page.getByTestId('forecast-driver-ledger')).toContainText(/contractor forecast overrun/i)
     await expect(page.getByRole('button', { name: 'Approve forecast impact' })).toBeDisabled()
   })
 })

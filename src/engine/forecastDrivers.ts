@@ -35,11 +35,14 @@ export function buildForecastDriverLedger(state: ProjectState): ForecastDriver[]
       .filter((change) => change.status !== 'rejected' && change.status !== 'withdrawn')
       .map((change) => change.id),
   )
-  const issueRiskIds = new Set(
-    state.issues
+  const replacedRiskIds = new Set([
+    ...state.issues
       .filter((issue) => issue.status !== 'closed' && issue.linkedRiskId)
       .map((issue) => issue.linkedRiskId!),
-  )
+    ...state.changes
+      .filter((change) => change.status !== 'rejected' && change.status !== 'withdrawn' && change.linkedRiskId)
+      .map((change) => change.linkedRiskId!),
+  ])
 
   const changes: ForecastDriver[] = state.changes.map((change) => ({
     id: `DRV-CHANGE-${change.id}`,
@@ -75,11 +78,11 @@ export function buildForecastDriverLedger(state: ProjectState): ForecastDriver[]
     highUsd: risk.costExposureUsd * 1.1,
     probability: risk.postMitigationLikelihood / 5,
     scheduleImpactDays: risk.scheduleExposureDays,
-    treatment: issueRiskIds.has(risk.id) ? 'excluded' : 'expected_value',
+    treatment: replacedRiskIds.has(risk.id) ? 'excluded' : 'expected_value',
     status: statusFor(risk.status),
     confidence: 0.8,
-    rationale: issueRiskIds.has(risk.id)
-      ? `Superseded by a realised issue linked to ${risk.id}.`
+    rationale: replacedRiskIds.has(risk.id)
+      ? `Superseded by a linked issue or change carrying this exposure.`
       : risk.consequence,
     createdAt: nowFrom(risk.reviewDate),
     createdBy: risk.owner,
@@ -180,9 +183,12 @@ export function supplementalForecastDrivers(state: ProjectState): ForecastDriver
 }
 
 export function supersededRiskIds(state: ProjectState): Set<string> {
-  return new Set(
-    state.issues
+  return new Set([
+    ...state.issues
       .filter((issue) => issue.status !== 'closed' && issue.linkedRiskId)
       .map((issue) => issue.linkedRiskId!),
-  )
+    ...state.changes
+      .filter((change) => change.status !== 'rejected' && change.status !== 'withdrawn' && change.linkedRiskId)
+      .map((change) => change.linkedRiskId!),
+  ])
 }

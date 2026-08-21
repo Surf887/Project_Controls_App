@@ -13,6 +13,7 @@ describe('unified forecast-driver ledger', () => {
     const state = createSeedState()
     const ledger = buildForecastDriverLedger(state)
     expect(ledger.find((driver) => driver.id === 'DRV-RISK-R-001')?.treatment).toBe('excluded')
+    expect(ledger.find((driver) => driver.id === 'DRV-RISK-R-002')?.treatment).toBe('excluded')
     expect(ledger.find((driver) => driver.id === 'DRV-CLAIM-CLM-001')?.treatment).toBe('excluded')
   })
 

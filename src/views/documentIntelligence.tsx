@@ -289,7 +289,7 @@ export function DocumentIntelligenceView() {
         <Metric label="Documents" value={String(state.sourceDocuments.length)} detail="Encrypted source records" />
         <Metric label="Draft drivers" value={String(documentDrivers.filter((driver) => driver.status === 'draft' || driver.status === 'in_review').length)} detail="Awaiting review/approval" />
         <Metric label="Approved drivers" value={String(documentDrivers.filter((driver) => driver.status === 'approved').length)} detail="Included in forecast" />
-        <Metric label="Ledger expected value" value={formatUsd(expectedExposure)} detail="All approved governed drivers" />
+        <Metric label="Ledger expected value" value={formatUsd(expectedExposure)} detail="Governed exposure across project registers" />
       </section>
 
       <section className="panel">

@@ -39,6 +39,7 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
+- ✅ Native Primavera XER imports parse project/WBS/calendar/activity/relationship tables, preserve reviewed mappings across P6 refresh formats, and reject invalid batches atomically.
 - ✅ Privacy-first document intelligence: malware scanning, encrypted PostgreSQL storage, local PDF/text/Tesseract/private-service OCR, optional Azure/AWS providers, page evidence, and governed forecast-driver approval.
 - ✅ Unified forecast-driver ledger links changes, risks, opportunities, issues, claims, and documents while suppressing linked double counting.
 - ✅ Deterministic and Monte Carlo models consume the same governed driver set; the probabilistic model no longer re-adds pending/risk exposure already present in its base.
@@ -70,4 +71,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 86 client/domain tests pass; server bundle + typecheck pass; 83 server tests pass locally; and all 12 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 90 client/domain tests pass; server bundle + typecheck pass; 83 server tests pass locally; and all 13 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

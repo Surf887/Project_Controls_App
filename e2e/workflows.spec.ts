@@ -137,7 +137,7 @@ test.describe('Dynamic company mapping', () => {
     await expect(page.getByText(/Saved Weekly custom export v1/i)).toBeVisible()
 
     await page.goto('/submissions/ingestion')
-    await page.getByLabel('Mapping profile').selectOption({ label: /Example EPC · Weekly custom export v1/ })
+    await page.getByLabel('Mapping profile').selectOption({ label: 'Example EPC · Weekly custom export v1' })
     await page.locator('input[type="file"]').setInputFiles({
       name: 'custom.csv',
       mimeType: 'text/csv',

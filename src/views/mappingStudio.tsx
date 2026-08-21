@@ -279,15 +279,16 @@ export function MappingStudioView() {
                     <span>Transform</span>
                     <select
                       value={rule.transforms.at(-1) ?? 'trim'}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const selected = event.target.value as MappingRule['transforms'][number]
                         setRules((current) =>
                           current.map((entry) =>
                             entry.id === rule.id
-                              ? { ...entry, transforms: ['trim', event.target.value as MappingRule['transforms'][number]].filter((value, index, all) => all.indexOf(value) === index) }
+                              ? { ...entry, transforms: selected === 'trim' ? ['trim'] : ['trim', selected] }
                               : entry,
                           ),
                         )
-                      }
+                      }}
                     >
                       <option value="trim">Trim</option>
                       <option value="uppercase">Uppercase</option>

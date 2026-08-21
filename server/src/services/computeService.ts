@@ -3,6 +3,7 @@ import { buildPoExposures, computeFxRiskUsd } from '@pc/engine/forex.js'
 import { costSheetToEvmAccounts, computeEvmWithMethod } from '@pc/engine/evmFromCostSheet.js'
 import type { ProjectState } from '@pc/store/types.js'
 import { latestAcceptedScheduleImport } from '@pc/engine/scheduleControl.js'
+import { supplementalForecastDrivers, supersededRiskIds } from '@pc/engine/forecastDrivers.js'
 
 export function forecastFxAdverseUsd(state: ProjectState): number {
   if (!state.settings.fx.includeFxInForecast) {
@@ -17,6 +18,8 @@ export function forecastFxAdverseUsd(state: ProjectState): number {
 export function computeProjectForecast(state: ProjectState) {
   const snapshots = computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
     fxAdverseUsd: forecastFxAdverseUsd(state),
+    supplementalDrivers: supplementalForecastDrivers(state),
+    supersededRiskIds: supersededRiskIds(state),
   })
   return {
     snapshots,

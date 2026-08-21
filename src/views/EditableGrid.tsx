@@ -10,6 +10,7 @@ import {
 import { syncCostSheetFromRegisters } from '../engine/costSheetSync'
 import { rowCostMeta } from '../engine/costStructure'
 import { resolveSccsForCostRow } from '../engine/sccs'
+import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
 import { loadingMethodLabels, type LoadingMethod } from '../engine/loading'
 import { useProjectStore } from '../store/projectStore'
 import type { EacScenarioField } from '../engine/costSheetSync'
@@ -151,6 +152,8 @@ export function CostSheetGrid({ phaseFilter }: { phaseFilter?: ProjectPhase } = 
         purchaseOrders: state.purchaseOrders,
         fxRates: state.fxRates,
         fxSettings: state.settings.fx,
+        supplementalDrivers: supplementalForecastDrivers(state),
+        supersededRiskIds: supersededRiskIds(state),
       },
     )
     setRows(synced)

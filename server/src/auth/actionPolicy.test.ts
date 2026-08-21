@@ -28,6 +28,13 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('cost_controller', 'UPDATE_SCHEDULE_ACTIVITY_MAPPING')).toBe(true)
   })
 
+  it('separates document review from forecast-driver approval', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_DOCUMENT_DRAFTS')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'UPDATE_FORECAST_DRIVER')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_FORECAST_DRIVER')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_FORECAST_DRIVER')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

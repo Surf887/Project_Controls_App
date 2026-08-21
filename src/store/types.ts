@@ -39,6 +39,8 @@ import type {
 import type { ConnectorConfig, SyncJobResult } from '../integrations/connectors'
 import type { Vendor } from '../data/vendors'
 import type { ScheduleActivity, ScheduleImportBatch, ScheduleRelationship } from '../data/schedule'
+import type { ForecastDriver } from '../data/forecastDrivers'
+import type { SourceDocument } from '../data/documentIntelligence'
 
 export type { ApprovalStep, WorkflowStatus } from '../data/governance'
 export type ReserveType = 'contingency' | 'management_reserve'
@@ -301,6 +303,8 @@ export interface ProjectState {
   scheduleActivities: ScheduleActivity[]
   scheduleRelationships: ScheduleRelationship[]
   scheduleImports: ScheduleImportBatch[]
+  forecastDrivers: ForecastDriver[]
+  sourceDocuments: SourceDocument[]
   ingestionApplications?: IngestionApplySummary[]
   /** Append-only ledger of extraction postings (active + reversed). */
   ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
@@ -379,6 +383,18 @@ export type ProjectAction =
       }
     }
   | { type: 'UPDATE_SCHEDULE_ACTIVITY_MAPPING'; payload: { activityId: string; wbs: string; actor: string } }
+  | { type: 'IMPORT_DOCUMENT_DRAFTS'; payload: { document: SourceDocument; drivers: ForecastDriver[] } }
+  | { type: 'SET_SOURCE_DOCUMENTS'; payload: SourceDocument[] }
+  | { type: 'UPDATE_FORECAST_DRIVER'; payload: ForecastDriver }
+  | {
+      type: 'DECIDE_FORECAST_DRIVER'
+      payload: {
+        driverId: string
+        decision: 'approved' | 'rejected'
+        actor: string
+        comment?: string
+      }
+    }
   | { type: 'APPLY_APPROVED_EXTRACTIONS'; payload: { actor: string } }
 
 /** One approved extraction posted into the cost model during a bulk apply. */
@@ -416,6 +432,7 @@ export interface ForecastRowSnapshot {
   approvedChangesDelta: number
   pendingChangesExpectedDelta: number
   riskExposure: number
+  controlLogExposure: number
   contingencyDraw: number
   fxExposure: number
   eacBestCase: number

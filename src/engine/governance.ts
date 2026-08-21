@@ -21,6 +21,7 @@ import { accrualTotals } from './accruals'
 import { invoicePipeline, subcontractMetrics } from './procurementReconcile'
 import { enrichCostSheetRows, lookupLabels, rollupCostSheetBySccs } from './sccs'
 import { controlAccountSchedulePerformance, latestAcceptedScheduleImport } from './scheduleControl'
+import { supplementalForecastDrivers, supersededRiskIds } from './forecastDrivers'
 
 export function createAuditEntry(
   partial: Omit<AuditLogEntry, 'id' | 'at'> & { at?: string },
@@ -114,6 +115,10 @@ export function buildDraftForecastPackage(state: ProjectState): ForecastApproval
     state.changes,
     state.risks,
     state.opportunities,
+    {
+      supplementalDrivers: supplementalForecastDrivers(state),
+      supersededRiskIds: supersededRiskIds(state),
+    },
   )
   const totals = totalForecastSnapshot(snapshots, state.costSheetRows)
   const bac = sumBac(state.costSheetRows)
@@ -204,7 +209,10 @@ export function rejectForecastPackage(
 }
 
 export function syncActivePortfolioProject(state: ProjectState): PortfolioProjectSnapshot[] {
-  const snapshots = computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities)
+  const snapshots = computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
+    supplementalDrivers: supplementalForecastDrivers(state),
+    supersededRiskIds: supersededRiskIds(state),
+  })
   const totals = totalForecastSnapshot(snapshots, state.costSheetRows)
   const bac = sumBac(state.costSheetRows)
   const actuals = sumCostSheetMetric(state.costSheetRows, 'actualsToDate')

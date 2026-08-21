@@ -4,6 +4,7 @@ import { validateProjectAction, ActionValidationError } from '@pc/engine/actionV
 import { applyProjectAction } from '@pc/store/projectReducer.js'
 import type { ExtractedValue } from '@pc/data/projectData.js'
 import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '@pc/utils/p6CsvImport.js'
+import type { ForecastDriver } from '@pc/data/forecastDrivers.js'
 
 describe('validateProjectAction', () => {
   it('blocks LOCK_REPORTING_PERIOD when approved extractions are pending apply', () => {
@@ -80,5 +81,71 @@ describe('validateProjectAction', () => {
         },
       }),
     ).toThrow(/counts/)
+  })
+
+  it('requires document drivers to be reviewed before approver decisions', () => {
+    const state = createSeedState()
+    const driver: ForecastDriver = {
+      id: 'DRV-DOC-test',
+      title: 'OCR forecast',
+      sourceType: 'document',
+      sourceEntityId: 'DOC-test',
+      linkedEntityIds: [],
+      wbs: ['A.01'],
+      impactDirection: 'cost',
+      lowUsd: 80,
+      mostLikelyUsd: 100,
+      highUsd: 120,
+      probability: 0.5,
+      scheduleImpactDays: 0,
+      treatment: 'expected_value',
+      status: 'draft',
+      confidence: 0.9,
+      rationale: 'Draft',
+      evidence: {
+        documentId: 'DOC-test',
+        fileName: 'forecast.txt',
+        page: 1,
+        excerpt: 'Forecast USD 100',
+      },
+      createdAt: '2026-08-21T00:00:00.000Z',
+      createdBy: 'Reviewer',
+    }
+    const document = {
+      id: 'DOC-test',
+      projectId: state.meta.id,
+      fileName: 'forecast.txt',
+      mimeType: 'text/plain',
+      sizeBytes: 16,
+      sha256: 'a'.repeat(64),
+      provider: 'local' as const,
+      status: 'review_required' as const,
+      uploadedAt: '2026-08-21T00:00:00.000Z',
+      uploadedBy: 'Reviewer',
+      draftDrivers: [driver],
+    }
+    const importAction = {
+      type: 'IMPORT_DOCUMENT_DRAFTS' as const,
+      payload: { document, drivers: [driver] },
+    }
+    expect(() => validateProjectAction(state, importAction)).not.toThrow()
+    const imported = applyProjectAction(state, importAction)
+    expect(() =>
+      validateProjectAction(imported, {
+        type: 'UPDATE_FORECAST_DRIVER',
+        payload: { ...driver, status: 'approved' },
+      }),
+    ).toThrow(/approval action/)
+    const reviewedDriver = { ...driver, status: 'in_review' as const }
+    const reviewed = applyProjectAction(imported, {
+      type: 'UPDATE_FORECAST_DRIVER',
+      payload: reviewedDriver,
+    })
+    expect(() =>
+      validateProjectAction(reviewed, {
+        type: 'DECIDE_FORECAST_DRIVER',
+        payload: { driverId: driver.id, decision: 'approved', actor: 'Approver' },
+      }),
+    ).not.toThrow()
   })
 })

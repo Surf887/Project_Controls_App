@@ -73,6 +73,60 @@ export function validateProjectAction(state: ProjectState, action: ProjectAction
       throw new ActionValidationError(`WBS ${action.payload.wbs} does not map to a control account.`)
     }
   }
+  if (action.type === 'IMPORT_DOCUMENT_DRAFTS') {
+    if (action.payload.document.projectId !== state.meta.id) {
+      throw new ActionValidationError('Document project does not match the active project.')
+    }
+    if (action.payload.drivers.some((driver) => driver.status !== 'draft')) {
+      throw new ActionValidationError('Document-extracted forecast drivers must enter as drafts.')
+    }
+    const documentDriverIds = new Set(action.payload.document.draftDrivers.map((driver) => driver.id))
+    if (
+      documentDriverIds.size !== action.payload.drivers.length ||
+      action.payload.drivers.some((driver) => !documentDriverIds.has(driver.id))
+    ) {
+      throw new ActionValidationError('Document draft-driver payload is inconsistent.')
+    }
+    if (
+      action.payload.drivers.some(
+        (driver) =>
+          driver.evidence?.documentId !== action.payload.document.id ||
+          driver.lowUsd > driver.mostLikelyUsd ||
+          driver.mostLikelyUsd > driver.highUsd,
+      )
+    ) {
+      throw new ActionValidationError('Document driver evidence or impact range is invalid.')
+    }
+  }
+  if (action.type === 'UPDATE_FORECAST_DRIVER') {
+    const driver = action.payload
+    const existing = state.forecastDrivers.find((entry) => entry.id === driver.id)
+    if (!existing) {
+      throw new ActionValidationError('Forecast driver not found.')
+    }
+    if (driver.status !== existing.status && (driver.status === 'approved' || driver.status === 'rejected')) {
+      throw new ActionValidationError('Forecast driver decisions require the approval action.')
+    }
+    if (driver.lowUsd > driver.mostLikelyUsd || driver.mostLikelyUsd > driver.highUsd) {
+      throw new ActionValidationError('Forecast driver requires low ≤ most likely ≤ high.')
+    }
+  }
+  if (action.type === 'DECIDE_FORECAST_DRIVER') {
+    const driver = state.forecastDrivers.find((entry) => entry.id === action.payload.driverId)
+    if (!driver) throw new ActionValidationError('Forecast driver not found.')
+    if (driver.status !== 'in_review') {
+      throw new ActionValidationError('Forecast driver must be saved for review before a decision.')
+    }
+    if (
+      action.payload.decision === 'approved' &&
+      (driver.lowUsd > driver.mostLikelyUsd ||
+        driver.mostLikelyUsd > driver.highUsd ||
+        driver.wbs.length === 0 ||
+        driver.wbs.some((wbs) => !findOwningControlAccount(state.costSheetRows, wbs)))
+    ) {
+      throw new ActionValidationError('Approved forecast drivers require a valid range and control-account WBS.')
+    }
+  }
 
   if (action.type === 'LOCK_REPORTING_PERIOD') {
     const pending = pendingApplyCount(state.values)

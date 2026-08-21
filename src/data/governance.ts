@@ -41,7 +41,7 @@ export interface AuditLogEntry {
   at: string
   actor: string
   team: string
-  entityType: 'forecast' | 'change' | 'cost_sheet' | 'settings' | 'accrual' | 'report' | 'schedule'
+  entityType: 'forecast' | 'change' | 'cost_sheet' | 'settings' | 'accrual' | 'report' | 'schedule' | 'document'
   entityId: string
   action: string
   summary: string

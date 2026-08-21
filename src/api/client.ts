@@ -1,4 +1,6 @@
 import type { ProjectAction, ProjectState } from '../store/types'
+import type { OcrProviderCapability, OcrProviderId, SourceDocument } from '../data/documentIntelligence'
+import type { ForecastDriver } from '../data/forecastDrivers'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 let sessionToken: string | null = null
@@ -181,7 +183,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   for (const [name, value] of Object.entries(authHeaders())) {
     headers.set(name, value)
   }
-  if (init?.body && !headers.has('Content-Type')) {
+  if (init?.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -287,6 +289,7 @@ export interface ForecastTotals {
   approvedChangesDelta: number
   pendingChangesExpectedDelta: number
   riskExposure: number
+  controlLogExposure: number
   contingencyDraw: number
   fxExposure: number
 }
@@ -317,6 +320,34 @@ export async function fetchImmutableAudit(projectId: string): Promise<{
   integrity: { ok: boolean; errors: string[] }
 }> {
   return request(`/projects/${encodeURIComponent(projectId)}/audit`)
+}
+
+export async function fetchOcrProviders(projectId: string): Promise<OcrProviderCapability[]> {
+  const data = await request<{ providers: OcrProviderCapability[] }>(
+    `/projects/${encodeURIComponent(projectId)}/documents/providers`,
+  )
+  return data.providers
+}
+
+export async function fetchSourceDocuments(projectId: string): Promise<SourceDocument[]> {
+  const data = await request<{ documents: SourceDocument[] }>(
+    `/projects/${encodeURIComponent(projectId)}/documents`,
+  )
+  return data.documents
+}
+
+export async function ingestSourceDocument(
+  projectId: string,
+  file: File,
+  provider: OcrProviderId,
+): Promise<{ document: SourceDocument; drivers: ForecastDriver[]; duplicate: boolean }> {
+  const form = new FormData()
+  form.set('provider', provider)
+  form.set('file', file)
+  return request(`/projects/${encodeURIComponent(projectId)}/documents/ingest`, {
+    method: 'POST',
+    body: form,
+  })
 }
 
 export interface ClosePackFile {

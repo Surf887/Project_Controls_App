@@ -36,8 +36,10 @@ function normalizeState(state: ProjectState): ProjectState {
     state.scheduleActivities == null ||
     state.scheduleRelationships == null ||
     state.scheduleImports == null
+  const needsDocumentIntelligence =
+    state.forecastDrivers == null || state.sourceDocuments == null
 
-  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule) {
+  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule && !needsDocumentIntelligence) {
     return state
   }
 
@@ -49,6 +51,12 @@ function normalizeState(state: ProjectState): ProjectState {
           scheduleActivities: state.scheduleActivities ?? [],
           scheduleRelationships: state.scheduleRelationships ?? [],
           scheduleImports: state.scheduleImports ?? [],
+        }
+      : {}),
+    ...(needsDocumentIntelligence
+      ? {
+          forecastDrivers: state.forecastDrivers ?? [],
+          sourceDocuments: state.sourceDocuments ?? [],
         }
       : {}),
     ...(needsSettings
@@ -582,6 +590,114 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           entityId: activity.id,
           action: 'mapped',
           summary: `Mapped schedule activity ${activity.sourceActivityId} to WBS ${action.payload.wbs}.`,
+        }),
+      }
+    }
+    case 'IMPORT_DOCUMENT_DRAFTS': {
+      const nextDrivers = new Map(state.forecastDrivers.map((driver) => [driver.id, driver]))
+      action.payload.drivers.forEach((driver) => nextDrivers.set(driver.id, driver))
+      return {
+        ...state,
+        sourceDocuments: [
+          action.payload.document,
+          ...state.sourceDocuments.filter((document) => document.id !== action.payload.document.id),
+        ].slice(0, 100),
+        forecastDrivers: [...nextDrivers.values()],
+        auditLog: appendAudit(state, {
+          actor: action.payload.document.uploadedBy,
+          team: 'Document intelligence',
+          entityType: 'document',
+          entityId: action.payload.document.id,
+          action: 'extracted',
+          summary: `Extracted ${action.payload.drivers.length} draft forecast driver(s) from ${action.payload.document.fileName}.`,
+        }),
+      }
+    }
+    case 'SET_SOURCE_DOCUMENTS': {
+      const current = new Map(state.sourceDocuments.map((document) => [document.id, document]))
+      return {
+        ...state,
+        sourceDocuments: action.payload.map((document) => {
+          const existing = current.get(document.id)
+          return existing
+            ? {
+                ...document,
+                status: existing.status,
+                draftDrivers: existing.draftDrivers,
+              }
+            : document
+        }),
+      }
+    }
+    case 'UPDATE_FORECAST_DRIVER': {
+      const exists = state.forecastDrivers.some((driver) => driver.id === action.payload.id)
+      if (!exists) return state
+      return {
+        ...state,
+        forecastDrivers: state.forecastDrivers.map((driver) =>
+          driver.id === action.payload.id ? action.payload : driver,
+        ),
+        sourceDocuments: state.sourceDocuments.map((document) =>
+          document.id === action.payload.evidence?.documentId
+            ? {
+                ...document,
+                draftDrivers: document.draftDrivers.map((driver) =>
+                  driver.id === action.payload.id ? action.payload : driver,
+                ),
+              }
+            : document,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.reviewedBy ?? action.payload.createdBy,
+          team: 'Forecast control',
+          entityType: 'forecast',
+          entityId: action.payload.id,
+          action: action.payload.status,
+          summary: `${action.payload.status} forecast driver ${action.payload.title}.`,
+        }),
+      }
+    }
+    case 'DECIDE_FORECAST_DRIVER': {
+      const existing = state.forecastDrivers.find((driver) => driver.id === action.payload.driverId)
+      if (!existing) return state
+      const updated = {
+        ...existing,
+        status: action.payload.decision,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: action.payload.actor,
+        reviewComment: action.payload.comment,
+      } as const
+      const forecastDrivers = state.forecastDrivers.map((driver) =>
+        driver.id === updated.id ? updated : driver,
+      )
+      return {
+        ...state,
+        forecastDrivers,
+        sourceDocuments: state.sourceDocuments.map((document) => {
+          if (document.id !== updated.evidence?.documentId) return document
+          const draftDrivers = document.draftDrivers.map((driver) =>
+            driver.id === updated.id ? updated : driver,
+          )
+          const complete = draftDrivers.every(
+            (driver) => driver.status === 'approved' || driver.status === 'rejected',
+          )
+          return {
+            ...document,
+            draftDrivers,
+            status: complete
+              ? draftDrivers.some((driver) => driver.status === 'approved')
+                ? 'accepted' as const
+                : 'rejected' as const
+              : document.status,
+          }
+        }),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Forecast approval',
+          entityType: 'forecast',
+          entityId: updated.id,
+          action: action.payload.decision,
+          summary: `${action.payload.decision} document forecast driver ${updated.title}.`,
         }),
       }
     }

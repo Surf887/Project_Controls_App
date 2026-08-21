@@ -21,6 +21,7 @@ import { latestAcceptedScheduleImport } from '../engine/scheduleControl'
 import { useProjectStore } from '../store/projectStore'
 import { CashFlowChart, ResourceHistogram, SCurveChart } from './charts'
 import { simulatedFeaturesEnabled } from '../config/features'
+import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
 
 function statusBadgeClass(status: ItemStatus | 'in_place' | 'partial' | 'planned') {
   switch (status) {
@@ -268,8 +269,11 @@ export function ControlsIntelligence() {
   const { state } = useProjectStore()
   const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports)
   const forecastByWbs = useMemo(
-    () => new Map(computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities).map((row) => [row.wbs, row.eacMostLikely])),
-    [state.changes, state.costSheetRows, state.opportunities, state.risks],
+    () => new Map(computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
+      supplementalDrivers: supplementalForecastDrivers(state),
+      supersededRiskIds: supersededRiskIds(state),
+    }).map((row) => [row.wbs, row.eacMostLikely])),
+    [state],
   )
   const results = useMemo(
     () =>

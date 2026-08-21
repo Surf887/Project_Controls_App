@@ -4,6 +4,7 @@ import { runMonteCarlo } from '../engine/scenario'
 import { useProjectStore } from '../store/projectStore'
 import { defaultScenarioInputs, type ScenarioInputs } from '../store/types'
 import { CdfChart, HistogramChart, TornadoChart } from './monteCarloCharts'
+import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -20,10 +21,13 @@ export function ForecastWhatIf() {
   const baseTotals = useMemo(
     () =>
       totalForecastSnapshot(
-        computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities),
+        computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
+          supplementalDrivers: supplementalForecastDrivers(state),
+          supersededRiskIds: supersededRiskIds(state),
+        }),
         state.costSheetRows,
       ),
-    [state.changes, state.costSheetRows, state.opportunities, state.risks],
+    [state],
   )
 
   const monteCarlo = useMemo(

@@ -99,6 +99,64 @@ const scheduleImportBatchSchema = z.object({
     .record(z.string().min(1).max(128), z.string().min(1).max(500))
     .refine((mapping) => Object.keys(mapping).length <= 50, 'Too many schedule column mappings'),
 })
+const forecastDriverSchema = z.object({
+  id: z.string().min(1).max(256),
+  title: z.string().min(1).max(1000),
+  sourceType: z.enum(['risk', 'opportunity', 'change', 'issue', 'claim', 'schedule', 'productivity', 'document', 'manual']),
+  sourceEntityId: z.string().min(1).max(256),
+  linkedEntityIds: z.array(z.string().min(1).max(256)).max(100),
+  wbs: z.array(z.string().min(1).max(256)).max(100),
+  cbs: z.string().max(128).optional(),
+  impactDirection: z.enum(['cost', 'saving']),
+  lowUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  mostLikelyUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  highUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  probability: z.number().finite().min(0).max(1),
+  scheduleImpactDays: z.number().finite().min(-100_000).max(100_000),
+  treatment: z.enum(['deterministic', 'expected_value', 'triangular', 'excluded']),
+  status: z.enum(['draft', 'in_review', 'approved', 'rejected', 'superseded']),
+  confidence: z.number().finite().min(0).max(1),
+  rationale: z.string().max(4000),
+  evidence: z.object({
+    documentId: z.string().min(1).max(256),
+    fileName: z.string().min(1).max(500),
+    page: z.number().int().min(1).max(100_000).optional(),
+    excerpt: z.string().max(10_000),
+    boundingBox: z.array(z.number().finite()).max(16).optional(),
+  }).optional(),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().min(1).max(200),
+  reviewedAt: z.string().datetime().optional(),
+  reviewedBy: z.string().max(200).optional(),
+  reviewComment: z.string().max(4000).optional(),
+})
+const sourceDocumentSchema = z.object({
+  id: z.string().min(1).max(256),
+  projectId: z.string().min(1).max(256),
+  fileName: z.string().min(1).max(500),
+  mimeType: z.string().min(1).max(200),
+  sizeBytes: z.number().int().min(0).max(25 * 1024 * 1024),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  provider: z.enum(['local', 'azure', 'aws']),
+  status: z.enum(['uploaded', 'extracting', 'review_required', 'accepted', 'rejected', 'failed']),
+  uploadedAt: z.string().datetime(),
+  uploadedBy: z.string().min(1).max(200),
+  extraction: z.object({
+    provider: z.enum(['local', 'azure', 'aws']),
+    model: z.string().min(1).max(200),
+    extractedAt: z.string().datetime(),
+    pages: z.array(z.object({
+      page: z.number().int().min(1).max(100_000),
+      text: z.string().max(1_000_000),
+      confidence: z.number().finite().min(0).max(1),
+    })).max(10_000),
+    fullText: z.string().max(5_000_000),
+    confidence: z.number().finite().min(0).max(1),
+    warnings: z.array(z.string().max(2000)).max(1_000),
+  }).optional(),
+  draftDrivers: z.array(forecastDriverSchema).max(10_000),
+  error: z.string().max(4000).optional(),
+})
 
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()
 const changeItemSchema = z.object({ id: z.string(), title: z.string() }).passthrough()
@@ -217,6 +275,24 @@ const actionSchemas = [
       activityId: z.string().min(1).max(256),
       wbs: z.string().min(1).max(256),
       actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('IMPORT_DOCUMENT_DRAFTS'),
+    payload: z.object({
+      document: sourceDocumentSchema,
+      drivers: z.array(forecastDriverSchema).max(10_000),
+    }),
+  }),
+  z.object({ type: z.literal('SET_SOURCE_DOCUMENTS'), payload: z.array(sourceDocumentSchema).max(1_000) }),
+  z.object({ type: z.literal('UPDATE_FORECAST_DRIVER'), payload: forecastDriverSchema }),
+  z.object({
+    type: z.literal('DECIDE_FORECAST_DRIVER'),
+    payload: z.object({
+      driverId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+      comment: z.string().max(4000).optional(),
     }),
   }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),

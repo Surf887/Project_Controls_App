@@ -131,6 +131,8 @@ export function createSeedState(): ProjectState {
     scheduleActivities: [],
     scheduleRelationships: [],
     scheduleImports: [],
+    forecastDrivers: [],
+    sourceDocuments: [],
     ingestionPostings: [],
   }
 
@@ -218,6 +220,8 @@ export function createBlankProjectState(id: string, name: string): ProjectState 
     scheduleActivities: [],
     scheduleRelationships: [],
     scheduleImports: [],
+    forecastDrivers: [],
+    sourceDocuments: [],
     ingestionApplications: [],
     ingestionPostings: [],
   }

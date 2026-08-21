@@ -50,6 +50,10 @@ export function canPerformAction(actionType: string, role: ProjectRole): boolean
     SYNC_COMMITMENTS: 'cost_controller',
     IMPORT_SCHEDULE: 'cost_controller',
     UPDATE_SCHEDULE_ACTIVITY_MAPPING: 'cost_controller',
+    IMPORT_DOCUMENT_DRAFTS: 'cost_controller',
+    SET_SOURCE_DOCUMENTS: 'cost_controller',
+    UPDATE_FORECAST_DRIVER: 'cost_controller',
+    DECIDE_FORECAST_DRIVER: 'approver',
   }
   const minRole = minRoleByAction[actionType] ?? 'cost_controller'
   return ROLE_RANK[role] >= ROLE_RANK[minRole]

@@ -15,6 +15,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Integrations** | Reviewed P6 CSV/XER; other connectors disabled | Adapter registry + sync jobs API | SAP/P6 OAuth and webhooks | iPaaS, message bus |
 | **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV/XER, control-account PV/EV | P6 API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
 | **Document intelligence** | Private local text/PDF OCR + optional Azure/AWS | Encrypted source store, evidence, review and forecast-driver ledger | Layout/table models, provider policy, batch queues | Domain-trained extraction and model monitoring |
+| **Dynamic source mapping** | User-defined CSV/company profiles | Versioned canonical mappings, safe transforms/lookups, drift detection | Snowflake schema introspection and governed cost staging | Cross-portfolio mapping library and stewardship workflow |
 | **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
 | **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
 | **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
@@ -73,6 +74,13 @@ Maps product capabilities to implementation phases. The trust milestone establis
 - All quantified findings enter as draft forecast drivers with page evidence
 - Cost-control review and approver decision are separate RBAC actions; only approved drivers affect EAC
 - Unified driver ledger excludes linked risk/issue/change/claim duplication
+
+### Dynamic Mapping Studio
+
+- Arbitrary source headers and company code values map to canonical project-controls fields without code changes
+- Profiles are organization/dataset scoped, versioned, audited, previewable, and schema-fingerprint aware
+- Safe operations only: direct/coalesce/concat/constants, transformations, and lookup maps—no arbitrary scripts
+- Contractor CSV ingestion already consumes saved profiles; Snowflake and API adapters use the same contract next
 
 ### Report packs
 

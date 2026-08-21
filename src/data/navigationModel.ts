@@ -47,6 +47,7 @@ export type NavView =
   | 'validation'
   | 'lineage'
   | 'documents'
+  | 'mapping-studio'
   | 'controls'
   | 'predictive'
   | 'engineering'
@@ -159,6 +160,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: 'ingestion', label: 'Ingestion', eyebrow: 'Progress & cost CSVs' },
       { id: 'documents', label: 'Document Intelligence', eyebrow: 'Private OCR · forecast drivers' },
+      { id: 'mapping-studio', label: 'Mapping Studio', eyebrow: 'Company schemas · Snowflake · CSV' },
       { id: 'review', label: 'Review Desk', eyebrow: 'Human-in-the-loop QA' },
       { id: 'validation', label: 'Validation', eyebrow: 'Mapping rules' },
       { id: 'lineage', label: 'Lineage', eyebrow: 'Source traceability' },

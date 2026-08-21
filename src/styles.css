@@ -2564,6 +2564,40 @@ td strong { display: block; font-size: 0.88rem; }
   color: var(--muted);
 }
 
+.mapping-sample-upload {
+  margin-top: 16px;
+}
+
+.mapping-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.mapping-rule-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.mapping-rule-card > div small {
+  display: block;
+  color: var(--muted);
+}
+
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+  background: #fff;
+  font: inherit;
+}
+
 @media (max-width: 700px) {
   .mapping-editor-heading {
     flex-direction: column;

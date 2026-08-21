@@ -10,6 +10,7 @@ import {
   type ReviewStatus,
 } from './data/projectData'
 import type { CostRow } from './data/costSheet'
+import type { MappingProfile } from './data/mappingProfiles'
 import { useProjectStore } from './store/projectStore'
 import {
   approvalBlockReason,
@@ -131,6 +132,9 @@ const ScheduleControlView = lazy(() =>
 )
 const DocumentIntelligenceView = lazy(() =>
   import('./views/documentIntelligence').then((m) => ({ default: m.DocumentIntelligenceView })),
+)
+const MappingStudioView = lazy(() =>
+  import('./views/mappingStudio').then((m) => ({ default: m.MappingStudioView })),
 )
 const MonthlyCloseWorkspace = lazy(() =>
   import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
@@ -450,9 +454,10 @@ function App() {
     setUploadMessage('Demo document added to the ingestion queue.')
   }
 
-  async function handleCsvUpload(file: File) {
+  async function handleCsvUpload(file: File, mappingProfileId?: string) {
     const text = await file.text()
-    const result = buildCsvImport(file.name, text, reports.length)
+    const profile = state.mappingProfiles.find((entry) => entry.id === mappingProfileId)
+    const result = buildCsvImport(file.name, text, reports.length, profile)
 
     if (!result.report || result.error) {
       setUploadMessage(result.error ?? 'CSV import failed.')
@@ -463,7 +468,12 @@ function App() {
     setValues((current) => [...result.values, ...current])
     setSelectedValueId(result.values[0]?.id ?? selectedValueId)
     setActiveView('review')
-    setUploadMessage(`Imported ${result.values.length} extracted values from ${file.name}.`)
+    const mappingNote = profile
+      ? ` using ${profile.name} v${profile.version}${result.schemaChanged ? ' (source schema changed)' : ''}`
+      : ''
+    setUploadMessage(
+      `Imported ${result.values.length} extracted values from ${file.name}${mappingNote}. ${result.mappingIssues.length} mapping issue(s).`,
+    )
   }
 
   async function resetDemoState() {
@@ -727,6 +737,7 @@ function App() {
 
         {activeView === 'ingestion' && (
           <Ingestion
+            mappingProfiles={state.mappingProfiles}
             reports={reports}
             uploadMessage={uploadMessage}
             onDownloadSample={downloadSampleCsv}
@@ -780,6 +791,8 @@ function App() {
         {activeView === 'schedule' && <ScheduleControlView />}
 
         {activeView === 'documents' && <DocumentIntelligenceView />}
+
+        {activeView === 'mapping-studio' && <MappingStudioView />}
 
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 
@@ -984,17 +997,23 @@ function MetricCard({ label, value, detail, tone = 'default' }: { label: string;
 
 function Ingestion({
   reports,
+  mappingProfiles,
   uploadMessage,
   onCsvUpload,
   onDownloadSample,
   onSimulateUpload,
 }: {
   reports: ReportDocument[]
+  mappingProfiles: MappingProfile[]
   uploadMessage: string
-  onCsvUpload: (file: File) => void
+  onCsvUpload: (file: File, mappingProfileId?: string) => void
   onDownloadSample: () => void
   onSimulateUpload: () => void
 }) {
+  const availableProfiles = mappingProfiles.filter(
+    (profile) => profile.targetDomain === 'contractor_report' && profile.status === 'active',
+  )
+  const [mappingProfileId, setMappingProfileId] = useState('')
   return (
     <div className="view-stack">
       <section className="panel split-panel">
@@ -1006,6 +1025,17 @@ function Ingestion({
             the browser. Each imported row gets confidence, mapping, validation status, and source lineage.
           </p>
           <div className="upload-actions">
+            <label className="field">
+              <span>Mapping profile</span>
+              <select value={mappingProfileId} onChange={(event) => setMappingProfileId(event.target.value)}>
+                <option value="">Automatic header aliases</option>
+                {availableProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.organization} · {profile.name} v{profile.version}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="file-drop">
               <input
                 accept=".csv,text/csv"
@@ -1014,7 +1044,7 @@ function Ingestion({
                   const file = event.target.files?.[0]
 
                   if (file) {
-                    onCsvUpload(file)
+                    onCsvUpload(file, mappingProfileId || undefined)
                     event.target.value = ''
                   }
                 }}

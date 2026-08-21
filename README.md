@@ -130,6 +130,12 @@ The Document Intelligence workspace turns contractor PDFs, images, text, and CSV
 
 Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SHA-256, and stored in PostgreSQL in production. Extracted amounts never change EAC automatically: cost control maps and corrects the draft, then an approver must accept the driver before the forecast engine includes it. The unified ledger also shows changes, risks, opportunities, realised issues, and claims, excluding linked records that would otherwise double count exposure.
 
+## Dynamic Mapping Studio
+
+Mapping Studio lets each company map arbitrary source names and coded values to canonical contractor-report, cost-transaction, or schedule fields. Profiles support direct, first-non-empty, concatenated, and constant mappings; safe text/number/date transformations; value lookup tables; required-field validation; versioning; reusable organization/dataset profiles; and schema-fingerprint drift warnings.
+
+Saved contractor-report profiles are selectable during CSV ingestion. The same profile model is the contract for the next Snowflake adapter, so Snowflake views do not need prescribed column names or SAP terminology.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).

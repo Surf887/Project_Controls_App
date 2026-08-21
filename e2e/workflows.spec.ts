@@ -110,6 +110,43 @@ test.describe('Privacy-first document intelligence', () => {
   })
 })
 
+test.describe('Dynamic company mapping', () => {
+  test('defines an arbitrary header profile and reuses it for ingestion', async ({ page }) => {
+    const csv = 'KPI_LABEL,TYPE_CODE,MONEY,PROJECT_NODE,ACCOUNT_CODE\nCurrent EAC,forecast,"$1,250,000",A.01,C-1000'
+    await page.goto('/submissions/mapping-studio')
+    await expect(page.getByTestId('mapping-studio-view')).toBeVisible()
+    await page.getByLabel('Organization').fill('Example EPC')
+    await page.getByLabel('Profile name').fill('Weekly custom export')
+    await page.getByTestId('mapping-sample-file').setInputFiles({
+      name: 'custom.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv),
+    })
+    const mappings = [
+      ['Metric / field name', 'KPI_LABEL'],
+      ['Category', 'TYPE_CODE'],
+      ['Raw value', 'MONEY'],
+      ['WBS', 'PROJECT_NODE'],
+      ['CBS / cost code', 'ACCOUNT_CODE'],
+    ] as const
+    for (const [label, column] of mappings) {
+      await page.locator('.mapping-rule-card').filter({ hasText: label }).getByLabel('Source column').selectOption(column)
+    }
+    await expect(page.getByTestId('mapping-preview-table')).toContainText('Current EAC')
+    await page.getByTestId('save-mapping-profile').click()
+    await expect(page.getByText(/Saved Weekly custom export v1/i)).toBeVisible()
+
+    await page.goto('/submissions/ingestion')
+    await page.getByLabel('Mapping profile').selectOption({ label: /Example EPC · Weekly custom export v1/ })
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'custom.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(csv),
+    })
+    await expect(page.getByText(/using Weekly custom export v1/i)).toBeVisible()
+  })
+})
+
 test.describe('Supported production scope', () => {
   test('blocks direct access to simulated connector modules by default', async ({ page }) => {
     await page.goto('/admin/integrations')

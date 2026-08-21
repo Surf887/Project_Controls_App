@@ -1,6 +1,7 @@
 import type { ProjectAction, ProjectState } from '../store/types'
 import type { OcrProviderCapability, OcrProviderId, SourceDocument } from '../data/documentIntelligence'
 import type { ForecastDriver } from '../data/forecastDrivers'
+import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 let sessionToken: string | null = null
@@ -347,6 +348,28 @@ export async function ingestSourceDocument(
   return request(`/projects/${encodeURIComponent(projectId)}/documents/ingest`, {
     method: 'POST',
     body: form,
+  })
+}
+
+export async function fetchSnowflakeStatus(projectId: string): Promise<{
+  configured: boolean
+  authentication: 'oauth' | 'key_pair' | 'password' | 'none'
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/snowflake/status`)
+}
+
+export async function stageSnowflakeTransactions(
+  projectId: string,
+  input: {
+    profileId: string
+    limit?: number
+    watermarkColumn?: string
+    afterWatermark?: string
+  },
+): Promise<{ batch: CostTransactionBatch; transactions: CostTransaction[] }> {
+  return request(`/projects/${encodeURIComponent(projectId)}/snowflake/stage`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   })
 }
 

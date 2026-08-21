@@ -48,6 +48,41 @@ export function validateEnv(): void {
   if (process.env.METRICS_TOKEN && process.env.METRICS_TOKEN.length < 16) {
     throw new Error('METRICS_TOKEN must be at least 16 characters when configured')
   }
+  const snowflakeConfigured = [
+    'SNOWFLAKE_ACCOUNT',
+    'SNOWFLAKE_USERNAME',
+    'SNOWFLAKE_WAREHOUSE',
+    'SNOWFLAKE_DATABASE',
+    'SNOWFLAKE_SCHEMA',
+    'SNOWFLAKE_OAUTH_TOKEN',
+    'SNOWFLAKE_PRIVATE_KEY',
+    'SNOWFLAKE_PASSWORD',
+  ].some((name) => Boolean(process.env[name]))
+  if (snowflakeConfigured) {
+    for (const name of [
+      'SNOWFLAKE_ACCOUNT',
+      'SNOWFLAKE_USERNAME',
+      'SNOWFLAKE_WAREHOUSE',
+      'SNOWFLAKE_DATABASE',
+      'SNOWFLAKE_SCHEMA',
+    ]) {
+      if (!process.env[name]) throw new Error(`${name} is required when Snowflake is configured`)
+    }
+    if (
+      !process.env.SNOWFLAKE_OAUTH_TOKEN &&
+      !process.env.SNOWFLAKE_PRIVATE_KEY &&
+      !process.env.SNOWFLAKE_PASSWORD
+    ) {
+      throw new Error('Snowflake requires OAuth, key-pair, or explicitly enabled password authentication')
+    }
+    if (
+      isProduction() &&
+      process.env.SNOWFLAKE_PASSWORD &&
+      process.env.SNOWFLAKE_ALLOW_PASSWORD_AUTH !== 'true'
+    ) {
+      throw new Error('SNOWFLAKE_PASSWORD requires SNOWFLAKE_ALLOW_PASSWORD_AUTH=true in production')
+    }
+  }
 
   const oidcIssuer = process.env.OIDC_ISSUER
   const oidcClient = process.env.OIDC_CLIENT_ID

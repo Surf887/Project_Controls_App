@@ -132,6 +132,18 @@ describe('API routes', () => {
     expect(listed.body.documents.some((document: { id: string }) => document.id === ingested.body.document.id)).toBe(true)
   })
 
+  it('reports Snowflake configuration without exposing credentials', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
+    const projectId = active.body.state.meta.id as string
+    const status = await request(app)
+      .get(`/api/projects/${projectId}/snowflake/status`)
+      .set('x-pc-role', 'viewer')
+    expect(status.status).toBe(200)
+    expect(status.body.configured).toBe(false)
+    expect(status.body).not.toHaveProperty('password')
+    expect(status.body).not.toHaveProperty('token')
+  })
+
   it('GET /api/projects/:id/audit returns immutable log', async () => {
     const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     const projectId = active.body.state.meta.id as string

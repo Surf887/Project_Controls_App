@@ -18,6 +18,15 @@ describe('validateEnv', () => {
     delete process.env.ENABLE_SIMULATED_INTEGRATIONS
     delete process.env.DOCUMENT_ENCRYPTION_KEY
     delete process.env.DOCUMENT_SCAN_ENDPOINT
+    delete process.env.SNOWFLAKE_ACCOUNT
+    delete process.env.SNOWFLAKE_USERNAME
+    delete process.env.SNOWFLAKE_WAREHOUSE
+    delete process.env.SNOWFLAKE_DATABASE
+    delete process.env.SNOWFLAKE_SCHEMA
+    delete process.env.SNOWFLAKE_OAUTH_TOKEN
+    delete process.env.SNOWFLAKE_PRIVATE_KEY
+    delete process.env.SNOWFLAKE_PASSWORD
+    delete process.env.SNOWFLAKE_ALLOW_PASSWORD_AUTH
   })
 
   afterEach(() => {
@@ -75,6 +84,11 @@ describe('validateEnv', () => {
   it('rejects a short metrics bearer token', () => {
     process.env.METRICS_TOKEN = 'short'
     expect(() => validateEnv()).toThrow(/METRICS_TOKEN/)
+  })
+
+  it('rejects partial Snowflake configuration', () => {
+    process.env.SNOWFLAKE_ACCOUNT = 'account'
+    expect(() => validateEnv()).toThrow(/SNOWFLAKE_USERNAME/)
   })
 })
 

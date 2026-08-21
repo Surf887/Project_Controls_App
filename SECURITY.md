@@ -18,6 +18,7 @@ The latest release on the default branch receives security fixes.
 - **Data integrity** — canonical HMAC audit chain keyed with `AUDIT_HMAC_SECRET`; project-state and audit writes commit in one PostgreSQL transaction; baseline snapshots and audit events are database-backed in production; optimistic concurrency is version-conditional.
 - **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
 - **Document privacy** — uploaded source documents are signature-validated, malware-scanned, deduplicated, encrypted with a separate AES-256-GCM key, and retained in PostgreSQL. Local OCR is the default; cloud OCR requires explicit provider configuration.
+- **Snowflake boundary** — the adapter accepts validated view identifiers only, limits result sets, prefers OAuth/key-pair authentication, and stages read-only rows for mapping and approval before any cost posting.
 - **Observability** — structured request/error logs carry correlation IDs; optional Prometheus metrics require a dedicated bearer token.
 
 ## Known follow-ups

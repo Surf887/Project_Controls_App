@@ -12,7 +12,7 @@ import { generateClosePack } from '../services/exportService.js'
 import { generateClosePackPdfAsync } from '../services/pdfExport.js'
 import { param } from '../utils/params.js'
 import { sendRouteError } from '../utils/routeError.js'
-import { createBaselineSchema } from '../validation/schemas.js'
+import { createBaselineSchema, snowflakeStageSchema } from '../validation/schemas.js'
 import multer from 'multer'
 import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
@@ -26,6 +26,8 @@ import {
   updateSourceDocument,
 } from '../services/documentStore.js'
 import { scanDocument, validateDocumentSignature } from '../services/documentSecurity.js'
+import { querySnowflakeDataset, snowflakeConfigured } from '../services/snowflakeService.js'
+import { buildCostTransactionBatch } from '@pc/engine/costTransactionStaging.js'
 
 export const enterpriseRouter = Router({ mergeParams: true })
 const documentUpload = multer({
@@ -161,6 +163,65 @@ enterpriseRouter.get('/portfolio/rollup', requireRole('viewer'), async (_req, re
 
 enterpriseRouter.get('/documents/providers', requireRole('viewer'), (_req, res) => {
   res.json({ providers: ocrProviderCapabilities() })
+})
+
+enterpriseRouter.get('/snowflake/status', requireRole('viewer'), (_req, res) => {
+  res.json({
+    configured: snowflakeConfigured(),
+    authentication: process.env.SNOWFLAKE_OAUTH_TOKEN
+      ? 'oauth'
+      : process.env.SNOWFLAKE_PRIVATE_KEY
+        ? 'key_pair'
+        : process.env.SNOWFLAKE_PASSWORD
+          ? 'password'
+          : 'none',
+  })
+})
+
+enterpriseRouter.post('/snowflake/stage', requireRole('cost_controller'), async (req, res) => {
+  const parsed = snowflakeStageSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid Snowflake staging request', issues: parsed.error.flatten() })
+    return
+  }
+  try {
+    const projectId = param(req.params.projectId)
+    const state = await getProjectById(projectId)
+    const profile = state.mappingProfiles.find((entry) => entry.id === parsed.data.profileId)
+    if (
+      !profile ||
+      profile.status !== 'active' ||
+      profile.sourceType !== 'snowflake' ||
+      profile.targetDomain !== 'cost_transaction'
+    ) {
+      res.status(400).json({ error: 'Active Snowflake cost-transaction mapping profile not found' })
+      return
+    }
+    const source = await querySnowflakeDataset({
+      dataset: profile.dataset,
+      limit: parsed.data.limit,
+      watermarkColumn: parsed.data.watermarkColumn,
+      afterWatermark: parsed.data.afterWatermark,
+    })
+    const watermarkKey = parsed.data.watermarkColumn?.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const watermark = watermarkKey
+      ? source.rows.map((row) => row[watermarkKey]).filter(Boolean).sort().at(-1)
+      : undefined
+    const result = buildCostTransactionBatch(
+      {
+        profile,
+        headers: source.headers,
+        rows: source.rows,
+        existingTransactions: state.costTransactions,
+        importedBy: req.user?.name ?? 'Snowflake data steward',
+        watermark,
+      },
+      state.costSheetRows,
+    )
+    res.json(result)
+  } catch (error) {
+    sendRouteError(res, error, 502, 'Snowflake staging failed')
+  }
 })
 
 enterpriseRouter.get('/documents', requireRole('viewer'), async (req, res) => {

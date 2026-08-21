@@ -12,7 +12,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
 | **Audit immutability** | Workflow history in state | Canonical HMAC chain | PostgreSQL `audit_events` with atomic state/audit commits | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Reviewed P6 CSV/XER; other connectors disabled | Adapter registry + sync jobs API | SAP/P6 OAuth and webhooks | iPaaS, message bus |
+| **Integrations** | Reviewed P6 CSV/XER + governed Snowflake cost staging | Adapter registry + sync jobs API | Direct SAP/P6 OAuth and webhooks | iPaaS, message bus |
 | **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV/XER, control-account PV/EV | P6 API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
 | **Document intelligence** | Private local text/PDF OCR + optional Azure/AWS | Encrypted source store, evidence, review and forecast-driver ledger | Layout/table models, provider policy, batch queues | Domain-trained extraction and model monitoring |
 | **Dynamic source mapping** | User-defined CSV/company profiles | Versioned canonical mappings, safe transforms/lookups, drift detection | Snowflake schema introspection and governed cost staging | Cross-portfolio mapping library and stewardship workflow |
@@ -80,7 +80,15 @@ Maps product capabilities to implementation phases. The trust milestone establis
 - Arbitrary source headers and company code values map to canonical project-controls fields without code changes
 - Profiles are organization/dataset scoped, versioned, audited, previewable, and schema-fingerprint aware
 - Safe operations only: direct/coalesce/concat/constants, transformations, and lookup maps—no arbitrary scripts
-- Contractor CSV ingestion already consumes saved profiles; Snowflake and API adapters use the same contract next
+- Contractor CSV ingestion and the Snowflake cost adapter consume the same governed profile contract
+
+### Snowflake cost reconciliation
+
+- Read-only OAuth/key-pair Snowflake adapter with validated identifiers and bounded queries
+- Arbitrary company schemas map through active `cost_transaction` profiles
+- External line IDs deduplicate; optional watermarks support incremental reads
+- Unmapped WBS and non-USD rows cannot be approved or posted
+- Approver signs off staged batches before cost control posts actuals/invoices, commitments, or accruals
 
 ### Report packs
 

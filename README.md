@@ -134,7 +134,9 @@ Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SH
 
 Mapping Studio lets each company map arbitrary source names and coded values to canonical contractor-report, cost-transaction, or schedule fields. Profiles support direct, first-non-empty, concatenated, and constant mappings; safe text/number/date transformations; value lookup tables; required-field validation; versioning; reusable organization/dataset profiles; and schema-fingerprint drift warnings.
 
-Saved contractor-report profiles are selectable during CSV ingestion. The same profile model is the contract for the next Snowflake adapter, so Snowflake views do not need prescribed column names or SAP terminology.
+Saved contractor-report profiles are selectable during CSV ingestion. The Snowflake adapter uses the same profile contract, so Snowflake views do not need prescribed column names or SAP terminology.
+
+The Snowflake Cost Sync workspace uses active `cost_transaction` profiles to query read-only curated views through OAuth or key-pair authentication. Rows are incrementally staged, external IDs deduplicated, WBS mappings reviewed, non-USD values blocked, and batch approval separated from posting. Approved actuals/invoices update period actuals, commitments update commitment exposure, and accruals enter the month-end accrual register with source lineage.
 
 ## Governance & reporting
 

@@ -153,6 +153,15 @@ export function MappingStudioView() {
               <input type="text" value={name} onChange={(event) => setName(event.target.value)} />
             </label>
             <label className="field">
+              <span>Dataset / Snowflake view</span>
+              <input
+                placeholder="DATABASE.SCHEMA.CURATED_COST_VIEW"
+                type="text"
+                value={dataset}
+                onChange={(event) => setDataset(event.target.value)}
+              />
+            </label>
+            <label className="field">
               <span>Source</span>
               <select value={sourceType} onChange={(event) => setSourceType(event.target.value as MappingSourceType)}>
                 <option value="snowflake">Snowflake</option>

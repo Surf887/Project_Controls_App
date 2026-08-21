@@ -145,6 +145,13 @@ test.describe('Dynamic company mapping', () => {
     })
     await expect(page.getByText(/using Weekly custom export v1/i)).toBeVisible()
   })
+
+  test('shows Snowflake as a secure configuration boundary when credentials are absent', async ({ page }) => {
+    await page.goto('/submissions/snowflake')
+    await expect(page.getByTestId('snowflake-sync-view')).toBeVisible()
+    await expect(page.getByText('Snowflake not configured')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stage Snowflake rows' })).toBeDisabled()
+  })
 })
 
 test.describe('Supported production scope', () => {

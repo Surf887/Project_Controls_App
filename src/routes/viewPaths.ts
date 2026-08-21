@@ -37,6 +37,7 @@ export const viewPaths: Record<NavView, string> = {
   ingestion: '/submissions/ingestion',
   documents: '/submissions/documents',
   'mapping-studio': '/submissions/mapping-studio',
+  snowflake: '/submissions/snowflake',
   review: '/submissions/review',
   validation: '/submissions/validation',
   lineage: '/submissions/lineage',

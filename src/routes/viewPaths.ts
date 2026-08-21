@@ -35,6 +35,7 @@ export const viewPaths: Record<NavView, string> = {
   'team-reports': '/reports',
   'audit-trail': '/audit',
   ingestion: '/submissions/ingestion',
+  documents: '/submissions/documents',
   review: '/submissions/review',
   validation: '/submissions/validation',
   lineage: '/submissions/lineage',

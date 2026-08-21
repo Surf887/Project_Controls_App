@@ -80,6 +80,21 @@ test.describe('Integrated schedule control', () => {
   })
 })
 
+test.describe('Privacy-first document intelligence', () => {
+  test('extracts a local OCR draft without changing forecast approval state', async ({ page }) => {
+    await page.goto('/submissions/documents')
+    await expect(page.getByTestId('document-intelligence-view')).toBeVisible()
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'contractor-forecast.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Contractor forecast overrun for A.01 is USD 1.8 million with 65% probability.'),
+    })
+    await expect(page.getByText(/Extracted 1 draft forecast driver/i)).toBeVisible()
+    await expect(page.getByTestId('forecast-driver-ledger')).toContainText('contractor forecast overrun')
+    await expect(page.getByRole('button', { name: 'Approve forecast impact' })).toBeDisabled()
+  })
+})
+
 test.describe('Supported production scope', () => {
   test('blocks direct access to simulated connector modules by default', async ({ page }) => {
     await page.goto('/admin/integrations')

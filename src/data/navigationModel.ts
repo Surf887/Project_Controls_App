@@ -46,6 +46,7 @@ export type NavView =
   | 'review'
   | 'validation'
   | 'lineage'
+  | 'documents'
   | 'controls'
   | 'predictive'
   | 'engineering'
@@ -157,6 +158,7 @@ export const navGroups: NavGroup[] = [
     rationale: 'Early variation capture — contractor data before month-end close',
     items: [
       { id: 'ingestion', label: 'Ingestion', eyebrow: 'Progress & cost CSVs' },
+      { id: 'documents', label: 'Document Intelligence', eyebrow: 'Private OCR · forecast drivers' },
       { id: 'review', label: 'Review Desk', eyebrow: 'Human-in-the-loop QA' },
       { id: 'validation', label: 'Validation', eyebrow: 'Mapping rules' },
       { id: 'lineage', label: 'Lineage', eyebrow: 'Source traceability' },

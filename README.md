@@ -77,7 +77,7 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 | **EPC execution** | Discipline workspaces | Engineering, Construction, Commissioning |
 | **Project logs** | Supporting registers | Issues, Actions, Lessons |
 | **Reporting & traceability** | Stakeholder packs | Team Reports, Audit Trail |
-| **Contractor submissions** | Early variation capture | Ingestion, Review, Validation, Lineage |
+| **Contractor submissions** | Early variation capture | CSV ingestion, private OCR, forecast-driver review, validation, lineage |
 | **Platform admin** | Integrations & intel | Connectors, Governance, intel modules |
 
 ### Improvements over legacy PMIS (EcoSys / Unifier)
@@ -124,6 +124,12 @@ Mapped schedule progress drives control-account planned value, earned value, SPI
 
 Use **Download P6 sample** in Schedule Control for the supported columns. The reviewed browser path is limited to 1,000 activities / 250 KB; larger programmes require the planned streaming adapter. Live P6 API and XER ingestion remain follow-up adapters on the same canonical schedule model.
 
+## Private document intelligence
+
+The Document Intelligence workspace turns contractor PDFs, images, text, and CSV reports into draft forecast drivers with page-level evidence. Privacy-first local extraction is the default: text-layer PDFs are processed in-process, while scanned documents can use a private Docling/Tesseract-compatible endpoint. Azure AI Document Intelligence and AWS Textract are optional provider adapters.
+
+Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SHA-256, and stored in PostgreSQL in production. Extracted amounts never change EAC automatically: cost control maps and corrects the draft, then an approver must accept the driver before the forecast engine includes it. The unified ledger also shows changes, risks, opportunities, realised issues, and claims, excluding linked records that would otherwise double count exposure.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).
@@ -150,6 +156,7 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 - Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with per-project RBAC. Demo role switching is hard-disabled in production; OIDC remains optional.
 - Simulated connectors and illustrative intelligence modules are disabled by default (`VITE_ENABLE_SIMULATED_FEATURES=false`, `ENABLE_SIMULATED_INTEGRATIONS=false`)
 - P6 CSV status imports are supported; P6 XER/live API and SAP/EcoSys live feeds are not yet implemented
+- OCR supports local text-layer PDF/text extraction plus configured local, Azure, or AWS providers; scanned-PDF quality depends on the selected provider
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 
 ## Reset demo data

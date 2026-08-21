@@ -2541,6 +2541,29 @@ td strong { display: block; font-size: 0.88rem; }
   font-size: 0.78rem;
 }
 
+.document-file-drop {
+  margin-top: 16px;
+}
+
+.driver-review-card {
+  border-left: 4px solid var(--blue);
+}
+
+.driver-evidence {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--line);
+  background: #f8fbff;
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.driver-evidence small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
 @media (max-width: 700px) {
   .mapping-editor-heading {
     flex-direction: column;

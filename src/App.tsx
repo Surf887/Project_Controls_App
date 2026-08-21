@@ -129,6 +129,9 @@ const WbsManager = lazy(() => import('./views/wbs').then((m) => ({ default: m.Wb
 const ScheduleControlView = lazy(() =>
   import('./views/scheduleControl').then((m) => ({ default: m.ScheduleControlView })),
 )
+const DocumentIntelligenceView = lazy(() =>
+  import('./views/documentIntelligence').then((m) => ({ default: m.DocumentIntelligenceView })),
+)
 const MonthlyCloseWorkspace = lazy(() =>
   import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
 )
@@ -775,6 +778,8 @@ function App() {
         {activeView === 'sccs' && <SccsView />}
 
         {activeView === 'schedule' && <ScheduleControlView />}
+
+        {activeView === 'documents' && <DocumentIntelligenceView />}
 
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 

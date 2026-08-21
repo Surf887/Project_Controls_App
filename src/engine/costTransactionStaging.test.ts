@@ -27,15 +27,19 @@ function profile(): MappingProfile {
     status: 'active',
     schemaFingerprint: schemaFingerprint(headers),
     sourceHeaders: headers,
-    rules: fields.map(([target, source], index) => ({
-      id: `R-${index}`,
-      targetField: target,
-      sourceColumns: [source],
-      operation: 'direct',
-      transforms: ['trim'],
-      valueMap: target === 'recordType' ? { ACT: 'actual', COM: 'commitment', ACR: 'accrual' } : {},
-      required: !['poNumber'].includes(target),
-    })),
+    rules: fields.map(([target, source], index) => {
+      const valueMap: Record<string, string> =
+        target === 'recordType' ? { ACT: 'actual', COM: 'commitment', ACR: 'accrual' } : {}
+      return {
+        id: `R-${index}`,
+        targetField: target,
+        sourceColumns: [source],
+        operation: 'direct',
+        transforms: ['trim'],
+        valueMap,
+        required: !['poNumber'].includes(target),
+      }
+    }),
     createdAt: '2026-08-21T00:00:00.000Z',
     createdBy: 'Steward',
     updatedAt: '2026-08-21T00:00:00.000Z',

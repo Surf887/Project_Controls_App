@@ -119,7 +119,7 @@ export function normalizeSnowflakeRows(rows: unknown[]): SnowflakeQueryResult {
 export async function querySnowflakeDataset(options: SnowflakeQueryOptions): Promise<SnowflakeQueryResult> {
   const dataset = quotedIdentifier(options.dataset)
   const limit = Math.min(Math.max(Math.trunc(options.limit ?? 500), 1), 1_000)
-  const binds: snowflake.Binds = []
+  const binds: unknown[] = []
   let where = ''
   let order = ''
   if (options.watermarkColumn && options.afterWatermark) {
@@ -133,7 +133,7 @@ export async function querySnowflakeDataset(options: SnowflakeQueryOptions): Pro
     const rows = await execute(
       connection,
       `SELECT * FROM ${dataset}${where}${order} LIMIT ${limit}`,
-      binds,
+      binds as snowflake.Binds,
     )
     return normalizeSnowflakeRows(rows)
   } finally {

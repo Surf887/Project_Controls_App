@@ -66,6 +66,11 @@ const selectDocument = `
          extraction_encrypted, draft_drivers, uploaded_by, uploaded_at, error
   FROM source_documents
 `
+const listDocument = `
+  SELECT id, project_id, file_name, mime_type, size_bytes, sha256, provider, status,
+         NULL::bytea AS extraction_encrypted, draft_drivers, uploaded_by, uploaded_at, error
+  FROM source_documents
+`
 
 export async function findDocumentByHash(projectId: string, sha256: string): Promise<SourceDocument | null> {
   if (isPostgresEnabled()) {
@@ -139,7 +144,7 @@ export async function updateSourceDocument(document: SourceDocument): Promise<vo
 export async function listSourceDocuments(projectId: string): Promise<SourceDocument[]> {
   if (isPostgresEnabled()) {
     const result = await query<DocumentRow>(
-      `${selectDocument} WHERE project_id = $1 ORDER BY uploaded_at DESC LIMIT 200`,
+      `${listDocument} WHERE project_id = $1 ORDER BY uploaded_at DESC LIMIT 200`,
       [assertSafeId(projectId, 'projectId')],
     )
     return result.rows.map(fromRow)

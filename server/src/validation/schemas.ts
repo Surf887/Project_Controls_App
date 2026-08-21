@@ -284,7 +284,6 @@ const actionSchemas = [
       drivers: z.array(forecastDriverSchema).max(10_000),
     }),
   }),
-  z.object({ type: z.literal('SET_SOURCE_DOCUMENTS'), payload: z.array(sourceDocumentSchema).max(1_000) }),
   z.object({ type: z.literal('UPDATE_FORECAST_DRIVER'), payload: forecastDriverSchema }),
   z.object({
     type: z.literal('DECIDE_FORECAST_DRIVER'),

@@ -51,7 +51,6 @@ export function canPerformAction(actionType: string, role: ProjectRole): boolean
     IMPORT_SCHEDULE: 'cost_controller',
     UPDATE_SCHEDULE_ACTIVITY_MAPPING: 'cost_controller',
     IMPORT_DOCUMENT_DRAFTS: 'cost_controller',
-    SET_SOURCE_DOCUMENTS: 'cost_controller',
     UPDATE_FORECAST_DRIVER: 'cost_controller',
     DECIDE_FORECAST_DRIVER: 'approver',
   }

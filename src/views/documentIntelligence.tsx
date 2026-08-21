@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ForecastDriver } from '../data/forecastDrivers'
 import type { OcrProviderCapability, OcrProviderId } from '../data/documentIntelligence'
+import type { SourceDocument } from '../data/documentIntelligence'
 import {
   fetchOcrProviders,
   fetchSourceDocuments,
@@ -180,16 +181,17 @@ export function DocumentIntelligenceView() {
   const [provider, setProvider] = useState<OcrProviderId>('local')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [serverDocuments, setServerDocuments] = useState<SourceDocument[]>([])
 
   useEffect(() => {
     if (!backendEnabled) return
     void Promise.all([fetchOcrProviders(state.meta.id), fetchSourceDocuments(state.meta.id)])
       .then(([nextProviders, documents]) => {
         setProviders(nextProviders)
-        if (canEdit) dispatch({ type: 'SET_SOURCE_DOCUMENTS', payload: documents })
+        setServerDocuments(documents)
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Document service unavailable'))
-  }, [backendEnabled, canEdit, dispatch, state.meta.id])
+  }, [backendEnabled, state.meta.id])
 
   const controlAccounts = useMemo(
     () => state.costSheetRows.filter((row) => row.parentId === null).sort((a, b) => a.wbs.localeCompare(b.wbs)),
@@ -197,6 +199,11 @@ export function DocumentIntelligenceView() {
   )
   const ledger = useMemo(() => buildForecastDriverLedger(state), [state])
   const documentDrivers = state.forecastDrivers.filter((driver) => driver.sourceType === 'document')
+  const documents = useMemo(() => {
+    const merged = new Map(serverDocuments.map((document) => [document.id, document]))
+    state.sourceDocuments.forEach((document) => merged.set(document.id, document))
+    return [...merged.values()]
+  }, [serverDocuments, state.sourceDocuments])
   const expectedExposure = ledger.reduce((sum, driver) => sum + driverExpectedValue(driver), 0)
 
   async function upload(file: File) {
@@ -286,7 +293,7 @@ export function DocumentIntelligenceView() {
       </section>
 
       <section className="metric-grid">
-        <Metric label="Documents" value={String(state.sourceDocuments.length)} detail="Encrypted source records" />
+        <Metric label="Documents" value={String(documents.length)} detail="Encrypted source records" />
         <Metric label="Draft drivers" value={String(documentDrivers.filter((driver) => driver.status === 'draft' || driver.status === 'in_review').length)} detail="Awaiting review/approval" />
         <Metric label="Approved drivers" value={String(documentDrivers.filter((driver) => driver.status === 'approved').length)} detail="Included in forecast" />
         <Metric label="Ledger expected value" value={formatUsd(expectedExposure)} detail="Governed exposure across project registers" />

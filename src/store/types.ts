@@ -384,7 +384,6 @@ export type ProjectAction =
     }
   | { type: 'UPDATE_SCHEDULE_ACTIVITY_MAPPING'; payload: { activityId: string; wbs: string; actor: string } }
   | { type: 'IMPORT_DOCUMENT_DRAFTS'; payload: { document: SourceDocument; drivers: ForecastDriver[] } }
-  | { type: 'SET_SOURCE_DOCUMENTS'; payload: SourceDocument[] }
   | { type: 'UPDATE_FORECAST_DRIVER'; payload: ForecastDriver }
   | {
       type: 'DECIDE_FORECAST_DRIVER'

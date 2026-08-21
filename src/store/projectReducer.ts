@@ -613,22 +613,6 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         }),
       }
     }
-    case 'SET_SOURCE_DOCUMENTS': {
-      const current = new Map(state.sourceDocuments.map((document) => [document.id, document]))
-      return {
-        ...state,
-        sourceDocuments: action.payload.map((document) => {
-          const existing = current.get(document.id)
-          return existing
-            ? {
-                ...document,
-                status: existing.status,
-                draftDrivers: existing.draftDrivers,
-              }
-            : document
-        }),
-      }
-    }
     case 'UPDATE_FORECAST_DRIVER': {
       const exists = state.forecastDrivers.some((driver) => driver.id === action.payload.id)
       if (!exists) return state

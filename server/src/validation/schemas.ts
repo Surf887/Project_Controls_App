@@ -157,6 +157,37 @@ const sourceDocumentSchema = z.object({
   draftDrivers: z.array(forecastDriverSchema).max(10_000),
   error: z.string().max(4000).optional(),
 })
+const mappingRuleSchema = z.object({
+  id: z.string().min(1).max(256),
+  targetField: z.string().min(1).max(128),
+  sourceColumns: z.array(z.string().min(1).max(500)).max(20),
+  operation: z.enum(['direct', 'coalesce', 'concat', 'constant']),
+  constant: z.string().max(4000).optional(),
+  delimiter: z.string().max(20).optional(),
+  transforms: z.array(z.enum(['trim', 'uppercase', 'lowercase', 'number', 'date_iso'])).max(10),
+  valueMap: z
+    .record(z.string().max(500), z.string().max(500))
+    .refine((mapping) => Object.keys(mapping).length <= 500, 'Too many value mappings'),
+  required: z.boolean(),
+  defaultValue: z.string().max(4000).optional(),
+})
+const mappingProfileSchema = z.object({
+  id: z.string().min(1).max(256),
+  name: z.string().min(1).max(300),
+  organization: z.string().min(1).max(300),
+  sourceType: z.enum(['csv', 'excel', 'snowflake', 'ocr', 'api']),
+  targetDomain: z.enum(['contractor_report', 'cost_transaction', 'schedule_activity']),
+  dataset: z.string().min(1).max(500),
+  version: z.number().int().min(1).max(1_000_000),
+  status: z.enum(['draft', 'active', 'retired']),
+  schemaFingerprint: z.string().max(128),
+  sourceHeaders: z.array(z.string().min(1).max(500)).max(5_000),
+  rules: z.array(mappingRuleSchema).min(1).max(500),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().min(1).max(200),
+  updatedAt: z.string().datetime(),
+  updatedBy: z.string().min(1).max(200),
+})
 
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()
 const changeItemSchema = z.object({ id: z.string(), title: z.string() }).passthrough()
@@ -292,6 +323,14 @@ const actionSchemas = [
       decision: z.enum(['approved', 'rejected']),
       actor: z.string().min(1).max(200),
       comment: z.string().max(4000).optional(),
+    }),
+  }),
+  z.object({ type: z.literal('UPSERT_MAPPING_PROFILE'), payload: mappingProfileSchema }),
+  z.object({
+    type: z.literal('DELETE_MAPPING_PROFILE'),
+    payload: z.object({
+      profileId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
     }),
   }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),

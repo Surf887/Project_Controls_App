@@ -41,6 +41,7 @@ import type { Vendor } from '../data/vendors'
 import type { ScheduleActivity, ScheduleImportBatch, ScheduleRelationship } from '../data/schedule'
 import type { ForecastDriver } from '../data/forecastDrivers'
 import type { SourceDocument } from '../data/documentIntelligence'
+import type { MappingProfile } from '../data/mappingProfiles'
 
 export type { ApprovalStep, WorkflowStatus } from '../data/governance'
 export type ReserveType = 'contingency' | 'management_reserve'
@@ -305,6 +306,7 @@ export interface ProjectState {
   scheduleImports: ScheduleImportBatch[]
   forecastDrivers: ForecastDriver[]
   sourceDocuments: SourceDocument[]
+  mappingProfiles: MappingProfile[]
   ingestionApplications?: IngestionApplySummary[]
   /** Append-only ledger of extraction postings (active + reversed). */
   ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
@@ -385,6 +387,8 @@ export type ProjectAction =
   | { type: 'UPDATE_SCHEDULE_ACTIVITY_MAPPING'; payload: { activityId: string; wbs: string; actor: string } }
   | { type: 'IMPORT_DOCUMENT_DRAFTS'; payload: { document: SourceDocument; drivers: ForecastDriver[] } }
   | { type: 'UPDATE_FORECAST_DRIVER'; payload: ForecastDriver }
+  | { type: 'UPSERT_MAPPING_PROFILE'; payload: MappingProfile }
+  | { type: 'DELETE_MAPPING_PROFILE'; payload: { profileId: string; actor: string } }
   | {
       type: 'DECIDE_FORECAST_DRIVER'
       payload: {

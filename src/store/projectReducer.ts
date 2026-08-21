@@ -38,8 +38,9 @@ function normalizeState(state: ProjectState): ProjectState {
     state.scheduleImports == null
   const needsDocumentIntelligence =
     state.forecastDrivers == null || state.sourceDocuments == null
+  const needsMappingProfiles = state.mappingProfiles == null
 
-  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule && !needsDocumentIntelligence) {
+  if (!needsSettings && !needsSccs && !needsPostings && !needsSchedule && !needsDocumentIntelligence && !needsMappingProfiles) {
     return state
   }
 
@@ -59,6 +60,7 @@ function normalizeState(state: ProjectState): ProjectState {
           sourceDocuments: state.sourceDocuments ?? [],
         }
       : {}),
+    ...(needsMappingProfiles ? { mappingProfiles: [] } : {}),
     ...(needsSettings
       ? {
           settings: {
@@ -685,6 +687,40 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           entityId: updated.id,
           action: action.payload.decision,
           summary: `${action.payload.decision} document forecast driver ${updated.title}.`,
+        }),
+      }
+    }
+    case 'UPSERT_MAPPING_PROFILE': {
+      const existing = state.mappingProfiles.find((profile) => profile.id === action.payload.id)
+      return {
+        ...state,
+        mappingProfiles: [
+          action.payload,
+          ...state.mappingProfiles.filter((profile) => profile.id !== action.payload.id),
+        ],
+        auditLog: appendAudit(state, {
+          actor: action.payload.updatedBy,
+          team: 'Data governance',
+          entityType: 'settings',
+          entityId: action.payload.id,
+          action: existing ? 'updated' : 'created',
+          summary: `${existing ? 'Updated' : 'Created'} mapping profile ${action.payload.name} v${action.payload.version}.`,
+        }),
+      }
+    }
+    case 'DELETE_MAPPING_PROFILE': {
+      const profile = state.mappingProfiles.find((entry) => entry.id === action.payload.profileId)
+      if (!profile) return state
+      return {
+        ...state,
+        mappingProfiles: state.mappingProfiles.filter((entry) => entry.id !== action.payload.profileId),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Data governance',
+          entityType: 'settings',
+          entityId: profile.id,
+          action: 'deleted',
+          summary: `Deleted mapping profile ${profile.name}.`,
         }),
       }
     }

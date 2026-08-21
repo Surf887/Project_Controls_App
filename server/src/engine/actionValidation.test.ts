@@ -5,6 +5,7 @@ import { applyProjectAction } from '@pc/store/projectReducer.js'
 import type { ExtractedValue } from '@pc/data/projectData.js'
 import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '@pc/utils/p6CsvImport.js'
 import type { ForecastDriver } from '@pc/data/forecastDrivers.js'
+import { schemaFingerprint, suggestMappingRules } from '@pc/engine/dynamicMapping.js'
 
 describe('validateProjectAction', () => {
   it('blocks LOCK_REPORTING_PERIOD when approved extractions are pending apply', () => {
@@ -147,5 +148,37 @@ describe('validateProjectAction', () => {
         payload: { driverId: driver.id, decision: 'approved', actor: 'Approver' },
       }),
     ).not.toThrow()
+  })
+
+  it('validates active mapping profiles and sequential versions', () => {
+    const state = createSeedState()
+    const headers = ['field', 'category', 'rawValue', 'wbs', 'cbs']
+    const profile = {
+      id: 'MAP-test',
+      name: 'Test mapping',
+      organization: 'Test EPC',
+      sourceType: 'csv' as const,
+      targetDomain: 'contractor_report' as const,
+      dataset: 'Weekly report',
+      version: 1,
+      status: 'active' as const,
+      schemaFingerprint: schemaFingerprint(headers),
+      sourceHeaders: headers,
+      rules: suggestMappingRules(headers, 'contractor_report'),
+      createdAt: '2026-08-21T00:00:00.000Z',
+      createdBy: 'Steward',
+      updatedAt: '2026-08-21T00:00:00.000Z',
+      updatedBy: 'Steward',
+    }
+    expect(() =>
+      validateProjectAction(state, { type: 'UPSERT_MAPPING_PROFILE', payload: profile }),
+    ).not.toThrow()
+    const saved = applyProjectAction(state, { type: 'UPSERT_MAPPING_PROFILE', payload: profile })
+    expect(() =>
+      validateProjectAction(saved, {
+        type: 'UPSERT_MAPPING_PROFILE',
+        payload: { ...profile, version: 1 },
+      }),
+    ).toThrow(/version 2/)
   })
 })

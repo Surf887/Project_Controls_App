@@ -133,6 +133,7 @@ export function createSeedState(): ProjectState {
     scheduleImports: [],
     forecastDrivers: [],
     sourceDocuments: [],
+    mappingProfiles: [],
     ingestionPostings: [],
   }
 
@@ -222,6 +223,7 @@ export function createBlankProjectState(id: string, name: string): ProjectState 
     scheduleImports: [],
     forecastDrivers: [],
     sourceDocuments: [],
+    mappingProfiles: [],
     ingestionApplications: [],
     ingestionPostings: [],
   }

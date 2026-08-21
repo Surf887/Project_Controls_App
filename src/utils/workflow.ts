@@ -1,6 +1,8 @@
 import type { ExtractedValue, ReportDocument, ValidationIssue } from '../data/projectData'
 import { buildSccsAssignment } from '../data/sccsMappings'
 import type { SccsAssignment } from '../data/sccs'
+import type { MappingProfile } from '../data/mappingProfiles'
+import { applyMappingProfile } from '../engine/dynamicMapping'
 
 export interface StoredAppState {
   reports: ReportDocument[]
@@ -87,8 +89,23 @@ export function parseCsv(text: string): Record<string, string>[] {
   return parseCsvTable(text).rows
 }
 
-export function buildCsvImport(fileName: string, text: string, existingReportCount: number) {
-  const rows = parseCsv(text).filter((row) => Object.values(row).some((value) => value.trim().length > 0))
+export function buildCsvImport(
+  fileName: string,
+  text: string,
+  existingReportCount: number,
+  mappingProfile?: MappingProfile,
+) {
+  const table = parseCsvTable(text)
+  const mapping = mappingProfile
+    ? applyMappingProfile(mappingProfile, table.headers, table.rows)
+    : null
+  const rows = (mapping?.rows ?? table.rows)
+    .map((row) =>
+      mappingProfile
+        ? Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeHeader(key), value]))
+        : row,
+    )
+    .filter((row) => Object.values(row).some((value) => value.trim().length > 0))
   const importId = `rpt-csv-${Date.now()}`
 
   if (rows.length === 0) {
@@ -111,7 +128,12 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
     const pbsOverride = readCell(row, ['pbs'])
     const sabOverride = readCell(row, ['sab'])
     const corOverride = readCell(row, ['cor'])
-    const issues = generateValidationIssues({ field, unit, confidence, normalizedValue, wbs, cbs })
+    const issues = [
+      ...generateValidationIssues({ field, unit, confidence, normalizedValue, wbs, cbs }),
+      ...(mapping?.issues ?? [])
+        .filter((issue) => issue.row === index + 2)
+        .map((issue) => ({ severity: issue.severity === 'error' ? 'critical' as const : 'warning' as const, message: issue.message })),
+    ]
 
     let sccs: SccsAssignment | undefined
     if (pbsOverride || sabOverride || corOverride) {
@@ -185,6 +207,8 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
     error: null,
     report,
     values,
+    mappingIssues: mapping?.issues ?? [],
+    schemaChanged: mapping?.schemaChanged ?? false,
   }
 }
 

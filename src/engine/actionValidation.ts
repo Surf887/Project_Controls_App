@@ -1,5 +1,6 @@
 import { findOwningControlAccount, pendingApplyCount } from './applyExtractionsCore'
 import type { ProjectAction, ProjectState } from '../store/types'
+import { canonicalFields } from './dynamicMapping'
 
 export class ActionValidationError extends Error {
   constructor(message: string) {
@@ -125,6 +126,43 @@ export function validateProjectAction(state: ProjectState, action: ProjectAction
         driver.wbs.some((wbs) => !findOwningControlAccount(state.costSheetRows, wbs)))
     ) {
       throw new ActionValidationError('Approved forecast drivers require a valid range and control-account WBS.')
+    }
+  }
+  if (action.type === 'UPSERT_MAPPING_PROFILE') {
+    const profile = action.payload
+    const existing = state.mappingProfiles.find((entry) => entry.id === profile.id)
+    if (existing && profile.version !== existing.version + 1) {
+      throw new ActionValidationError(`Mapping profile update must create version ${existing.version + 1}.`)
+    }
+    const allowedTargets = new Set(canonicalFields[profile.targetDomain].map((field) => field.field))
+    const targets = profile.rules.map((rule) => rule.targetField)
+    if (new Set(targets).size !== targets.length || targets.some((target) => !allowedTargets.has(target))) {
+      throw new ActionValidationError('Mapping profile contains duplicate or unsupported target fields.')
+    }
+    if (
+      profile.rules.some(
+        (rule) =>
+          rule.operation !== 'constant' &&
+          rule.sourceColumns.some((column) => !profile.sourceHeaders.includes(column)),
+      )
+    ) {
+      throw new ActionValidationError('Mapping rule references a source column outside the saved schema.')
+    }
+    const requiredTargets = canonicalFields[profile.targetDomain]
+      .filter((field) => field.required)
+      .map((field) => field.field)
+    if (
+      profile.status === 'active' &&
+      requiredTargets.some(
+        (target) =>
+          !profile.rules.some(
+            (rule) =>
+              rule.targetField === target &&
+              (rule.operation === 'constant' ? Boolean(rule.constant) : rule.sourceColumns.length > 0),
+          ),
+      )
+    ) {
+      throw new ActionValidationError('Active mapping profiles must map every required canonical field.')
     }
   }
 

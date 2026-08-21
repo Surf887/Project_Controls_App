@@ -150,6 +150,10 @@ export const ACTION_MIN_ROLE = {
 
   DECIDE_FORECAST_DRIVER: 'approver',
 
+  UPSERT_MAPPING_PROFILE: 'cost_controller',
+
+  DELETE_MAPPING_PROFILE: 'admin',
+
   APPLY_APPROVED_EXTRACTIONS: 'cost_controller',
 
 } as const satisfies Record<string, Role>

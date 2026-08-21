@@ -35,6 +35,12 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('approver', 'DECIDE_FORECAST_DRIVER')).toBe(true)
   })
 
+  it('allows data stewards to version profiles but reserves deletion for admins', () => {
+    expect(canPerformActionType('cost_controller', 'UPSERT_MAPPING_PROFILE')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DELETE_MAPPING_PROFILE')).toBe(false)
+    expect(canPerformActionType('admin', 'DELETE_MAPPING_PROFILE')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

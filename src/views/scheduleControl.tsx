@@ -17,6 +17,12 @@ import {
   type P6ColumnMap,
   type P6CsvInspection,
 } from '../utils/p6CsvImport'
+import {
+  buildP6XerImport,
+  inspectP6Xer,
+  sampleP6Xer,
+  type P6XerInspection,
+} from '../utils/p6XerImport'
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -124,11 +130,18 @@ interface PendingP6File {
   inspection: P6CsvInspection
 }
 
+interface PendingXerFile {
+  fileName: string
+  text: string
+  inspection: P6XerInspection
+}
+
 export function ScheduleControlView() {
   const { state, dispatch, currentUser } = useProjectStore()
   const { canEdit } = useProjectRole()
   const latest = latestAcceptedScheduleImport(state.scheduleImports)
   const [pending, setPending] = useState<PendingP6File | null>(null)
+  const [pendingXer, setPendingXer] = useState<PendingXerFile | null>(null)
   const [columnMap, setColumnMap] = useState<P6ColumnMap>({})
   const [dataDate, setDataDate] = useState(latest?.dataDate ?? new Date().toISOString().slice(0, 10))
   const [message, setMessage] = useState<string | null>(null)
@@ -221,6 +234,21 @@ export function ScheduleControlView() {
     )
   }
 
+  async function selectXerFile(file: File) {
+    if (file.size > 500 * 1024) {
+      setMessage('P6 XER exceeds the 500 KB reviewed-upload limit. Use the streaming adapter for larger programmes.')
+      return
+    }
+    const text = await file.text()
+    const inspection = inspectP6Xer(text)
+    setPendingXer({ fileName: file.name, text, inspection })
+    setPending(null)
+    if (inspection.projectDataDate) setDataDate(inspection.projectDataDate)
+    setMessage(
+      `Detected ${inspection.activityCount} XER activities and ${inspection.relationshipCount} relationships. Review before import.`,
+    )
+  }
+
   function importSchedule() {
     if (!pending || !canEdit) return
     const result = buildP6CsvImport(pending.text, {
@@ -241,6 +269,25 @@ export function ScheduleControlView() {
     setPending(null)
   }
 
+  function importXerSchedule() {
+    if (!pendingXer || !canEdit) return
+    const result = buildP6XerImport(pendingXer.text, {
+      fileName: pendingXer.fileName,
+      dataDate,
+      importedBy: currentUser?.name ?? 'Planner',
+      knownWbs: controlAccounts.map((row) => row.wbs),
+    })
+    dispatch({ type: 'IMPORT_SCHEDULE', payload: result })
+    if (result.batch.status === 'rejected') {
+      setMessage(`XER import rejected: ${result.batch.errorCount} error(s).`)
+      return
+    }
+    setMessage(
+      `Imported ${result.batch.activityCount} XER activities and ${result.batch.relationshipCount} relationships; ${result.batch.warningCount} warning(s).`,
+    )
+    setPendingXer(null)
+  }
+
   return (
     <div className="view-stack schedule-view" data-testid="schedule-control-view">
       <div className="topbar">
@@ -256,6 +303,9 @@ export function ScheduleControlView() {
           <button className="ghost-button" type="button" onClick={() => downloadText('p6-schedule-sample.csv', sampleP6Csv())}>
             Download P6 sample
           </button>
+          <button className="ghost-button" type="button" onClick={() => downloadText('p6-schedule-sample.xer', sampleP6Xer())}>
+            Download XER sample
+          </button>
           <label className="primary-button schedule-file-button">
             Select P6 CSV
             <input
@@ -267,6 +317,21 @@ export function ScheduleControlView() {
                 event.target.value = ''
               }}
               type="file"
+              data-testid="p6-csv-file"
+            />
+          </label>
+          <label className="primary-button schedule-file-button">
+            Select P6 XER
+            <input
+              accept=".xer,text/plain"
+              disabled={!canEdit}
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) void selectXerFile(file)
+                event.target.value = ''
+              }}
+              type="file"
+              data-testid="p6-xer-file"
             />
           </label>
         </div>
@@ -339,6 +404,45 @@ export function ScheduleControlView() {
             <button className="ghost-button" onClick={() => setPending(null)} type="button">
               Cancel
             </button>
+          </div>
+        </section>
+      )}
+
+      {pendingXer && (
+        <section className="panel" data-testid="p6-xer-review">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Native Primavera XER staging</span>
+              <h3>{pendingXer.fileName}</h3>
+              <p className="muted">
+                {pendingXer.inspection.activityCount} activities · {pendingXer.inspection.relationshipCount} relationships · tables {pendingXer.inspection.tables.join(', ')}
+              </p>
+            </div>
+            <span className={`badge ${pendingXer.inspection.warnings.length > 0 ? 'badge-watch' : 'badge-good'}`}>
+              {pendingXer.inspection.warnings.length > 0 ? `${pendingXer.inspection.warnings.length} source warning(s)` : 'Core XER tables detected'}
+            </span>
+          </div>
+          <div className="form-grid">
+            <label className="field">
+              <span>Schedule data date</span>
+              <input
+                aria-label="XER schedule data date"
+                onChange={(event) => setDataDate(event.target.value)}
+                type="date"
+                value={dataDate}
+              />
+            </label>
+          </div>
+          {pendingXer.inspection.warnings.length > 0 && (
+            <ul className="schedule-issue-list">
+              {pendingXer.inspection.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          )}
+          <div className="panel-actions">
+            <button className="primary-button" onClick={importXerSchedule} type="button" data-testid="import-p6-xer">
+              Validate and import XER
+            </button>
+            <button className="ghost-button" onClick={() => setPendingXer(null)} type="button">Cancel</button>
           </div>
         </section>
       )}

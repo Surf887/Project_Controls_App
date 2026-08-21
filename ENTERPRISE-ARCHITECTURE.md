@@ -12,8 +12,8 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
 | **Audit immutability** | Workflow history in state | Canonical HMAC chain | PostgreSQL `audit_events` with atomic state/audit commits | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Reviewed P6 CSV; other connectors simulated | Adapter registry + sync jobs API | SAP/P6 OAuth, XER, webhooks | iPaaS, message bus |
-| **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV mapping, control-account PV/EV | P6 XER/API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
+| **Integrations** | Reviewed P6 CSV/XER; other connectors disabled | Adapter registry + sync jobs API | SAP/P6 OAuth and webhooks | iPaaS, message bus |
+| **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV/XER, control-account PV/EV | P6 API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
 | **Document intelligence** | Private local text/PDF OCR + optional Azure/AWS | Encrypted source store, evidence, review and forecast-driver ledger | Layout/table models, provider policy, batch queues | Domain-trained extraction and model monitoring |
 | **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
 | **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
@@ -87,7 +87,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 ## Phase 2 — Enterprise hardening
 
 1. Normalize schedule activities, relationships, snapshots, and source mappings into Postgres tables
-2. Add P6 XER and authenticated API adapters with streaming/staged imports
+2. Add authenticated P6 API adapters with streaming/staged imports
 3. Add SAP commitments/actuals reconciliation against the same control-account dictionary
 4. Add Planview governance/milestone adapter and reusable source mapping profiles
 5. Complete server-side OIDC Authorization Code + PKCE and enterprise session controls

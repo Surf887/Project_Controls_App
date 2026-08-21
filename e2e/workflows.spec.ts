@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { sampleP6Csv } from '../src/utils/p6CsvImport'
+import { sampleP6Xer } from '../src/utils/p6XerImport'
 
 // These workflows intentionally mutate the same seeded project through the
 // optimistic-concurrency API, so run them serially instead of manufacturing
@@ -66,7 +67,7 @@ test.describe('Integrated schedule control', () => {
     await page.goto('/schedule-control')
     await expect(page.getByTestId('schedule-control-view')).toBeVisible()
 
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.getByTestId('p6-csv-file').setInputFiles({
       name: 'p6-status.csv',
       mimeType: 'text/csv',
       buffer: Buffer.from(sampleP6Csv()),
@@ -77,6 +78,19 @@ test.describe('Integrated schedule control', () => {
 
     await expect(page.getByTestId('schedule-activity-table')).toContainText('CON-210')
     await expect(page.getByTestId('schedule-cost-performance')).toContainText('A.02')
+  })
+
+  test('imports a native P6 XER refresh with relationships', async ({ page }) => {
+    await page.goto('/schedule-control')
+    await page.getByTestId('p6-xer-file').setInputFiles({
+      name: 'p6-status.xer',
+      mimeType: 'text/plain',
+      buffer: Buffer.from(sampleP6Xer()),
+    })
+    await expect(page.getByTestId('p6-xer-review')).toBeVisible()
+    await page.getByTestId('import-p6-xer').click()
+    await expect(page.getByText(/Imported 2 XER activities and 1 relationships/i)).toBeVisible()
+    await expect(page.getByTestId('schedule-activity-table')).toContainText('CON-210')
   })
 })
 

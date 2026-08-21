@@ -527,11 +527,14 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
       const { batch, activities, relationships } = action.payload
       const accepted = batch.status !== 'rejected'
       const sourceSystem = batch.sourceSystem
+      const sameSourceFamily = (candidate: typeof sourceSystem) =>
+        candidate === sourceSystem ||
+        (candidate.startsWith('p6_') && sourceSystem.startsWith('p6_'))
       const rememberedMappings = new Map(
         state.scheduleActivities
           .filter(
             (activity) =>
-              activity.sourceSystem === sourceSystem &&
+              sameSourceFamily(activity.sourceSystem) &&
               activity.mappingStatus === 'manual' &&
               findOwningControlAccount(state.costSheetRows, activity.wbs) != null,
           )
@@ -547,14 +550,14 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
         ...state,
         scheduleActivities: accepted
           ? [
-              ...state.scheduleActivities.filter((activity) => activity.sourceSystem !== sourceSystem),
+              ...state.scheduleActivities.filter((activity) => !sameSourceFamily(activity.sourceSystem)),
               ...mappedActivities,
             ]
           : state.scheduleActivities,
         scheduleRelationships: accepted
           ? [
               ...state.scheduleRelationships.filter(
-                (relationship) => relationship.sourceSystem !== sourceSystem,
+                (relationship) => !sameSourceFamily(relationship.sourceSystem),
               ),
               ...relationships,
             ]

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createBlankProjectState, createSeedState } from '../store/seedState'
 import { projectReducer } from '../store/projectReducer'
 import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '../utils/p6CsvImport'
+import { buildP6XerImport, sampleP6Xer } from '../utils/p6XerImport'
 
 describe('projectReducer stability', () => {
   it('creates a truthful empty project for production bootstrap', () => {
@@ -81,5 +82,28 @@ describe('projectReducer stability', () => {
       wbs: 'A.02',
       mappingStatus: 'manual',
     })
+  })
+
+  it('treats P6 CSV and XER as refreshes of the same schedule source', () => {
+    const seed = createSeedState()
+    const csv = sampleP6Csv()
+    const csvImport = buildP6CsvImport(csv, {
+      fileName: 'p6.csv',
+      dataDate: '2026-06-30',
+      importedBy: 'Planner',
+      knownWbs: ['A.01', 'A.02'],
+      columnMap: inspectP6Csv(csv).suggestedMap,
+      now: '2026-08-20T00:00:00.000Z',
+    })
+    const withCsv = projectReducer(seed, { type: 'IMPORT_SCHEDULE', payload: csvImport })
+    const xerImport = buildP6XerImport(sampleP6Xer(), {
+      fileName: 'p6.xer',
+      importedBy: 'Planner',
+      knownWbs: ['A.01', 'A.02'],
+      now: '2026-08-21T00:00:00.000Z',
+    })
+    const withXer = projectReducer(withCsv, { type: 'IMPORT_SCHEDULE', payload: xerImport })
+    expect(withXer.scheduleActivities).toHaveLength(2)
+    expect(withXer.scheduleActivities.every((activity) => activity.sourceSystem === 'p6_xer')).toBe(true)
   })
 })

@@ -122,7 +122,7 @@ The Schedule Control workspace imports a statused Primavera P6 CSV through a rev
 
 Mapped schedule progress drives control-account planned value, earned value, SPI, CPI, forecast finish, the schedule completion S-curve, EVM reports, and the monthly close workspace. Invalid batches are rejected atomically; unmatched WBS activities remain staged for manual mapping rather than silently posting.
 
-Use **Download P6 sample** in Schedule Control for the supported columns. The reviewed browser path is limited to 1,000 activities / 250 KB; larger programmes require the planned streaming adapter. Live P6 API and XER ingestion remain follow-up adapters on the same canonical schedule model.
+Use the downloadable CSV/XER samples in Schedule Control for the supported structures. Native XER parsing covers PROJECT, PROJWBS, CALENDAR, TASK, and TASKPRED data. Reviewed imports are limited to 1,000 activities (250 KB CSV / 500 KB XER); larger programmes require the planned streaming API adapter.
 
 ## Private document intelligence
 
@@ -155,7 +155,7 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 - PostgreSQL is mandatory in production; the JSON/file store is a local-development fallback. Project state remains a versioned JSONB document while immutable audit events and baseline snapshots use dedicated PostgreSQL tables.
 - Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with per-project RBAC. Demo role switching is hard-disabled in production; OIDC remains optional.
 - Simulated connectors and illustrative intelligence modules are disabled by default (`VITE_ENABLE_SIMULATED_FEATURES=false`, `ENABLE_SIMULATED_INTEGRATIONS=false`)
-- P6 CSV status imports are supported; P6 XER/live API and SAP/EcoSys live feeds are not yet implemented
+- P6 CSV and native XER status imports are supported; live P6 API and SAP/EcoSys feeds are not yet implemented
 - OCR supports local text-layer PDF/text extraction plus configured local, Azure, or AWS providers; scanned-PDF quality depends on the selected provider
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 

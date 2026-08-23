@@ -12,7 +12,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
 | **Audit immutability** | Workflow history in state | Canonical HMAC chain | PostgreSQL `audit_events` with atomic state/audit commits | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Reviewed P6 CSV/XER + governed Snowflake cost staging | Adapter registry + sync jobs API | Direct SAP/P6 OAuth and webhooks | iPaaS, message bus |
+| **Integrations** | P6 CSV/XER + governed Snowflake and Planview staging | Adapter registry + sync jobs API | Direct SAP/P6 OAuth and webhooks | iPaaS, message bus |
 | **Integrated cost/schedule** | Cost control with rules-of-credit EVM | Canonical P6 activities/relationships, reviewed CSV/XER, control-account PV/EV | P6 API, schedule snapshots, SAP actuals | Streaming status updates, portfolio schedule analytics |
 | **Document intelligence** | Private local text/PDF OCR + optional Azure/AWS | Encrypted source store, evidence, review and forecast-driver ledger | Layout/table models, provider policy, batch queues | Domain-trained extraction and model monitoring |
 | **Dynamic source mapping** | User-defined CSV/company profiles | Versioned canonical mappings, safe transforms/lookups, drift detection | Snowflake schema introspection and governed cost staging | Cross-portfolio mapping library and stewardship workflow |
@@ -89,6 +89,13 @@ Maps product capabilities to implementation phases. The trust milestone establis
 - External line IDs deduplicate; optional watermarks support incremental reads
 - Unmapped WBS and non-USD rows cannot be approved or posted
 - Approver signs off staged batches before cost control posts actuals/invoices, commitments, or accruals
+
+### Planview governance integration
+
+- Configurable Portfolios, ProjectPlace, or generic GET-based REST boundary with OAuth/API-key credentials
+- Dynamic `project_governance` profiles map arbitrary responses into milestones, actions, issues, and decisions
+- Paging cursors, external-ID deduplication, WBS reconciliation, and staged approval
+- Approved milestones enter the integrated schedule; approved logs enter their project-control registers
 
 ### Report packs
 

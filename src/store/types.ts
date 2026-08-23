@@ -43,6 +43,7 @@ import type { ForecastDriver } from '../data/forecastDrivers'
 import type { SourceDocument } from '../data/documentIntelligence'
 import type { MappingProfile } from '../data/mappingProfiles'
 import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
+import type { PlanviewGovernanceItem, PlanviewSyncBatch } from '../data/planview'
 
 export type { ApprovalStep, WorkflowStatus } from '../data/governance'
 export type ReserveType = 'contingency' | 'management_reserve'
@@ -310,6 +311,8 @@ export interface ProjectState {
   mappingProfiles: MappingProfile[]
   costTransactions: CostTransaction[]
   costTransactionBatches: CostTransactionBatch[]
+  planviewItems: PlanviewGovernanceItem[]
+  planviewSyncBatches: PlanviewSyncBatch[]
   ingestionApplications?: IngestionApplySummary[]
   /** Append-only ledger of extraction postings (active + reversed). */
   ingestionPostings?: import('../engine/ingestionPosting').IngestionPosting[]
@@ -405,6 +408,16 @@ export type ProjectAction =
       payload: { batchId: string; decision: 'approved' | 'rejected'; actor: string; comment?: string }
     }
   | { type: 'POST_COST_TRANSACTION_BATCH'; payload: { batchId: string; actor: string } }
+  | {
+      type: 'IMPORT_PLANVIEW_BATCH'
+      payload: { batch: PlanviewSyncBatch; items: PlanviewGovernanceItem[] }
+    }
+  | { type: 'UPDATE_PLANVIEW_ITEM_MAPPING'; payload: { itemId: string; wbs: string; actor: string } }
+  | {
+      type: 'DECIDE_PLANVIEW_BATCH'
+      payload: { batchId: string; decision: 'approved' | 'rejected'; actor: string }
+    }
+  | { type: 'POST_PLANVIEW_BATCH'; payload: { batchId: string; actor: string } }
   | {
       type: 'DECIDE_FORECAST_DRIVER'
       payload: {

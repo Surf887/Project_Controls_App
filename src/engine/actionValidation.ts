@@ -228,6 +228,54 @@ export function validateProjectAction(state: ProjectState, action: ProjectAction
       throw new ActionValidationError('Cannot post cost transactions while the reporting period is locked.')
     }
   }
+  if (action.type === 'IMPORT_PLANVIEW_BATCH') {
+    const { batch, items } = action.payload
+    const profile = state.mappingProfiles.find((entry) => entry.id === batch.profileId)
+    if (
+      !profile ||
+      profile.status !== 'active' ||
+      profile.sourceType !== 'api' ||
+      profile.targetDomain !== 'project_governance' ||
+      profile.version !== batch.profileVersion
+    ) {
+      throw new ActionValidationError('Planview batch requires the active API governance profile version.')
+    }
+    if (
+      batch.rowCount !== items.length ||
+      batch.mappedCount !== items.filter((item) => item.mappingStatus === 'mapped').length ||
+      batch.duplicateCount !== items.filter((item) => item.duplicate).length ||
+      batch.errorCount !== batch.issues.filter((issue) => issue.severity === 'error').length ||
+      batch.warningCount !== batch.issues.filter((issue) => issue.severity === 'warning').length ||
+      items.some((item) => item.batchId !== batch.id || item.status !== 'staged')
+    ) {
+      throw new ActionValidationError('Planview batch counts or item metadata are inconsistent.')
+    }
+  }
+  if (action.type === 'UPDATE_PLANVIEW_ITEM_MAPPING') {
+    const item = state.planviewItems.find((entry) => entry.id === action.payload.itemId)
+    if (!item || item.status === 'posted') throw new ActionValidationError('Planview item is unavailable for mapping.')
+    if (!findOwningControlAccount(state.costSheetRows, action.payload.wbs)) {
+      throw new ActionValidationError(`WBS ${action.payload.wbs} does not map to a control account.`)
+    }
+  }
+  if (action.type === 'DECIDE_PLANVIEW_BATCH') {
+    const batch = state.planviewSyncBatches.find((entry) => entry.id === action.payload.batchId)
+    const items = state.planviewItems.filter((entry) => entry.batchId === action.payload.batchId)
+    if (!batch || batch.status !== 'staged') throw new ActionValidationError('Planview batch is not awaiting approval.')
+    if (
+      action.payload.decision === 'approved' &&
+      (batch.errorCount > 0 ||
+        items.some((item) => !item.duplicate && item.mappingStatus === 'unmapped'))
+    ) {
+      throw new ActionValidationError('Resolve Planview batch errors and WBS mappings before approval.')
+    }
+  }
+  if (action.type === 'POST_PLANVIEW_BATCH') {
+    const batch = state.planviewSyncBatches.find((entry) => entry.id === action.payload.batchId)
+    if (!batch || batch.status !== 'approved') {
+      throw new ActionValidationError('Only approved Planview batches can be posted.')
+    }
+  }
 
   if (action.type === 'LOCK_REPORTING_PERIOD') {
     const pending = pendingApplyCount(state.values)

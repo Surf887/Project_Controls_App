@@ -60,6 +60,21 @@ export const canonicalFields: Record<MappingTargetDomain, CanonicalField[]> = {
     { field: 'percentComplete', label: 'Percent complete', required: true, aliases: ['percent complete', '% complete', 'progress'] },
     { field: 'totalFloat', label: 'Total float', required: false, aliases: ['total float', 'float'] },
   ],
+  project_governance: [
+    { field: 'externalId', label: 'External item ID', required: true, aliases: ['id', 'item id', 'sysid'] },
+    { field: 'projectCode', label: 'Project code', required: true, aliases: ['project', 'project id', 'project code'] },
+    { field: 'itemType', label: 'Item type', required: true, aliases: ['type', 'item type', 'entity type'] },
+    { field: 'title', label: 'Title', required: true, aliases: ['title', 'name', 'item name'] },
+    { field: 'description', label: 'Description', required: false, aliases: ['description', 'details'] },
+    { field: 'owner', label: 'Owner', required: true, aliases: ['owner', 'manager', 'assignee'] },
+    { field: 'status', label: 'Status', required: true, aliases: ['status', 'state'] },
+    { field: 'dueDate', label: 'Due date', required: true, aliases: ['due date', 'finish date', 'target date'] },
+    { field: 'progressPercent', label: 'Progress percent', required: false, aliases: ['progress', 'percent complete', '% complete'] },
+    { field: 'wbs', label: 'WBS', required: false, aliases: ['wbs', 'work package', 'control account'] },
+    { field: 'costImpactUsd', label: 'Cost impact USD', required: false, aliases: ['cost impact', 'cost impact usd', 'amount'] },
+    { field: 'scheduleImpactDays', label: 'Schedule impact days', required: false, aliases: ['schedule impact', 'delay days'] },
+    { field: 'updatedAt', label: 'Source updated at', required: false, aliases: ['updated at', 'modified at'] },
+  ],
 }
 
 export function schemaFingerprint(headers: string[]): string {

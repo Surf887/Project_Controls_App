@@ -136,6 +136,8 @@ export function createSeedState(): ProjectState {
     mappingProfiles: [],
     costTransactions: [],
     costTransactionBatches: [],
+    planviewItems: [],
+    planviewSyncBatches: [],
     ingestionPostings: [],
   }
 
@@ -228,6 +230,8 @@ export function createBlankProjectState(id: string, name: string): ProjectState 
     mappingProfiles: [],
     costTransactions: [],
     costTransactionBatches: [],
+    planviewItems: [],
+    planviewSyncBatches: [],
     ingestionApplications: [],
     ingestionPostings: [],
   }

@@ -13,6 +13,7 @@ import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
 import { applyApprovedExtractions } from '../engine/ingestionPosting'
 import { findOwningControlAccount } from '../engine/applyExtractionsCore'
 import { postCostTransactionBatch } from '../engine/costTransactionStaging'
+import { postPlanviewBatch } from '../engine/planviewStaging'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
 import { applyValuesUpdate } from '../engine/extractionIntegrity'
 import { validateProjectAction } from '../engine/actionValidation'
@@ -42,6 +43,7 @@ function normalizeState(state: ProjectState): ProjectState {
   const needsMappingProfiles = state.mappingProfiles == null
   const needsCostTransactions =
     state.costTransactions == null || state.costTransactionBatches == null
+  const needsPlanview = state.planviewItems == null || state.planviewSyncBatches == null
 
   if (
     !needsSettings &&
@@ -50,7 +52,8 @@ function normalizeState(state: ProjectState): ProjectState {
     !needsSchedule &&
     !needsDocumentIntelligence &&
     !needsMappingProfiles &&
-    !needsCostTransactions
+    !needsCostTransactions &&
+    !needsPlanview
   ) {
     return state
   }
@@ -76,6 +79,12 @@ function normalizeState(state: ProjectState): ProjectState {
       ? {
           costTransactions: state.costTransactions ?? [],
           costTransactionBatches: state.costTransactionBatches ?? [],
+        }
+      : {}),
+    ...(needsPlanview
+      ? {
+          planviewItems: state.planviewItems ?? [],
+          planviewSyncBatches: state.planviewSyncBatches ?? [],
         }
       : {}),
     ...(needsSettings
@@ -815,6 +824,69 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
           entityId: action.payload.batchId,
           action: 'posted',
           summary: `Posted approved Snowflake transaction batch ${action.payload.batchId}.`,
+        }),
+      }
+    }
+    case 'IMPORT_PLANVIEW_BATCH': {
+      const replacementIds = new Set(
+        action.payload.items.filter((item) => !item.duplicate).map((item) => item.externalId),
+      )
+      return {
+        ...state,
+        planviewItems: [
+          ...action.payload.items,
+          ...state.planviewItems.filter((item) => !replacementIds.has(item.externalId)),
+        ],
+        planviewSyncBatches: [
+          action.payload.batch,
+          ...state.planviewSyncBatches.filter((batch) => batch.id !== action.payload.batch.id),
+        ].slice(0, 100),
+        auditLog: appendAudit(state, {
+          actor: action.payload.batch.importedBy,
+          team: 'Project governance integration',
+          entityType: 'settings',
+          entityId: action.payload.batch.id,
+          action: action.payload.batch.status,
+          summary: `Staged ${action.payload.batch.rowCount} Planview governance item(s).`,
+        }),
+      }
+    }
+    case 'UPDATE_PLANVIEW_ITEM_MAPPING':
+      return {
+        ...state,
+        planviewItems: state.planviewItems.map((item) =>
+          item.id === action.payload.itemId
+            ? { ...item, wbs: action.payload.wbs, mappingStatus: 'mapped' as const }
+            : item,
+        ),
+      }
+    case 'DECIDE_PLANVIEW_BATCH': {
+      const batch = state.planviewSyncBatches.find((entry) => entry.id === action.payload.batchId)
+      if (!batch) return state
+      return {
+        ...state,
+        planviewItems: state.planviewItems.map((item) =>
+          item.batchId === batch.id && !item.duplicate
+            ? { ...item, status: action.payload.decision }
+            : item,
+        ),
+        planviewSyncBatches: state.planviewSyncBatches.map((entry) =>
+          entry.id === batch.id ? { ...entry, status: action.payload.decision } : entry,
+        ),
+      }
+    }
+    case 'POST_PLANVIEW_BATCH': {
+      const posted = postPlanviewBatch(state, action.payload.batchId, action.payload.actor)
+      if (posted === state) return state
+      return {
+        ...posted,
+        auditLog: appendAudit(posted, {
+          actor: action.payload.actor,
+          team: 'Project controls',
+          entityType: 'settings',
+          entityId: action.payload.batchId,
+          action: 'posted',
+          summary: `Posted approved Planview governance batch ${action.payload.batchId}.`,
         }),
       }
     }

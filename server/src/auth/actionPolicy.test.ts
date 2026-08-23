@@ -48,6 +48,13 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('cost_controller', 'POST_COST_TRANSACTION_BATCH')).toBe(true)
   })
 
+  it('separates Planview staging, approval, and posting duties', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_PLANVIEW_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_PLANVIEW_BATCH')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_PLANVIEW_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'POST_PLANVIEW_BATCH')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

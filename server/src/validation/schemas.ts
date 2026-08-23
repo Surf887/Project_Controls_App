@@ -176,7 +176,7 @@ const mappingProfileSchema = z.object({
   name: z.string().min(1).max(300),
   organization: z.string().min(1).max(300),
   sourceType: z.enum(['csv', 'excel', 'snowflake', 'ocr', 'api']),
-  targetDomain: z.enum(['contractor_report', 'cost_transaction', 'schedule_activity']),
+  targetDomain: z.enum(['contractor_report', 'cost_transaction', 'schedule_activity', 'project_governance']),
   dataset: z.string().min(1).max(500),
   version: z.number().int().min(1).max(1_000_000),
   status: z.enum(['draft', 'active', 'retired']),
@@ -234,6 +234,45 @@ const costTransactionBatchSchema = z.object({
   errorCount: z.number().int().min(0).max(1_000_000),
   warningCount: z.number().int().min(0).max(1_000_000),
   watermark: z.string().max(500).optional(),
+  issues: z.array(costTransactionIssueSchema).max(100_000),
+})
+const planviewItemSchema = z.object({
+  id: z.string().min(1).max(1000),
+  batchId: z.string().min(1).max(256),
+  externalId: z.string().min(1).max(500),
+  projectCode: z.string().max(256),
+  itemType: z.enum(['milestone', 'action', 'issue', 'decision']),
+  title: z.string().min(1).max(1000),
+  description: z.string().max(4000),
+  owner: z.string().min(1).max(500),
+  sourceStatus: z.string().min(1).max(200),
+  dueDate: isoDateSchema,
+  progressPercent: z.number().finite().min(0).max(100),
+  sourceWbs: z.string().max(256),
+  wbs: z.string().max(256),
+  costImpactUsd: z.number().finite().min(-1_000_000_000_000).max(1_000_000_000_000),
+  scheduleImpactDays: z.number().finite().min(-100_000).max(100_000),
+  sourceUpdatedAt: isoDateSchema.optional(),
+  mappingStatus: z.enum(['mapped', 'unmapped']),
+  duplicate: z.boolean(),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  postedAt: z.string().datetime().optional(),
+  postedBy: z.string().max(200).optional(),
+})
+const planviewBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  profileId: z.string().min(1).max(256),
+  profileVersion: z.number().int().min(1).max(1_000_000),
+  dataset: z.string().min(1).max(1000),
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  rowCount: z.number().int().min(0).max(1_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  duplicateCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  cursor: z.string().max(2000).optional(),
   issues: z.array(costTransactionIssueSchema).max(100_000),
 })
 
@@ -412,6 +451,36 @@ const actionSchemas = [
       actor: z.string().min(1).max(200),
     }),
   }),
+  z.object({
+    type: z.literal('IMPORT_PLANVIEW_BATCH'),
+    payload: z.object({
+      batch: planviewBatchSchema,
+      items: z.array(planviewItemSchema).max(10_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_PLANVIEW_ITEM_MAPPING'),
+    payload: z.object({
+      itemId: z.string().min(1).max(1000),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('DECIDE_PLANVIEW_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('POST_PLANVIEW_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),
 ] as const satisfies ReadonlyArray<z.ZodTypeAny>
 
@@ -519,6 +588,12 @@ export const snowflakeStageSchema = z.object({
   limit: z.number().int().min(1).max(1_000).optional(),
   watermarkColumn: z.string().min(1).max(256).optional(),
   afterWatermark: z.string().max(500).optional(),
+})
+
+export const planviewStageSchema = z.object({
+  profileId: z.string().min(1).max(256),
+  limit: z.number().int().min(1).max(1_000).optional(),
+  cursor: z.string().max(2000).optional(),
 })
 
 export type LoginInput = z.infer<typeof loginSchema>

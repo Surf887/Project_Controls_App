@@ -1,5 +1,9 @@
 export type MappingSourceType = 'csv' | 'excel' | 'snowflake' | 'ocr' | 'api'
-export type MappingTargetDomain = 'contractor_report' | 'cost_transaction' | 'schedule_activity'
+export type MappingTargetDomain =
+  | 'contractor_report'
+  | 'cost_transaction'
+  | 'schedule_activity'
+  | 'project_governance'
 export type MappingOperation = 'direct' | 'coalesce' | 'concat' | 'constant'
 export type MappingTransform = 'trim' | 'uppercase' | 'lowercase' | 'number' | 'date_iso'
 

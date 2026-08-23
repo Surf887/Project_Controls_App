@@ -162,6 +162,14 @@ export const ACTION_MIN_ROLE = {
 
   POST_COST_TRANSACTION_BATCH: 'cost_controller',
 
+  IMPORT_PLANVIEW_BATCH: 'cost_controller',
+
+  UPDATE_PLANVIEW_ITEM_MAPPING: 'cost_controller',
+
+  DECIDE_PLANVIEW_BATCH: 'approver',
+
+  POST_PLANVIEW_BATCH: 'cost_controller',
+
   APPLY_APPROVED_EXTRACTIONS: 'cost_controller',
 
 } as const satisfies Record<string, Role>

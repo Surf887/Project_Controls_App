@@ -12,7 +12,7 @@ import { generateClosePack } from '../services/exportService.js'
 import { generateClosePackPdfAsync } from '../services/pdfExport.js'
 import { param } from '../utils/params.js'
 import { sendRouteError } from '../utils/routeError.js'
-import { createBaselineSchema, snowflakeStageSchema } from '../validation/schemas.js'
+import { createBaselineSchema, planviewStageSchema, snowflakeStageSchema } from '../validation/schemas.js'
 import multer from 'multer'
 import path from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
@@ -28,6 +28,8 @@ import {
 import { scanDocument, validateDocumentSignature } from '../services/documentSecurity.js'
 import { querySnowflakeDataset, snowflakeConfigured } from '../services/snowflakeService.js'
 import { buildCostTransactionBatch } from '@pc/engine/costTransactionStaging.js'
+import { planviewConfigured, queryPlanviewDataset } from '../services/planviewService.js'
+import { buildPlanviewBatch } from '@pc/engine/planviewStaging.js'
 
 export const enterpriseRouter = Router({ mergeParams: true })
 const documentUpload = multer({
@@ -221,6 +223,58 @@ enterpriseRouter.post('/snowflake/stage', requireRole('cost_controller'), async 
     res.json(result)
   } catch (error) {
     sendRouteError(res, error, 502, 'Snowflake staging failed')
+  }
+})
+
+enterpriseRouter.get('/planview/status', requireRole('viewer'), (_req, res) => {
+  res.json({
+    configured: planviewConfigured(),
+    product: process.env.PLANVIEW_PRODUCT ?? 'generic',
+    authentication: process.env.PLANVIEW_OAUTH_TOKEN
+      ? 'oauth_token'
+      : process.env.PLANVIEW_CLIENT_ID
+        ? 'oauth_client_credentials'
+        : process.env.PLANVIEW_API_KEY
+          ? 'api_key'
+          : 'none',
+  })
+})
+
+enterpriseRouter.post('/planview/stage', requireRole('cost_controller'), async (req, res) => {
+  const parsed = planviewStageSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid Planview staging request', issues: parsed.error.flatten() })
+    return
+  }
+  try {
+    const projectId = param(req.params.projectId)
+    const state = await getProjectById(projectId)
+    const profile = state.mappingProfiles.find((entry) => entry.id === parsed.data.profileId)
+    if (
+      !profile ||
+      profile.status !== 'active' ||
+      profile.sourceType !== 'api' ||
+      profile.targetDomain !== 'project_governance'
+    ) {
+      res.status(400).json({ error: 'Active Planview project-governance mapping profile not found' })
+      return
+    }
+    const source = await queryPlanviewDataset(profile.dataset, {
+      limit: parsed.data.limit,
+      cursor: parsed.data.cursor,
+    })
+    const result = buildPlanviewBatch(
+      profile,
+      source.headers,
+      source.rows,
+      state.planviewItems,
+      state,
+      req.user?.name ?? 'Planview data steward',
+      { cursor: source.nextCursor },
+    )
+    res.json(result)
+  } catch (error) {
+    sendRouteError(res, error, 502, 'Planview staging failed')
   }
 })
 

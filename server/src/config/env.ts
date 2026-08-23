@@ -83,6 +83,28 @@ export function validateEnv(): void {
       throw new Error('SNOWFLAKE_PASSWORD requires SNOWFLAKE_ALLOW_PASSWORD_AUTH=true in production')
     }
   }
+  const planviewConfigured = [
+    'PLANVIEW_BASE_URL',
+    'PLANVIEW_OAUTH_TOKEN',
+    'PLANVIEW_CLIENT_ID',
+    'PLANVIEW_CLIENT_SECRET',
+    'PLANVIEW_TOKEN_URL',
+    'PLANVIEW_API_KEY',
+  ].some((name) => Boolean(process.env[name]))
+  if (planviewConfigured) {
+    if (!process.env.PLANVIEW_BASE_URL) {
+      throw new Error('PLANVIEW_BASE_URL is required when Planview is configured')
+    }
+    const hasStaticToken = Boolean(process.env.PLANVIEW_OAUTH_TOKEN || process.env.PLANVIEW_API_KEY)
+    const hasClientCredentials = Boolean(
+      process.env.PLANVIEW_CLIENT_ID &&
+        process.env.PLANVIEW_CLIENT_SECRET &&
+        process.env.PLANVIEW_TOKEN_URL,
+    )
+    if (!hasStaticToken && !hasClientCredentials) {
+      throw new Error('Planview requires an OAuth token, API key, or complete client-credentials configuration')
+    }
+  }
 
   const oidcIssuer = process.env.OIDC_ISSUER
   const oidcClient = process.env.OIDC_CLIENT_ID

@@ -2,6 +2,7 @@ import type { ProjectAction, ProjectState } from '../store/types'
 import type { OcrProviderCapability, OcrProviderId, SourceDocument } from '../data/documentIntelligence'
 import type { ForecastDriver } from '../data/forecastDrivers'
 import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
+import type { PlanviewGovernanceItem, PlanviewSyncBatch } from '../data/planview'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 let sessionToken: string | null = null
@@ -368,6 +369,24 @@ export async function stageSnowflakeTransactions(
   },
 ): Promise<{ batch: CostTransactionBatch; transactions: CostTransaction[] }> {
   return request(`/projects/${encodeURIComponent(projectId)}/snowflake/stage`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchPlanviewStatus(projectId: string): Promise<{
+  configured: boolean
+  product: string
+  authentication: string
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/planview/status`)
+}
+
+export async function stagePlanviewItems(
+  projectId: string,
+  input: { profileId: string; limit?: number; cursor?: string },
+): Promise<{ batch: PlanviewSyncBatch; items: PlanviewGovernanceItem[] }> {
+  return request(`/projects/${encodeURIComponent(projectId)}/planview/stage`, {
     method: 'POST',
     body: JSON.stringify(input),
   })

@@ -111,6 +111,12 @@ Configure a read-only Snowflake user/role, warehouse, database, and schema. OAut
 
 Snowflake rows are capped per query, deduplicated by external line ID, WBS/CBS reconciled, and staged for approver sign-off. Non-USD rows are blocked from posting until the curated view or mapping supplies reporting-currency values. Optional watermark fields support incremental reads.
 
+## Planview governance integration
+
+Set `PLANVIEW_PRODUCT` for Portfolios, ProjectPlace, or a generic GET-based REST deployment; configure the fixed base URL and OAuth/API credentials. The active `project_governance` mapping profile supplies the relative endpoint path and maps product/company fields into milestones, actions, issues, and decisions. AdaptiveWork entity-query POST support remains a separate adapter.
+
+Responses are bounded and support offset/cursor continuation where exposed. External IDs deduplicate, milestones require control-account mapping, and all items stage for approver sign-off before posting to project registers or the integrated schedule.
+
 ## Rollback
 
 Redeploy the previous image tag. If a migration was applied, restore the pre-deploy database backup before rolling back code that expects the older schema.

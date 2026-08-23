@@ -27,6 +27,12 @@ describe('validateEnv', () => {
     delete process.env.SNOWFLAKE_PRIVATE_KEY
     delete process.env.SNOWFLAKE_PASSWORD
     delete process.env.SNOWFLAKE_ALLOW_PASSWORD_AUTH
+    delete process.env.PLANVIEW_BASE_URL
+    delete process.env.PLANVIEW_OAUTH_TOKEN
+    delete process.env.PLANVIEW_CLIENT_ID
+    delete process.env.PLANVIEW_CLIENT_SECRET
+    delete process.env.PLANVIEW_TOKEN_URL
+    delete process.env.PLANVIEW_API_KEY
   })
 
   afterEach(() => {
@@ -89,6 +95,11 @@ describe('validateEnv', () => {
   it('rejects partial Snowflake configuration', () => {
     process.env.SNOWFLAKE_ACCOUNT = 'account'
     expect(() => validateEnv()).toThrow(/SNOWFLAKE_USERNAME/)
+  })
+
+  it('rejects partial Planview configuration', () => {
+    process.env.PLANVIEW_BASE_URL = 'https://example.pvcloud.com/public-api/v1'
+    expect(() => validateEnv()).toThrow(/Planview requires/)
   })
 })
 

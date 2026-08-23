@@ -1,6 +1,8 @@
 import type { MappingProfile } from '../data/mappingProfiles'
 import type { PlanviewGovernanceItem, PlanviewItemType, PlanviewSyncBatch } from '../data/planview'
 import type { ProjectState } from '../store/types'
+import type { ActionItem, DecisionLogEntry, IssueItem } from '../data/registers'
+import type { ScheduleActivity } from '../data/schedule'
 import { applyMappingProfile } from './dynamicMapping'
 import { findOwningControlAccount } from './applyExtractionsCore'
 
@@ -35,7 +37,10 @@ export function buildPlanviewBatch(
   const mapped = applyMappingProfile(profile, headers, rows)
   const importedAt = options?.now ?? new Date().toISOString()
   const batchId = `PV-${Date.parse(importedAt)}`
-  const issues = mapped.issues.map((issue) => ({ ...issue, externalId: undefined }))
+  const issues: PlanviewSyncBatch['issues'] = mapped.issues.map((issue) => ({
+    ...issue,
+    externalId: undefined,
+  }))
   const existing = new Set(existingItems.map((item) => item.externalId))
   const seen = new Set<string>()
   const items: PlanviewGovernanceItem[] = []
@@ -134,7 +139,7 @@ export function postPlanviewBatch(state: ProjectState, batchId: string, actor: s
   const items = state.planviewItems.filter(
     (item) => item.batchId === batchId && item.status === 'approved' && !item.duplicate,
   )
-  const actions = items
+  const actions: ActionItem[] = items
     .filter((item) => item.itemType === 'action')
     .map((item) => ({
       id: `PV-ACT-${item.externalId}`,
@@ -148,7 +153,7 @@ export function postPlanviewBatch(state: ProjectState, batchId: string, actor: s
       priority: 'medium' as const,
       source: 'Meeting' as const,
     }))
-  const issues = items
+  const issues: IssueItem[] = items
     .filter((item) => item.itemType === 'issue')
     .map((item) => ({
       id: `PV-ISS-${item.externalId}`,
@@ -165,7 +170,7 @@ export function postPlanviewBatch(state: ProjectState, batchId: string, actor: s
       resolution: '',
       dueDate: item.dueDate,
     }))
-  const decisions = items
+  const decisions: DecisionLogEntry[] = items
     .filter((item) => item.itemType === 'decision')
     .map((item) => ({
       id: `PV-DEC-${item.externalId}`,
@@ -180,7 +185,7 @@ export function postPlanviewBatch(state: ProjectState, batchId: string, actor: s
       cost: item.costImpactUsd,
       rationale: item.description,
     }))
-  const milestones = items
+  const milestones: ScheduleActivity[] = items
     .filter((item) => item.itemType === 'milestone')
     .map((item) => ({
       id: `PLANVIEW:${item.externalId}`,

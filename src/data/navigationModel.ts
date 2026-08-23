@@ -49,6 +49,7 @@ export type NavView =
   | 'documents'
   | 'mapping-studio'
   | 'snowflake'
+  | 'planview'
   | 'controls'
   | 'predictive'
   | 'engineering'
@@ -163,6 +164,7 @@ export const navGroups: NavGroup[] = [
       { id: 'documents', label: 'Document Intelligence', eyebrow: 'Private OCR · forecast drivers' },
       { id: 'mapping-studio', label: 'Mapping Studio', eyebrow: 'Company schemas · Snowflake · CSV' },
       { id: 'snowflake', label: 'Snowflake Cost Sync', eyebrow: 'Actuals · commitments · accruals' },
+      { id: 'planview', label: 'Planview Governance', eyebrow: 'Milestones · actions · issues · decisions' },
       { id: 'review', label: 'Review Desk', eyebrow: 'Human-in-the-loop QA' },
       { id: 'validation', label: 'Validation', eyebrow: 'Mapping rules' },
       { id: 'lineage', label: 'Lineage', eyebrow: 'Source traceability' },

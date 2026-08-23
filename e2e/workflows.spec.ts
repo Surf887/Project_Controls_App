@@ -152,6 +152,13 @@ test.describe('Dynamic company mapping', () => {
     await expect(page.getByText('Snowflake not configured')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Stage Snowflake rows' })).toBeDisabled()
   })
+
+  test('shows Planview as a configurable governance boundary', async ({ page }) => {
+    await page.goto('/submissions/planview')
+    await expect(page.getByTestId('planview-sync-view')).toBeVisible()
+    await expect(page.getByText('Planview not configured')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stage Planview items' })).toBeDisabled()
+  })
 })
 
 test.describe('Supported production scope', () => {

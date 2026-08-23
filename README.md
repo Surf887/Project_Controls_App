@@ -138,6 +138,8 @@ Saved contractor-report profiles are selectable during CSV ingestion. The Snowfl
 
 The Snowflake Cost Sync workspace uses active `cost_transaction` profiles to query read-only curated views through OAuth or key-pair authentication. Rows are incrementally staged, external IDs deduplicated, WBS mappings reviewed, non-USD values blocked, and batch approval separated from posting. Approved actuals/invoices update period actuals, commitments update commitment exposure, and accruals enter the month-end accrual register with source lineage.
 
+The Planview Governance workspace supports configurable Portfolios, ProjectPlace, or generic GET-based REST endpoints. Active `project_governance` profiles map arbitrary response fields into milestones, actions, issues, and decisions. Items are paged, deduplicated, mapped, approved, and then posted to the relevant project register or integrated schedule. AdaptiveWork entity-query POST support remains a follow-up adapter.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).

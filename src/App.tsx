@@ -139,6 +139,9 @@ const MappingStudioView = lazy(() =>
 const SnowflakeSyncView = lazy(() =>
   import('./views/snowflakeSync').then((m) => ({ default: m.SnowflakeSyncView })),
 )
+const PlanviewSyncView = lazy(() =>
+  import('./views/planviewSync').then((m) => ({ default: m.PlanviewSyncView })),
+)
 const MonthlyCloseWorkspace = lazy(() =>
   import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
 )
@@ -798,6 +801,8 @@ function App() {
         {activeView === 'mapping-studio' && <MappingStudioView />}
 
         {activeView === 'snowflake' && <SnowflakeSyncView />}
+
+        {activeView === 'planview' && <PlanviewSyncView />}
 
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 

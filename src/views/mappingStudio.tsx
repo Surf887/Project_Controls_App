@@ -177,6 +177,7 @@ export function MappingStudioView() {
                 <option value="contractor_report">Contractor report values</option>
                 <option value="cost_transaction">Cost transactions / Snowflake</option>
                 <option value="schedule_activity">Schedule activities</option>
+                <option value="project_governance">Project governance / Planview</option>
               </select>
             </label>
           </div>

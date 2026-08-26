@@ -46,6 +46,7 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Dynamic Mapping Studio versions arbitrary company/Snowflake/CSV/OCR/API schemas, safe transformations and value lookups, previews canonical output, and detects schema drift.
 - ✅ Snowflake cost adapter uses read-only OAuth/key-pair connectivity, dynamic profiles, incremental watermarks, deduplication, WBS reconciliation, approval separation, and governed posting to actuals/commitments/accruals.
 - ✅ Configurable Planview Portfolios/ProjectPlace REST staging maps arbitrary governance schemas and posts approved milestones/actions/issues/decisions with deduplication and WBS controls.
+- ✅ PostgreSQL asynchronous ingestion jobs provide idempotency, retries/backoff, expiring leases, and multi-replica `SKIP LOCKED` worker claims; production OCR uses the queue.
 - ✅ Empty production databases create one explicit blank project; demo projects, benchmark metrics, extracted reports, and FX rates are development-only.
 - ✅ The audit workspace verifies the server HMAC chain and labels the reducer history separately.
 - ✅ WBS imports create structure/baseline only and reject invalid currency, parent, duplicate, and negative-budget data without fabricating financials.
@@ -74,4 +75,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 94 server tests pass locally; and all 16 Playwright workflows pass. CI executes four PostgreSQL migration/concurrency/governance/document tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 97 server tests pass locally; and all 16 Playwright workflows pass. CI executes five PostgreSQL migration/concurrency/governance/document/queue tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

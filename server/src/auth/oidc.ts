@@ -49,6 +49,7 @@ export interface OidcProfile {
 export async function verifyOidcIdToken(
   idToken: string,
   keyInput?: JWTVerifyGetKey | KeyLike | Uint8Array,
+  expectedNonce?: string,
 ): Promise<OidcProfile | null> {
   if (!isOidcEnabled()) return null
   try {
@@ -64,6 +65,7 @@ export async function verifyOidcIdToken(
         ? await jwtVerify(idToken, key as JWTVerifyGetKey, options)
         : await jwtVerify(idToken, key, options)
     if (typeof payload.sub !== 'string') return null
+    if (expectedNonce && payload.nonce !== expectedNonce) return null
     const email = typeof payload.email === 'string' ? payload.email : ''
     const name = typeof payload.name === 'string' ? payload.name : email || payload.sub
     return { subject: payload.sub, email, name }

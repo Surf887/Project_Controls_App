@@ -111,6 +111,33 @@ describe('password auth flow', () => {
     expect((await agent.get('/api/platform/auth/me')).status).toBe(401)
   })
 
+  it('starts OIDC Authorization Code + PKCE with a signed state cookie', async () => {
+    process.env.OIDC_ISSUER = 'https://idp.example.com/'
+    process.env.OIDC_CLIENT_ID = 'project-controls'
+    process.env.OIDC_REDIRECT_URI = 'https://controls.example.com/api/platform/auth/oidc/callback'
+    process.env.OIDC_AUTHORIZATION_ENDPOINT = 'https://idp.example.com/authorize'
+    process.env.OIDC_TOKEN_ENDPOINT = 'https://idp.example.com/token'
+    try {
+      const app = mod.app.createApp()
+      const started = await request(app)
+        .get('/api/platform/auth/oidc/start')
+        .query({ returnTo: '/schedule-control' })
+      expect(started.status).toBe(302)
+      const redirect = new URL(started.headers.location)
+      expect(redirect.origin).toBe('https://idp.example.com')
+      expect(redirect.searchParams.get('response_type')).toBe('code')
+      expect(redirect.searchParams.get('code_challenge_method')).toBe('S256')
+      expect(String(started.headers['set-cookie'])).toContain('pc_oidc_flow=')
+      expect(String(started.headers['set-cookie'])).toContain('HttpOnly')
+    } finally {
+      delete process.env.OIDC_ISSUER
+      delete process.env.OIDC_CLIENT_ID
+      delete process.env.OIDC_REDIRECT_URI
+      delete process.env.OIDC_AUTHORIZATION_ENDPOINT
+      delete process.env.OIDC_TOKEN_ENDPOINT
+    }
+  })
+
   it('admin can register a user who can then log in; non-admin cannot register', async () => {
     const app = mod.app.createApp()
     const login = await request(app)

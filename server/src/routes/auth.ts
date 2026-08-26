@@ -15,12 +15,17 @@ import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountE
 import { loginSchema, oidcLoginSchema, registerUserSchema } from '../validation/schemas.js'
 import type { Response } from 'express'
 import { redisRateLimitStore } from '../services/redisService.js'
+import {
+  createOidcAuthorization,
+  exchangeOidcCode,
+  verifyOidcFlowCookie,
+} from '../auth/oidcFlow.js'
 
 export const authRouter = Router()
 
 const SESSION_TTL_SEC = Number(process.env.SESSION_TTL_SEC ?? 3600)
 
-function setSessionCookie(res: Response, token: string) {
+export function setSessionCookie(res: Response, token: string) {
   res.cookie('pc_session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -39,12 +44,25 @@ function clearSessionCookie(res: Response) {
   })
 }
 
+function cookieValue(cookieHeader: string | undefined, name: string): string | undefined {
+  return cookieHeader
+    ?.split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(`${name}=`))
+    ?.slice(name.length + 1)
+}
+
 /**
  * Public: lets the client decide which login options to present (password is
  * always available; SSO/demo only when configured). No secrets exposed.
  */
 authRouter.get('/config', (_req, res) => {
-  res.json({ demoAuthEnabled: isDemoAuthEnabled(), oidcEnabled: isOidcEnabled() })
+  const oidcEnabled = isOidcEnabled() && Boolean(process.env.OIDC_REDIRECT_URI)
+  res.json({
+    demoAuthEnabled: isDemoAuthEnabled(),
+    oidcEnabled,
+    oidcLoginUrl: oidcEnabled ? '/api/platform/auth/oidc/start' : undefined,
+  })
 })
 
 // Throttle credential-guessing. Generous enough for real users, tight enough to
@@ -79,8 +97,59 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   res.json({ token, user: toPublicUser(user), expiresIn: SESSION_TTL_SEC })
 })
 
-/** Exchange a verified OIDC ID token for a local session token. */
+authRouter.get('/oidc/start', loginLimiter, async (req, res) => {
+  if (!isOidcEnabled() || !process.env.OIDC_REDIRECT_URI) {
+    res.status(404).json({ error: 'OIDC Authorization Code flow is not configured' })
+    return
+  }
+  const authorization = await createOidcAuthorization(req.query.returnTo?.toString())
+  res.cookie('pc_oidc_flow', authorization.flowCookie, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/platform/auth/oidc',
+    maxAge: 10 * 60 * 1000,
+  })
+  res.redirect(302, authorization.authorizationUrl)
+})
+
+authRouter.get('/oidc/callback', loginLimiter, async (req, res) => {
+  const code = req.query.code?.toString()
+  const state = req.query.state?.toString()
+  const flowCookie = cookieValue(req.headers.cookie, 'pc_oidc_flow')
+  res.clearCookie('pc_oidc_flow', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/platform/auth/oidc',
+  })
+  if (!code || !state || !flowCookie) {
+    res.redirect(302, '/?sso_error=invalid_callback')
+    return
+  }
+  try {
+    const flow = await verifyOidcFlowCookie(flowCookie, state)
+    const idToken = await exchangeOidcCode(code, flow.verifier)
+    const profile = await verifyOidcIdToken(idToken, undefined, flow.nonce)
+    if (!profile) throw new Error('OIDC token verification failed')
+    const user = await findOrProvisionOidcUser(profile)
+    if (user.disabled) throw new Error('Account disabled')
+    const token = await signSessionToken(user, SESSION_TTL_SEC)
+    setSessionCookie(res, token)
+    const separator = flow.returnTo.includes('?') ? '&' : '?'
+    res.redirect(302, `${flow.returnTo}${separator}sso=success`)
+  } catch (error) {
+    const message = error instanceof OidcAccountError ? 'account_link' : 'authentication'
+    res.redirect(302, `/?sso_error=${message}`)
+  }
+})
+
+/** Legacy ID-token exchange retained only for non-production migrations/tests. */
 authRouter.post('/oidc', loginLimiter, async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
   if (!isOidcEnabled()) {
     res.status(404).json({ error: 'OIDC is not configured' })
     return

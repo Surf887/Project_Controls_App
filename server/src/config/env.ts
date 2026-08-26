@@ -124,6 +124,28 @@ export function validateEnv(): void {
   if (oidcClient && !oidcIssuer) {
     throw new Error('OIDC_ISSUER is required when OIDC_CLIENT_ID is set')
   }
+  if (isProduction() && oidcIssuer && !process.env.OIDC_REDIRECT_URI) {
+    throw new Error('OIDC_REDIRECT_URI is required when OIDC is enabled in production')
+  }
+  if (
+    process.env.OIDC_REDIRECT_URI &&
+    isProduction() &&
+    !process.env.OIDC_REDIRECT_URI.startsWith('https://')
+  ) {
+    throw new Error('OIDC_REDIRECT_URI must use HTTPS in production')
+  }
+  if (
+    Boolean(process.env.OIDC_AUTHORIZATION_ENDPOINT) !==
+    Boolean(process.env.OIDC_TOKEN_ENDPOINT)
+  ) {
+    throw new Error('OIDC_AUTHORIZATION_ENDPOINT and OIDC_TOKEN_ENDPOINT must be configured together')
+  }
+  if (
+    process.env.OIDC_TOKEN_AUTH_METHOD &&
+    !['client_secret_post', 'client_secret_basic'].includes(process.env.OIDC_TOKEN_AUTH_METHOD)
+  ) {
+    throw new Error('OIDC_TOKEN_AUTH_METHOD must be client_secret_post or client_secret_basic')
+  }
 
   if (isProduction() && process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 12) {
     throw new Error('ADMIN_PASSWORD must be at least 12 characters in production')

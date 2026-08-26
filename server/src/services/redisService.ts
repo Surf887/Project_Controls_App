@@ -1,4 +1,4 @@
-import { createClient, type RedisClientType, type RedisCommandArgument } from 'redis'
+import { createClient, type RedisArgument, type RedisClientType } from 'redis'
 import { RedisStore } from 'rate-limit-redis'
 import type { Store } from 'express-rate-limit'
 
@@ -23,7 +23,7 @@ export function redisRateLimitStore(prefix: string): Store | undefined {
     prefix: `pc:${prefix}:`,
     sendCommand: async (...args: string[]) => {
       await connecting
-      return redis.sendCommand(args as RedisCommandArgument[])
+      return redis.sendCommand(args as RedisArgument[])
     },
   })
 }

@@ -14,6 +14,7 @@ import {
 import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
 import { loginSchema, oidcLoginSchema, registerUserSchema } from '../validation/schemas.js'
 import type { Response } from 'express'
+import { redisRateLimitStore } from '../services/redisService.js'
 
 export const authRouter = Router()
 
@@ -53,6 +54,7 @@ const loginLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  store: redisRateLimitStore('login'),
   skip: () => rateLimitDisabled(),
   message: { error: 'Too many login attempts — try again later' },
 })

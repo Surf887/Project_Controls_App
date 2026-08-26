@@ -17,6 +17,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - '6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     restart: unless-stopped
@@ -73,8 +84,12 @@ services:
       PLANVIEW_DATA_PATH: ${PLANVIEW_DATA_PATH:-}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
       TRUST_PROXY: ${TRUST_PROXY:-1}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      APP_REPLICA_COUNT: ${APP_REPLICA_COUNT:-1}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:

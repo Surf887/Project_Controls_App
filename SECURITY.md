@@ -19,6 +19,7 @@ The latest release on the default branch receives security fixes.
 - **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
 - **Document privacy** — uploaded source documents are signature-validated, malware-scanned, deduplicated, encrypted with a separate AES-256-GCM key, and retained in PostgreSQL. Local OCR is the default; cloud OCR requires explicit provider configuration.
 - **Asynchronous ingestion** — production OCR jobs persist in PostgreSQL, use idempotency keys, bounded retries, and expiring worker leases; project membership guards every status endpoint.
+- **Horizontal controls** — optional Redis-backed API/login rate limits are mandatory when multiple replicas are declared; PostgreSQL advisory locks prevent duplicate scheduled exports.
 - **Snowflake boundary** — the adapter accepts validated view identifiers only, limits result sets, prefers OAuth/key-pair authentication, and stages read-only rows for mapping and approval before any cost posting.
 - **Planview boundary** — product-specific endpoints are fixed by deployment/profile configuration, OAuth/API credentials stay server-side, result sets are bounded, and governance items require mapping and approval before register/schedule posting.
 - **Observability** — structured request/error logs carry correlation IDs; optional Prometheus metrics require a dedicated bearer token.

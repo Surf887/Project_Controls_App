@@ -14,6 +14,7 @@ import { authRouter } from './routes/auth.js'
 import { attachUser } from './middleware/auth.js'
 import { logger } from './utils/logger.js'
 import { beginRequestMetric, renderPrometheusMetrics } from './utils/metrics.js'
+import { pingRedis, redisRateLimitStore } from './services/redisService.js'
 
 type RequestWithId = express.Request & { requestId?: string }
 
@@ -92,6 +93,7 @@ export function createApp() {
       max: Number(process.env.RATE_LIMIT_PER_MIN ?? 300),
       standardHeaders: true,
       legacyHeaders: false,
+      store: redisRateLimitStore('api'),
       skip: () => rateLimitDisabled(),
     }),
   )
@@ -120,6 +122,7 @@ export function createApp() {
       if (isUsingPostgres()) {
         await pingDatabase()
       }
+      await pingRedis()
       res.json({ ok: true, postgres: isUsingPostgres() })
     } catch (error) {
       logger.error('readiness_check_failed', {
@@ -136,6 +139,7 @@ export function createApp() {
       if (isUsingPostgres()) {
         await pingDatabase()
       }
+      await pingRedis()
       res.json({ ok: true, ready: true, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })
     } catch {
       res.status(503).json({ ok: false, ready: false, version: '1.0.0', service: 'project-controls-api', postgres: isUsingPostgres() })

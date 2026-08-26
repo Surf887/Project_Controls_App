@@ -2,7 +2,7 @@ import { loadRootEnvFile } from './config/loadEnv.js'
 import { createApp } from './app.js'
 import { validateEnv } from './config/env.js'
 import { closeDatabase, getProjectById, initDatabase, isUsingPostgres } from './db/database.js'
-import { closePool } from './db/postgres.js'
+import { closePool, getPool } from './db/postgres.js'
 import { runMigrations } from './db/migrate.js'
 import { runDueExportJobs } from './services/exportScheduler.js'
 import { generateClosePackPdfAsync } from './services/pdfExport.js'
@@ -10,6 +10,7 @@ import { getJwtSecret } from './auth/jwt.js'
 import { ensureBootstrapAdmin } from './auth/userStore.js'
 import { logger } from './utils/logger.js'
 import { startIngestionWorker } from './services/ingestionWorker.js'
+import { closeRedis } from './services/redisService.js'
 
 loadRootEnvFile()
 
@@ -22,7 +23,7 @@ await runMigrations()
 await initDatabase()
 await ensureBootstrapAdmin()
 
-async function runScheduledExports() {
+async function executeScheduledExports() {
   const count = await runDueExportJobs(async (projectId) => {
     const state = await getProjectById(projectId)
     await generateClosePackPdfAsync(state, 'Scheduled export')
@@ -30,6 +31,29 @@ async function runScheduledExports() {
   })
   if (count > 0) {
     logger.info('scheduled_exports_completed', { count })
+  }
+}
+
+async function runScheduledExports() {
+  if (!isUsingPostgres()) {
+    await executeScheduledExports()
+    return
+  }
+  const client = await getPool().connect()
+  try {
+    const lock = await client.query<{ acquired: boolean }>(
+      `SELECT pg_try_advisory_lock(hashtext('project-controls-export-scheduler')) AS acquired`,
+    )
+    if (!lock.rows[0]?.acquired) return
+    try {
+      await executeScheduledExports()
+    } finally {
+      await client.query(
+        `SELECT pg_advisory_unlock(hashtext('project-controls-export-scheduler'))`,
+      )
+    }
+  } finally {
+    client.release()
   }
 }
 
@@ -59,7 +83,7 @@ function shutdown(signal: string) {
   stopIngestionWorker()
   server.close(() => {
     closeDatabase()
-    void closePool().finally(() => process.exit(0))
+    void Promise.all([closePool(), closeRedis()]).finally(() => process.exit(0))
   })
   setTimeout(() => {
     logger.error('shutdown_forced', { timeoutMs: 10_000 })

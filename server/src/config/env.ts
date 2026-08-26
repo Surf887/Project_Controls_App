@@ -108,6 +108,13 @@ export function validateEnv(): void {
       throw new Error('Planview requires an OAuth token, API key, or complete client-credentials configuration')
     }
   }
+  const replicaCount = Number(process.env.APP_REPLICA_COUNT ?? 1)
+  if (!Number.isInteger(replicaCount) || replicaCount < 1) {
+    throw new Error('APP_REPLICA_COUNT must be a positive integer')
+  }
+  if (replicaCount > 1 && !process.env.REDIS_URL) {
+    throw new Error('REDIS_URL is required when APP_REPLICA_COUNT is greater than 1')
+  }
 
   const oidcIssuer = process.env.OIDC_ISSUER
   const oidcClient = process.env.OIDC_CLIENT_ID

@@ -33,6 +33,8 @@ describe('validateEnv', () => {
     delete process.env.PLANVIEW_CLIENT_SECRET
     delete process.env.PLANVIEW_TOKEN_URL
     delete process.env.PLANVIEW_API_KEY
+    delete process.env.APP_REPLICA_COUNT
+    delete process.env.REDIS_URL
     delete process.env.INGESTION_ASYNC
   })
 
@@ -104,6 +106,11 @@ describe('validateEnv', () => {
   it('rejects partial Planview configuration', () => {
     process.env.PLANVIEW_BASE_URL = 'https://example.pvcloud.com/public-api/v1'
     expect(() => validateEnv()).toThrow(/Planview requires/)
+  })
+
+  it('requires Redis for multiple replicas', () => {
+    process.env.APP_REPLICA_COUNT = '2'
+    expect(() => validateEnv()).toThrow(/REDIS_URL/)
   })
 })
 

@@ -89,7 +89,7 @@ DATABASE_URL=postgres://... ./scripts/backup.sh /var/backups/project-controls
 
 The server handles `SIGTERM`/`SIGINT`: it stops accepting connections, drains in-flight requests, closes the DB pool, then exits (with a forced-exit timeout). This makes rolling deploys safe.
 
-For horizontal scaling (multiple replicas): move the rate-limit store to a shared backend (e.g. Redis) — the default in-memory limiter is per-instance. PostgreSQL handles shared project, audit, and baseline state; the JSON file store is development-only.
+For horizontal scaling, configure `REDIS_URL` and set `APP_REPLICA_COUNT` to the deployed replica count; startup rejects multi-replica configuration without Redis. API and login rate limits then use shared Redis state. PostgreSQL handles shared project, audit, baseline, document, and ingestion-job state; workers use leased `SKIP LOCKED` claims. Scheduled exports use a PostgreSQL advisory leader lock so only one replica generates each due pack. The JSON file store remains development-only.
 
 ## Observability
 

@@ -8,7 +8,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 |---|---|---|---|---|
 | **Configurable workflows** | Hard-coded forecast/change flows | `workflowConfig.ts` + `workflowEngine.ts` | Admin UI, delegation, SLAs | BPMN, multi-tenant templates |
 | **Multi-project / portfolio** | 3-project compare, active sync | Portfolio API, roll-up policies | PMO dashboards, cross-project RBAC | Federated portfolios, JV structures |
-| **Role-based permissions** | Demo `x-pc-role` header | `actionPolicy.ts` aligned to reducer | OIDC/JWT, project-scoped roles | SoD, attribute-based access |
+| **Role-based permissions** | RBAC + project membership | Central action policy + HttpOnly sessions | OIDC Code+PKCE and scoped roles | SoD, group claims, attribute-based access |
 | **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
 | **Audit immutability** | Workflow history in state | Canonical HMAC chain | PostgreSQL `audit_events` with atomic state/audit commits | WORM storage, SIEM export |
 | **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
@@ -19,7 +19,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 | **High-volume ingestion** | Synchronous reviewed imports | Durable PostgreSQL jobs, retries and worker leases | Streaming/chunked schedule and integration staging | Dedicated worker pools and autoscaling |
 | **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
 | **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
-| **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
+| **Security / deployment** | Full CI gates | Docker/Postgres/Redis, shared limits, leader locks | TLS, secrets vault, restore/pen tests | K8s, WORM/SIEM, compliance automation |
 | **Edge cases** | Core O&G scenarios in seed | Documented edge-case register | Per-domain regression suites | Production incident library |
 
 ## Phase 1 — Foundation (implemented in this repo)
@@ -115,7 +115,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 2. Add authenticated P6 API adapters with streaming/staged imports
 3. Add SAP commitments/actuals reconciliation against the same control-account dictionary
 4. Add Planview governance/milestone adapter and reusable source mapping profiles
-5. Complete server-side OIDC Authorization Code + PKCE and enterprise session controls
+5. Add IdP group-to-project-role mapping, SCIM provisioning, and session revocation controls
 6. Add portfolio governance policies, webhooks, APM, and external penetration testing
 
 ## Phase 3 — Production scale

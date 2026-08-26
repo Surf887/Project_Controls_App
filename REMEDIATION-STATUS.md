@@ -36,6 +36,7 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Production baseline snapshots and immutable audit events use PostgreSQL; no application data volume is required.
 - ✅ Production client disables offline/local seed fallback unless `VITE_ALLOW_OFFLINE=true` is explicitly set.
 - ✅ Browser credentials use Secure, HttpOnly, SameSite=Strict cookies; JWTs are no longer persisted in browser storage.
+- ✅ Production SSO uses server-side OIDC Authorization Code + PKCE with signed state, nonce validation, discovery/token exchange, and secure callback sessions.
 - ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
@@ -66,9 +67,7 @@ These are either operational (not code we can complete here) or larger initiativ
 
 - **ESLint/Prettier + coverage gates in CI.** Config and a baseline cleanup require adding devDependencies (a lockfile change) and fixing the existing lint backlog — do this as a dedicated pass, then flip the CI jobs to blocking.
 - **Tracing and error tracking** (OpenTelemetry/Sentry). Structured logs, request correlation, health probes, and protected Prometheus metrics are in place.
-- **Shared-store rate limiting** (e.g. Redis) for multi-replica deployments — current limiter is per-instance.
 - **DB normalization / event sourcing.** State is stored as a versioned JSONB blob today; splitting cost sheet/registers into relational tables is a Phase-2/3 effort.
-- **Full OIDC Authorization-Code + PKCE** server-side flow (current flow verifies a client-supplied ID token at the exchange endpoint).
 - **Expanded test coverage** for the remaining routes/services and UI components; add a coverage tool + threshold.
 - **Operational / compliance:** TLS termination + reverse proxy config for your environment, automated backup scheduling, third-party penetration test, SOC 2 control mapping, and (if needed) Kubernetes/horizontal-scale topology. `LICENSE` choice is left to the repository owner.
 - **Feature truthfulness:** simulated connectors and illustrative intelligence are disabled by default and cannot report simulated SAP success in production. Keep feature flags off outside explicit demonstrations.
@@ -76,4 +75,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 98 server tests pass locally; and all 16 Playwright workflows pass. CI executes five PostgreSQL migration/concurrency/governance/document/queue tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 101 server tests pass locally; and all 16 Playwright workflows pass. CI executes five PostgreSQL migration/concurrency/governance/document/queue tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

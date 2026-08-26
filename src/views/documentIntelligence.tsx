@@ -3,10 +3,13 @@ import type { ForecastDriver } from '../data/forecastDrivers'
 import type { OcrProviderCapability, OcrProviderId } from '../data/documentIntelligence'
 import type { SourceDocument } from '../data/documentIntelligence'
 import {
+  fetchIngestionJob,
+  fetchIngestionJobs,
   fetchOcrProviders,
   fetchSourceDocuments,
   ingestSourceDocument,
 } from '../api/client'
+import type { IngestionJob } from '../data/ingestionJobs'
 import { buildForecastDriverLedger, driverExpectedValue } from '../engine/forecastDrivers'
 import { useProjectRole } from '../hooks/useProjectRole'
 import { useProjectStore } from '../store/projectStore'
@@ -175,20 +178,26 @@ function DriverReviewCard({
 }
 
 export function DocumentIntelligenceView() {
-  const { state, dispatch, backendEnabled, currentUser } = useProjectStore()
+  const { state, dispatch, backendEnabled, currentUser, reconnect } = useProjectStore()
   const { canEdit } = useProjectRole()
   const [providers, setProviders] = useState<OcrProviderCapability[]>([])
   const [provider, setProvider] = useState<OcrProviderId>('local')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [serverDocuments, setServerDocuments] = useState<SourceDocument[]>([])
+  const [jobs, setJobs] = useState<IngestionJob[]>([])
 
   useEffect(() => {
     if (!backendEnabled) return
-    void Promise.all([fetchOcrProviders(state.meta.id), fetchSourceDocuments(state.meta.id)])
-      .then(([nextProviders, documents]) => {
+    void Promise.all([
+      fetchOcrProviders(state.meta.id),
+      fetchSourceDocuments(state.meta.id),
+      fetchIngestionJobs(state.meta.id),
+    ])
+      .then(([nextProviders, documents, nextJobs]) => {
         setProviders(nextProviders)
         setServerDocuments(documents)
+        setJobs(nextJobs)
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : 'Document service unavailable'))
   }, [backendEnabled, state.meta.id])
@@ -212,6 +221,28 @@ export function DocumentIntelligenceView() {
     setMessage(null)
     try {
       const result = await ingestSourceDocument(state.meta.id, file, provider)
+      if (result.job) {
+        const queuedJob = result.job
+        setJobs((current) => [queuedJob, ...current.filter((job) => job.id !== queuedJob.id)])
+        setMessage(`Queued secure extraction job ${queuedJob.id}.`)
+        for (let attempt = 0; attempt < 120; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1_000))
+          const job = await fetchIngestionJob(state.meta.id, queuedJob.id)
+          setJobs((current) => [job, ...current.filter((entry) => entry.id !== job.id)])
+          if (job.status === 'completed') {
+            await reconnect()
+            setServerDocuments(await fetchSourceDocuments(state.meta.id))
+            setMessage(`Extraction completed: ${Number(job.result?.driverCount ?? 0)} draft forecast driver(s).`)
+            return
+          }
+          if (job.status === 'failed') {
+            setMessage(job.error ?? 'Document extraction job failed')
+            return
+          }
+        }
+        setMessage('Document extraction is still running; check ingestion job status.')
+        return
+      }
       dispatch({
         type: 'IMPORT_DOCUMENT_DRAFTS',
         payload: { document: result.document, drivers: result.drivers },
@@ -298,6 +329,27 @@ export function DocumentIntelligenceView() {
         <Metric label="Approved drivers" value={String(documentDrivers.filter((driver) => driver.status === 'approved').length)} detail="Included in forecast" />
         <Metric label="Ledger expected value" value={formatUsd(expectedExposure)} detail="Governed exposure across project registers" />
       </section>
+
+      {jobs.length > 0 && (
+        <section className="panel">
+          <div className="panel-header">
+            <div><span className="eyebrow">Asynchronous ingestion</span><h3>Recent extraction jobs</h3></div>
+          </div>
+          <div className="report-list compact">
+            {jobs.slice(0, 10).map((job) => (
+              <article className="report-card" key={job.id}>
+                <div><strong>{job.jobType.replaceAll('_', ' ')}</strong><p>{job.id}</p></div>
+                <div className="report-meta">
+                  <span className={`badge ${job.status === 'completed' ? 'badge-good' : job.status === 'failed' ? 'badge-risk' : 'badge-watch'}`}>
+                    {job.status}
+                  </span>
+                  <small>Attempt {job.attempts}/{job.maxAttempts}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <div className="panel-header">

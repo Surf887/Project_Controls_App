@@ -128,7 +128,7 @@ Use the downloadable CSV/XER samples in Schedule Control for the supported struc
 
 The Document Intelligence workspace turns contractor PDFs, images, text, and CSV reports into draft forecast drivers with page-level evidence. Privacy-first local extraction is the default: text-layer PDFs are processed in-process, while scanned documents can use a private Docling/Tesseract-compatible endpoint. Azure AI Document Intelligence and AWS Textract are optional provider adapters.
 
-Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SHA-256, and stored in PostgreSQL in production. Extracted amounts never change EAC automatically: cost control maps and corrects the draft, then an approver must accept the driver before the forecast engine includes it. The unified ledger also shows changes, risks, opportunities, realised issues, and claims, excluding linked records that would otherwise double count exposure.
+Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SHA-256, and stored in PostgreSQL in production. Production extraction runs through a durable PostgreSQL job queue with retry/backoff, expiring worker leases, and `SKIP LOCKED` multi-replica claiming. Extracted amounts never change EAC automatically: cost control maps and corrects the draft, then an approver must accept the driver before the forecast engine includes it.
 
 ## Dynamic Mapping Studio
 

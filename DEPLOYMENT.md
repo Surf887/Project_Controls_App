@@ -105,6 +105,8 @@ Illustrative intelligence and simulated connector modules are excluded by defaul
 
 Azure Document Intelligence requires `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` and `AZURE_DOCUMENT_INTELLIGENCE_KEY`. AWS Textract uses the standard AWS credential chain and `AWS_REGION`. Selecting either cloud provider sends document content to that provider; complete the relevant data-processing, residency, retention, and private-network review first.
 
+Production requires `INGESTION_ASYNC=true`. Uploaded documents enqueue PostgreSQL jobs; workers claim jobs with `FOR UPDATE SKIP LOCKED`, hold expiring leases, retry with bounded backoff, and publish status through project-scoped job APIs. Multiple application replicas may run workers safely. Tune `INGESTION_WORKER_INTERVAL_MS` for the deployment.
+
 ## Snowflake cost integration
 
 Configure a read-only Snowflake user/role, warehouse, database, and schema. OAuth or key-pair authentication is recommended; password authentication is blocked in production unless explicitly enabled. Mapping Studio stores the organization-specific column/value mapping, while the profile dataset must be a validated one-to-three-part table/view identifier such as `CURATED.PROJECT_CONTROLS.COST_VIEW`.

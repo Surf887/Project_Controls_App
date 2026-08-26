@@ -30,6 +30,11 @@ import { querySnowflakeDataset, snowflakeConfigured } from '../services/snowflak
 import { buildCostTransactionBatch } from '@pc/engine/costTransactionStaging.js'
 import { planviewConfigured, queryPlanviewDataset } from '../services/planviewService.js'
 import { buildPlanviewBatch } from '@pc/engine/planviewStaging.js'
+import {
+  enqueueIngestionJob,
+  getIngestionJob,
+  listIngestionJobs,
+} from '../services/ingestionJobService.js'
 
 export const enterpriseRouter = Router({ mergeParams: true })
 const documentUpload = multer({
@@ -165,6 +170,30 @@ enterpriseRouter.get('/portfolio/rollup', requireRole('viewer'), async (_req, re
 
 enterpriseRouter.get('/documents/providers', requireRole('viewer'), (_req, res) => {
   res.json({ providers: ocrProviderCapabilities() })
+})
+
+enterpriseRouter.get('/ingestion-jobs', requireRole('viewer'), async (req, res) => {
+  try {
+    res.json({ jobs: await listIngestionJobs(param(req.params.projectId)) })
+  } catch (error) {
+    sendRouteError(res, error, 500, 'Ingestion job list failed')
+  }
+})
+
+enterpriseRouter.get('/ingestion-jobs/:jobId', requireRole('viewer'), async (req, res) => {
+  try {
+    const job = await getIngestionJob(
+      param(req.params.projectId),
+      param(req.params.jobId),
+    )
+    if (!job) {
+      res.status(404).json({ error: 'Ingestion job not found' })
+      return
+    }
+    res.json({ job })
+  } catch (error) {
+    sendRouteError(res, error, 500, 'Ingestion job read failed')
+  }
 })
 
 enterpriseRouter.get('/snowflake/status', requireRole('viewer'), (_req, res) => {
@@ -316,6 +345,24 @@ enterpriseRouter.post(
       await scanDocument(file.buffer, file.mimetype, fileName)
       const duplicate = await findDocumentByHash(projectId, sha256)
       if (duplicate) {
+        if (process.env.INGESTION_ASYNC === 'true' && duplicate.status === 'extracting') {
+          const job = await enqueueIngestionJob({
+            projectId,
+            jobType: 'ocr_document',
+            request: { documentId: duplicate.id },
+            idempotencyKey: duplicate.sha256,
+            createdById: req.user!.id,
+            createdByName: req.user!.name,
+            createdByRole: req.user!.role,
+          })
+          res.status(202).json({
+            document: publicDocument(duplicate),
+            drivers: [],
+            duplicate: true,
+            job,
+          })
+          return
+        }
         res.json({ document: publicDocument(duplicate), drivers: duplicate.draftDrivers, duplicate: true })
         return
       }
@@ -335,6 +382,25 @@ enterpriseRouter.post(
         draftDrivers: [],
       }
       await createSourceDocument(document, file.buffer)
+
+      if (process.env.INGESTION_ASYNC === 'true') {
+        const job = await enqueueIngestionJob({
+          projectId,
+          jobType: 'ocr_document',
+          request: { documentId: document.id },
+          idempotencyKey: document.sha256,
+          createdById: req.user!.id,
+          createdByName: req.user!.name,
+          createdByRole: req.user!.role,
+        })
+        res.status(202).json({
+          document: publicDocument(document),
+          drivers: [],
+          duplicate: false,
+          job,
+        })
+        return
+      }
 
       try {
         const extraction = await extractDocument(provider, file.buffer, file.mimetype)

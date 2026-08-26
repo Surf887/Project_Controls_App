@@ -33,6 +33,7 @@ describe('validateEnv', () => {
     delete process.env.PLANVIEW_CLIENT_SECRET
     delete process.env.PLANVIEW_TOKEN_URL
     delete process.env.PLANVIEW_API_KEY
+    delete process.env.INGESTION_ASYNC
   })
 
   afterEach(() => {
@@ -84,6 +85,9 @@ describe('validateEnv', () => {
     expect(() => validateEnv()).toThrow(/DOCUMENT_SCAN_ENDPOINT/)
 
     process.env.DOCUMENT_SCAN_ENDPOINT = 'http://scanner.internal/scan'
+    expect(() => validateEnv()).toThrow(/INGESTION_ASYNC/)
+
+    process.env.INGESTION_ASYNC = 'true'
     expect(() => validateEnv()).not.toThrow()
   })
 

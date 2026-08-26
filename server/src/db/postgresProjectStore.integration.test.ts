@@ -22,6 +22,12 @@ import {
   listSourceDocuments,
 } from '../services/documentStore.js'
 import type { SourceDocument } from '@pc/data/documentIntelligence.js'
+import {
+  claimIngestionJob,
+  completeIngestionJob,
+  enqueueIngestionJob,
+  getIngestionJob,
+} from '../services/ingestionJobService.js'
 
 const describePostgres = process.env.DATABASE_URL ? describe : describe.skip
 
@@ -41,7 +47,7 @@ describePostgres('Postgres project store integration', () => {
 
   it('applies every SQL migration and seeds readable projects', async () => {
     const migrations = await query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations')
-    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(6)
+    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(7)
 
     const projects = await store.listProjectsAsync()
     const active = await store.getActiveProjectRecordAsync()
@@ -123,5 +129,29 @@ describePostgres('Postgres project store integration', () => {
     await createSourceDocument(document, content)
     expect((await listSourceDocuments(current.state.meta.id)).some((entry) => entry.id === document.id)).toBe(true)
     expect((await getSourceDocumentContent(current.state.meta.id, document.id))?.equals(content)).toBe(true)
+  })
+
+  it('claims asynchronous ingestion jobs once across workers', async () => {
+    const current = await store.getActiveProjectRecordAsync()
+    await query(
+      `INSERT INTO users (id, email, name, role, provider)
+       VALUES ($1,$2,$3,'cost_controller','oidc')
+       ON CONFLICT (id) DO NOTHING`,
+      ['queue-test-user', 'queue-test@example.com', 'Queue Tester'],
+    )
+    const queued = await enqueueIngestionJob({
+      projectId: current.state.meta.id,
+      jobType: 'ocr_document',
+      request: { documentId: 'DOC-queue-test' },
+      idempotencyKey: `queue-${Date.now()}`,
+      createdById: 'queue-test-user',
+      createdByName: 'Queue Tester',
+      createdByRole: 'cost_controller',
+    })
+    const claimed = await claimIngestionJob('worker-a')
+    expect(claimed?.id).toBe(queued.id)
+    expect(await claimIngestionJob('worker-b')).toBeNull()
+    await completeIngestionJob(queued.id, 'worker-a', { ok: true })
+    expect((await getIngestionJob(current.state.meta.id, queued.id))?.status).toBe('completed')
   })
 })

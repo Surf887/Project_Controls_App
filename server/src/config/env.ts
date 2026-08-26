@@ -39,6 +39,9 @@ export function validateEnv(): void {
     if (!process.env.DOCUMENT_SCAN_ENDPOINT) {
       throw new Error('DOCUMENT_SCAN_ENDPOINT is required in production')
     }
+    if (process.env.INGESTION_ASYNC !== 'true') {
+      throw new Error('INGESTION_ASYNC must be enabled in production')
+    }
   }
 
   if (process.env.OIDC_DEFAULT_ROLE && !VALID_ROLES.includes(process.env.OIDC_DEFAULT_ROLE as Role)) {

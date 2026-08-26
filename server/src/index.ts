@@ -9,6 +9,7 @@ import { generateClosePackPdfAsync } from './services/pdfExport.js'
 import { getJwtSecret } from './auth/jwt.js'
 import { ensureBootstrapAdmin } from './auth/userStore.js'
 import { logger } from './utils/logger.js'
+import { startIngestionWorker } from './services/ingestionWorker.js'
 
 loadRootEnvFile()
 
@@ -40,6 +41,8 @@ function triggerScheduledExports() {
 
 triggerScheduledExports()
 const exportInterval = setInterval(triggerScheduledExports, 60 * 60 * 1000)
+const stopIngestionWorker =
+  process.env.INGESTION_ASYNC === 'true' ? startIngestionWorker() : () => undefined
 
 const app = createApp()
 const server = app.listen(port, () => {
@@ -53,6 +56,7 @@ function shutdown(signal: string) {
   shuttingDown = true
   logger.info('shutdown_started', { signal })
   clearInterval(exportInterval)
+  stopIngestionWorker()
   server.close(() => {
     closeDatabase()
     void closePool().finally(() => process.exit(0))

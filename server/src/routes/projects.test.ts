@@ -132,6 +132,33 @@ describe('API routes', () => {
     expect(listed.body.documents.some((document: { id: string }) => document.id === ingested.body.document.id)).toBe(true)
   })
 
+  it('queues production-style OCR and exposes project-scoped job status', async () => {
+    process.env.INGESTION_ASYNC = 'true'
+    try {
+      const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+      const projectId = active.body.state.meta.id as string
+      const queued = await request(app)
+        .post(`/api/projects/${projectId}/documents/ingest`)
+        .set('x-pc-role', 'cost_controller')
+        .field('provider', 'local')
+        .attach(
+          'file',
+          Buffer.from(`Queued forecast USD 3.1 million ${Date.now()}`),
+          { filename: 'queued.txt', contentType: 'text/plain' },
+        )
+      expect(queued.status).toBe(202)
+      expect(queued.body.job.status).toBe('queued')
+
+      const status = await request(app)
+        .get(`/api/projects/${projectId}/ingestion-jobs/${queued.body.job.id}`)
+        .set('x-pc-role', 'viewer')
+      expect(status.status).toBe(200)
+      expect(status.body.job.id).toBe(queued.body.job.id)
+    } finally {
+      delete process.env.INGESTION_ASYNC
+    }
+  })
+
   it('reports Snowflake configuration without exposing credentials', async () => {
     const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
     const projectId = active.body.state.meta.id as string

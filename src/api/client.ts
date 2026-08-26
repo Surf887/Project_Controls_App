@@ -3,6 +3,7 @@ import type { OcrProviderCapability, OcrProviderId, SourceDocument } from '../da
 import type { ForecastDriver } from '../data/forecastDrivers'
 import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
 import type { PlanviewGovernanceItem, PlanviewSyncBatch } from '../data/planview'
+import type { IngestionJob } from '../data/ingestionJobs'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
 let sessionToken: string | null = null
@@ -342,7 +343,12 @@ export async function ingestSourceDocument(
   projectId: string,
   file: File,
   provider: OcrProviderId,
-): Promise<{ document: SourceDocument; drivers: ForecastDriver[]; duplicate: boolean }> {
+): Promise<{
+  document: SourceDocument
+  drivers: ForecastDriver[]
+  duplicate: boolean
+  job?: IngestionJob
+}> {
   const form = new FormData()
   form.set('provider', provider)
   form.set('file', file)
@@ -350,6 +356,23 @@ export async function ingestSourceDocument(
     method: 'POST',
     body: form,
   })
+}
+
+export async function fetchIngestionJob(
+  projectId: string,
+  jobId: string,
+): Promise<IngestionJob> {
+  const data = await request<{ job: IngestionJob }>(
+    `/projects/${encodeURIComponent(projectId)}/ingestion-jobs/${encodeURIComponent(jobId)}`,
+  )
+  return data.job
+}
+
+export async function fetchIngestionJobs(projectId: string): Promise<IngestionJob[]> {
+  const data = await request<{ jobs: IngestionJob[] }>(
+    `/projects/${encodeURIComponent(projectId)}/ingestion-jobs`,
+  )
+  return data.jobs
 }
 
 export async function fetchSnowflakeStatus(projectId: string): Promise<{

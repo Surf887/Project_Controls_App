@@ -520,6 +520,7 @@ function App() {
         onSso={loginSso}
         onDemoLogin={loginDemo}
         oidcEnabled={authConfig?.oidcEnabled}
+        oidcLoginUrl={authConfig?.oidcLoginUrl}
         demoAuthEnabled={demoAuthAvailable}
         globalError={error}
       />

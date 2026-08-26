@@ -56,6 +56,10 @@ SQL migrations in `server/src/db/migrations/*.sql` run automatically at startup 
 
 An empty production database creates one blank project from `BOOTSTRAP_PROJECT_NAME`; demo projects are never seeded. The bootstrap administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Every non-admin user—including newly provisioned OIDC users—must receive an explicit project membership through `POST /api/platform/projects/:projectId/roles` before project data is visible. This deny-by-default behavior is intentional.
 
+## Enterprise SSO
+
+Configure `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and the public HTTPS `OIDC_REDIRECT_URI` ending at `/api/platform/auth/oidc/callback`. Discovery resolves authorization/token endpoints unless explicit endpoints are supplied. The server generates PKCE verifier/challenge, signed state and nonce, performs the code exchange, verifies the ID token, provisions the local identity, and issues the HttpOnly application session. `OIDC_CLIENT_SECRET` is optional for public PKCE clients. The legacy client-posted ID-token endpoint is disabled in production.
+
 ## Health checks
 
 - `GET /api/health` — overall status incl. `ready` (real DB probe).

@@ -31,6 +31,7 @@ export interface AuthSession {
 export interface AuthConfig {
   demoAuthEnabled: boolean
   oidcEnabled: boolean
+  oidcLoginUrl?: string
 }
 
 export interface ImmutableAuditEvent {

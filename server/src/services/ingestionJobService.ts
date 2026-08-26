@@ -61,6 +61,12 @@ const columns = `
   available_at, lease_owner, lease_until, error, created_at, started_at,
   completed_at, updated_at
 `
+const jobColumns = `
+  job.id, job.project_id, job.job_type, job.status, job.request, job.result,
+  job.idempotency_key, job.created_by_id, job.created_by_name, job.created_by_role,
+  job.attempts, job.max_attempts, job.available_at, job.lease_owner, job.lease_until,
+  job.error, job.created_at, job.started_at, job.completed_at, job.updated_at
+`
 
 const memoryJobs = new Map<string, IngestionJob>()
 
@@ -205,7 +211,7 @@ export async function claimIngestionJob(workerId: string, leaseSeconds = 300): P
          updated_at = NOW()
      FROM candidate
      WHERE job.id = candidate.id
-     RETURNING ${columns}`,
+     RETURNING ${jobColumns}`,
     [workerId, leaseSeconds],
   )
   return result.rows[0] ? fromRow(result.rows[0]) : null

@@ -20,6 +20,7 @@ import {
   verifyOidcFlowCookie,
 } from '../auth/oidcFlow.js'
 import { issueSession, revokeSession, revokeUserSessions } from '../auth/sessionStore.js'
+import { param } from '../utils/params.js'
 
 export const authRouter = Router()
 
@@ -215,7 +216,7 @@ authRouter.get('/users', requireAdmin, async (_req, res) => {
 })
 
 authRouter.post('/users/:userId/revoke-sessions', requireAdmin, async (req, res) => {
-  const count = await revokeUserSessions(req.params.userId)
+  const count = await revokeUserSessions(param(req.params.userId))
   res.json({ revoked: count })
 })
 

@@ -4,6 +4,7 @@ import { pendingApplyCount } from '@pc/engine/applyExtractionsCore.js'
 import { createApp } from '../app.js'
 import { closeDatabase, initDatabase } from '../db/database.js'
 import { runMigrations } from '../db/migrate.js'
+import { buildP6CsvImport, inspectP6Csv, sampleP6Csv } from '@pc/utils/p6CsvImport.js'
 
 describe('API routes', () => {
   beforeAll(async () => {
@@ -19,9 +20,24 @@ describe('API routes', () => {
   const app = createApp()
 
   it('GET /api/health returns ok', async () => {
-    const res = await request(app).get('/api/health')
+    const res = await request(app).get('/api/health').set('x-request-id', 'health-test-1')
     expect(res.status).toBe(200)
     expect(res.body.ok).toBe(true)
+    expect(res.body.ready).toBe(true)
+    expect(res.headers['x-request-id']).toBe('health-test-1')
+  })
+
+  it('protects Prometheus metrics with a bearer token', async () => {
+    process.env.METRICS_TOKEN = 'metrics-test-token-long'
+    const denied = await request(app).get('/api/metrics')
+    expect(denied.status).toBe(401)
+
+    const allowed = await request(app)
+      .get('/api/metrics')
+      .set('Authorization', 'Bearer metrics-test-token-long')
+    expect(allowed.status).toBe(200)
+    expect(allowed.text).toContain('project_controls_http_requests_total')
+    delete process.env.METRICS_TOKEN
   })
 
   it('GET /api/projects lists projects', async () => {
@@ -44,12 +60,127 @@ describe('API routes', () => {
     expect(res.status).toBe(400)
   })
 
+  it('POST actions rejects a malformed If-Match version', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
+    const projectId = active.body.state.meta.id as string
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'viewer')
+      .set('If-Match', 'not-a-version')
+      .send({ type: 'SET_SELECTED_VALUE', payload: active.body.state.selectedValueId })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/positive integer/)
+  })
+
   it('GET compute forecast uses control-account totals', async () => {
     const active = await request(app).get('/api/projects/active')
     const projectId = active.body.state.meta.id as string
     const res = await request(app).get(`/api/projects/${projectId}/compute/forecast`)
     expect(res.status).toBe(200)
     expect(res.body.totals.eacMostLikely).toBeGreaterThan(0)
+  })
+
+  it('POST actions imports a validated P6 schedule batch', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+    const projectId = active.body.state.meta.id as string
+    const text = sampleP6Csv()
+    const imported = buildP6CsvImport(text, {
+      fileName: 'p6-status.csv',
+      dataDate: '2026-06-30',
+      importedBy: 'Planner',
+      knownWbs: (active.body.state.costSheetRows as Array<{ parentId: string | null; wbs: string }>)
+        .filter((row) => row.parentId === null)
+        .map((row) => row.wbs),
+      columnMap: inspectP6Csv(text).suggestedMap,
+      now: '2026-08-05T00:00:00.000Z',
+    })
+    const res = await request(app)
+      .post(`/api/projects/${projectId}/actions`)
+      .set('x-pc-role', 'cost_controller')
+      .send({ type: 'IMPORT_SCHEDULE', payload: imported })
+
+    expect(res.status).toBe(200)
+    expect(res.body.state.scheduleActivities).toHaveLength(3)
+    expect(res.body.state.scheduleRelationships).toHaveLength(2)
+  })
+
+  it('ingests a privacy-first document into draft forecast drivers', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+    const projectId = active.body.state.meta.id as string
+    const ingested = await request(app)
+      .post(`/api/projects/${projectId}/documents/ingest`)
+      .set('x-pc-role', 'cost_controller')
+      .field('provider', 'local')
+      .attach(
+        'file',
+        Buffer.from('Contractor forecast overrun for A.01 is USD 2.4 million with 60% probability.'),
+        { filename: 'forecast.txt', contentType: 'text/plain' },
+      )
+
+    expect(ingested.status).toBe(201)
+    expect(ingested.body.document.status).toBe('review_required')
+    expect(ingested.body.drivers[0]).toMatchObject({
+      status: 'draft',
+      sourceType: 'document',
+      mostLikelyUsd: 2_400_000,
+      probability: 0.6,
+    })
+
+    const listed = await request(app)
+      .get(`/api/projects/${projectId}/documents`)
+      .set('x-pc-role', 'viewer')
+    expect(listed.body.documents.some((document: { id: string }) => document.id === ingested.body.document.id)).toBe(true)
+  })
+
+  it('queues production-style OCR and exposes project-scoped job status', async () => {
+    process.env.INGESTION_ASYNC = 'true'
+    try {
+      const active = await request(app).get('/api/projects/active').set('x-pc-role', 'cost_controller')
+      const projectId = active.body.state.meta.id as string
+      const queued = await request(app)
+        .post(`/api/projects/${projectId}/documents/ingest`)
+        .set('x-pc-role', 'cost_controller')
+        .field('provider', 'local')
+        .attach(
+          'file',
+          Buffer.from(`Queued forecast USD 3.1 million ${Date.now()}`),
+          { filename: 'queued.txt', contentType: 'text/plain' },
+        )
+      expect(queued.status).toBe(202)
+      expect(queued.body.job.status).toBe('queued')
+
+      const status = await request(app)
+        .get(`/api/projects/${projectId}/ingestion-jobs/${queued.body.job.id}`)
+        .set('x-pc-role', 'viewer')
+      expect(status.status).toBe(200)
+      expect(status.body.job.id).toBe(queued.body.job.id)
+    } finally {
+      delete process.env.INGESTION_ASYNC
+    }
+  })
+
+  it('reports Snowflake configuration without exposing credentials', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
+    const projectId = active.body.state.meta.id as string
+    const status = await request(app)
+      .get(`/api/projects/${projectId}/snowflake/status`)
+      .set('x-pc-role', 'viewer')
+    expect(status.status).toBe(200)
+    expect(status.body.configured).toBe(false)
+    expect(status.body).not.toHaveProperty('password')
+    expect(status.body).not.toHaveProperty('token')
+  })
+
+  it('reports Planview configuration without exposing credentials', async () => {
+    const active = await request(app).get('/api/projects/active').set('x-pc-role', 'viewer')
+    const projectId = active.body.state.meta.id as string
+    const status = await request(app)
+      .get(`/api/projects/${projectId}/planview/status`)
+      .set('x-pc-role', 'viewer')
+    expect(status.status).toBe(200)
+    expect(status.body.configured).toBe(false)
+    expect(status.body).not.toHaveProperty('clientSecret')
+    expect(status.body).not.toHaveProperty('token')
   })
 
   it('GET /api/projects/:id/audit returns immutable log', async () => {

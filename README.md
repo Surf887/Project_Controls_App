@@ -1,6 +1,6 @@
 # Project Controls Intelligence Platform
 
-Project controls workspace aligned with EcoSys / Oracle Unifier / AACE workflows. Runs as a full client + API stack: a React/Vite SPA backed by an Express + TypeScript API with a JSON-file or PostgreSQL project store, JWT/OIDC auth with RBAC, and an audited action reducer. A browser-only `localStorage` fallback exists for offline demos.
+Project controls workspace aligned with EcoSys / Oracle Unifier / AACE workflows. Runs as a full client + API stack: a React/Vite SPA backed by an Express + TypeScript API with a JSON-file or PostgreSQL project store, JWT/OIDC auth with RBAC, and an audited action reducer. A browser-only `localStorage` fallback exists for local or explicitly enabled offline demos; production builds fail closed when the API is unavailable.
 
 ## Quick start
 
@@ -15,7 +15,7 @@ npm run dev
 - **Frontend:** http://localhost:5173/ (Vite proxies `/api` → backend)
 - **API:** http://localhost:3001/api/health
 
-The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable the client falls back to `localStorage`.
+The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable, local development can fall back to `localStorage`; a production build requires `VITE_ALLOW_OFFLINE=true` to opt into that demo behavior.
 
 ### Frontend only (legacy local mode)
 
@@ -68,6 +68,7 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 |-------|---------|---------|
 | **Programme overview** | Owner / PMO health | Command Center, Portfolio Compare |
 | **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR) |
+| **Schedule control** | Baseline/current programme → cost accounts | P6 CSV import, relationship validation, critical/late activities, schedule-cost performance |
 | **Monthly control cycle** | Period close sequence | Accruals, Cost Sheet, Contingency, Forecast Engine, Forecast Approval |
 | **VOWD & performance** | Physical progress → EV | Rules of Credit, EVM, Predictive |
 | **Commitments & delivery** | PO · LLI · FX together | Long-Lead, Procurement, FX & Hedging |
@@ -76,7 +77,7 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 | **EPC execution** | Discipline workspaces | Engineering, Construction, Commissioning |
 | **Project logs** | Supporting registers | Issues, Actions, Lessons |
 | **Reporting & traceability** | Stakeholder packs | Team Reports, Audit Trail |
-| **Contractor submissions** | Early variation capture | Ingestion, Review, Validation, Lineage |
+| **Contractor submissions** | Early variation capture | CSV ingestion, private OCR, forecast-driver review, validation, lineage |
 | **Platform admin** | Integrations & intel | Connectors, Governance, intel modules |
 
 ### Improvements over legacy PMIS (EcoSys / Unifier)
@@ -115,6 +116,30 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 **Cost structure** — CBS hierarchy with direct/indirect nature, TECOP/NTR categories, burden rules, and loaded-budget view tied to cost sheet control accounts.
 
+## Integrated schedule control
+
+The Schedule Control workspace imports a statused Primavera P6 CSV through a reviewed column-mapping stage. Activities and relationships are validated as one batch, source WBS codes are mapped to project control accounts, and every refresh retains import lineage and data-quality issues. Compatible column mappings and manual activity/WBS overrides are remembered on subsequent P6 refreshes.
+
+Mapped schedule progress drives control-account planned value, earned value, SPI, CPI, forecast finish, the schedule completion S-curve, EVM reports, and the monthly close workspace. Invalid batches are rejected atomically; unmatched WBS activities remain staged for manual mapping rather than silently posting.
+
+Use the downloadable CSV/XER samples in Schedule Control for the supported structures. Native XER parsing covers PROJECT, PROJWBS, CALENDAR, TASK, and TASKPRED data. Reviewed imports are limited to 1,000 activities (250 KB CSV / 500 KB XER); larger programmes require the planned streaming API adapter.
+
+## Private document intelligence
+
+The Document Intelligence workspace turns contractor PDFs, images, text, and CSV reports into draft forecast drivers with page-level evidence. Privacy-first local extraction is the default: text-layer PDFs are processed in-process, while scanned documents can use a private Docling/Tesseract-compatible endpoint. Azure AI Document Intelligence and AWS Textract are optional provider adapters.
+
+Source files are malware-scanned, encrypted with AES-256-GCM, deduplicated by SHA-256, and stored in PostgreSQL in production. Production extraction runs through a durable PostgreSQL job queue with retry/backoff, expiring worker leases, and `SKIP LOCKED` multi-replica claiming. Extracted amounts never change EAC automatically: cost control maps and corrects the draft, then an approver must accept the driver before the forecast engine includes it.
+
+## Dynamic Mapping Studio
+
+Mapping Studio lets each company map arbitrary source names and coded values to canonical contractor-report, cost-transaction, or schedule fields. Profiles support direct, first-non-empty, concatenated, and constant mappings; safe text/number/date transformations; value lookup tables; required-field validation; versioning; reusable organization/dataset profiles; and schema-fingerprint drift warnings.
+
+Saved contractor-report profiles are selectable during CSV ingestion. The Snowflake adapter uses the same profile contract, so Snowflake views do not need prescribed column names or SAP terminology.
+
+The Snowflake Cost Sync workspace uses active `cost_transaction` profiles to query read-only curated views through OAuth or key-pair authentication. Rows are incrementally staged, external IDs deduplicated, WBS mappings reviewed, non-USD values blocked, and batch approval separated from posting. Approved actuals/invoices update period actuals, commitments update commitment exposure, and accruals enter the month-end accrual register with source lineage.
+
+The Planview Governance workspace supports configurable Portfolios, ProjectPlace, or generic GET-based REST endpoints. Active `project_governance` profiles map arbitrary response fields into milestones, actions, issues, and decisions. Items are paged, deduplicated, mapped, approved, and then posted to the relevant project register or integrated schedule. AdaptiveWork entity-query POST support remains a follow-up adapter.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).
@@ -136,12 +161,12 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 
 ## Scope limits (v1)
 
-- Active project is single-project at a time; portfolio compare shows seeded benchmark projects alongside the live one
-- Persistence is either JSON file or PostgreSQL (set `DATABASE_URL`); project state is stored as a versioned JSONB blob in Postgres today — splitting cost sheet / registers into relational tables is the next enterprise step
-- Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
-- Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
-- Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
-- No P6/SAP/EcoSys live API feeds
+- Active project is single-project at a time; portfolio comparison shows only configured snapshots. Seeded benchmarks are development/demo data and are never created in production.
+- PostgreSQL is mandatory in production; the JSON/file store is a local-development fallback. Project state remains a versioned JSONB document while immutable audit events and baseline snapshots use dedicated PostgreSQL tables.
+- Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with server-side revocation and per-project RBAC. Demo role switching is hard-disabled in production; enterprise identity supports OIDC Authorization Code + PKCE, group-to-project role mapping, and bearer-protected SCIM user lifecycle.
+- Simulated connectors and illustrative intelligence modules are disabled by default (`VITE_ENABLE_SIMULATED_FEATURES=false`, `ENABLE_SIMULATED_INTEGRATIONS=false`)
+- P6 CSV and native XER status imports are supported; live P6 API and SAP/EcoSys feeds are not yet implemented
+- OCR supports local text-layer PDF/text extraction plus configured local, Azure, or AWS providers; scanned-PDF quality depends on the selected provider
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 
 ## Reset demo data

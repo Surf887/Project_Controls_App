@@ -9,8 +9,11 @@ import {
   type ReportDocument,
   type ReviewStatus,
 } from './data/projectData'
+import type { CostRow } from './data/costSheet'
+import type { MappingProfile } from './data/mappingProfiles'
 import { useProjectStore } from './store/projectStore'
 import {
+  approvalBlockReason,
   buildCsvImport,
   canApproveValue,
   clearStoredState,
@@ -18,10 +21,12 @@ import {
 } from './utils/workflow'
 import { resetExtractionForCorrection } from './engine/extractionIntegrity'
 import { resolveSccsForExtraction } from './engine/sccs'
+import { applyManualExtractionMapping } from './engine/manualMapping'
 // SCurveChart stays eager: it renders inside the always-mounted Dashboard hero,
 // so lazy-loading it would just add a flash with no real chunk-size benefit.
 import { SCurveChart } from './views/charts'
 import { buildScurveFromCostSheet } from './engine/loading'
+import { latestAcceptedScheduleImport, scheduleSummary } from './engine/scheduleControl'
 import type { NavView } from './data/navigationModel'
 import { monthlyClosePath, pathForView, viewFromPath } from './routes/viewPaths'
 // Core shell stays eagerly loaded for instant first paint.
@@ -32,6 +37,9 @@ import { isCloseFlowRoute } from './data/monthlyCloseSteps'
 import { CloseFlowBar } from './components/CloseFlowBar'
 import { signIn } from './api/client'
 import { LoginScreen } from './views/login'
+import { ExtractionMappingEditor, type ExtractionMappingDraft } from './components/ExtractionMappingEditor'
+import { useProjectRole } from './hooks/useProjectRole'
+import { isViewEnabled, simulatedFeaturesEnabled } from './config/features'
 
 // Route-level code splitting: each routed view is loaded on demand so the
 // initial bundle stays small. Named exports are adapted to the default export
@@ -119,6 +127,21 @@ const RulesOfCreditView = lazy(() =>
   import('./views/rulesOfCredit').then((m) => ({ default: m.RulesOfCreditView })),
 )
 const WbsManager = lazy(() => import('./views/wbs').then((m) => ({ default: m.WbsManager })))
+const ScheduleControlView = lazy(() =>
+  import('./views/scheduleControl').then((m) => ({ default: m.ScheduleControlView })),
+)
+const DocumentIntelligenceView = lazy(() =>
+  import('./views/documentIntelligence').then((m) => ({ default: m.DocumentIntelligenceView })),
+)
+const MappingStudioView = lazy(() =>
+  import('./views/mappingStudio').then((m) => ({ default: m.MappingStudioView })),
+)
+const SnowflakeSyncView = lazy(() =>
+  import('./views/snowflakeSync').then((m) => ({ default: m.SnowflakeSyncView })),
+)
+const PlanviewSyncView = lazy(() =>
+  import('./views/planviewSync').then((m) => ({ default: m.PlanviewSyncView })),
+)
 const MonthlyCloseWorkspace = lazy(() =>
   import('./views/monthlyClose').then((m) => ({ default: m.MonthlyCloseWorkspace })),
 )
@@ -192,6 +215,19 @@ function statusClass(status: ReviewStatus | ApprovalStatus | ReportDocument['sta
   return status.replace('_', '-')
 }
 
+function UnsupportedProductionFeature() {
+  return (
+    <section className="panel">
+      <span className="eyebrow">Not enabled in this deployment</span>
+      <h2>Illustrative module disabled</h2>
+      <p className="empty-state">
+        This capability is not backed by a production data source. An administrator may enable it explicitly for
+        demonstrations, but it is excluded from the supported production scope.
+      </p>
+    </section>
+  )
+}
+
 function App() {
   const {
     state,
@@ -212,6 +248,7 @@ function App() {
     authConfig,
     projects,
   } = useProjectStore()
+  const { canEdit } = useProjectRole()
   const location = useLocation()
   const navigate = useNavigate()
   const commandPalette = useCommandPalette()
@@ -273,6 +310,16 @@ function App() {
   }
 
   const scurveData = useMemo(() => buildScurveFromCostSheet(state.costSheetRows), [state.costSheetRows])
+  const latestSchedule = latestAcceptedScheduleImport(state.scheduleImports)
+  const scheduleHealth = useMemo(
+    () =>
+      scheduleSummary(
+        state.scheduleActivities,
+        state.scheduleRelationships,
+        latestSchedule?.dataDate ?? null,
+      ),
+    [latestSchedule?.dataDate, state.scheduleActivities, state.scheduleRelationships],
+  )
 
   const metrics = useMemo(() => {
     const approved = values.filter((value) => value.approvalStatus === 'approved').length
@@ -329,6 +376,16 @@ function App() {
             }
           : value,
       ),
+    )
+  }
+
+  function updateExtractionMapping(id: string, draft: ExtractionMappingDraft) {
+    setValues((current) =>
+      applyManualExtractionMapping(current, {
+        valueId: id,
+        ...draft,
+        actor: currentUser?.name ?? 'You',
+      }).values,
     )
   }
 
@@ -403,9 +460,10 @@ function App() {
     setUploadMessage('Demo document added to the ingestion queue.')
   }
 
-  async function handleCsvUpload(file: File) {
+  async function handleCsvUpload(file: File, mappingProfileId?: string) {
     const text = await file.text()
-    const result = buildCsvImport(file.name, text, reports.length)
+    const profile = state.mappingProfiles.find((entry) => entry.id === mappingProfileId)
+    const result = buildCsvImport(file.name, text, reports.length, profile)
 
     if (!result.report || result.error) {
       setUploadMessage(result.error ?? 'CSV import failed.')
@@ -416,7 +474,12 @@ function App() {
     setValues((current) => [...result.values, ...current])
     setSelectedValueId(result.values[0]?.id ?? selectedValueId)
     setActiveView('review')
-    setUploadMessage(`Imported ${result.values.length} extracted values from ${file.name}.`)
+    const mappingNote = profile
+      ? ` using ${profile.name} v${profile.version}${result.schemaChanged ? ' (source schema changed)' : ''}`
+      : ''
+    setUploadMessage(
+      `Imported ${result.values.length} extracted values from ${file.name}${mappingNote}. ${result.mappingIssues.length} mapping issue(s).`,
+    )
   }
 
   async function resetDemoState() {
@@ -457,6 +520,7 @@ function App() {
         onSso={loginSso}
         onDemoLogin={loginDemo}
         oidcEnabled={authConfig?.oidcEnabled}
+        oidcLoginUrl={authConfig?.oidcLoginUrl}
         demoAuthEnabled={demoAuthAvailable}
         globalError={error}
       />
@@ -594,17 +658,21 @@ function App() {
                     >
                       Open lineage
                     </button>
-                    <button
-                      className="topbar-menu-item"
-                      role="menuitem"
-                      type="button"
-                      onClick={() => {
-                        void resetDemoState()
-                        setMoreOpen(false)
-                      }}
-                    >
-                      Reset demo
-                    </button>
+                    {demoAuthAvailable && currentUser?.role === 'admin' && (
+                      <button
+                        className="topbar-menu-item"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Reset all demo project data? This cannot be undone.')) {
+                            void resetDemoState()
+                          }
+                          setMoreOpen(false)
+                        }}
+                      >
+                        Reset demo
+                      </button>
+                    )}
                   </div>
                 </>
               )}
@@ -659,6 +727,7 @@ function App() {
             metrics={metrics}
             reports={reports}
             scurveData={scurveData}
+            schedule={scheduleHealth}
             values={values}
             onOpenReview={() => setActiveView('review')}
             onOpenValidation={() => setActiveView('validation')}
@@ -675,6 +744,7 @@ function App() {
 
         {activeView === 'ingestion' && (
           <Ingestion
+            mappingProfiles={state.mappingProfiles}
             reports={reports}
             uploadMessage={uploadMessage}
             onDownloadSample={downloadSampleCsv}
@@ -685,10 +755,14 @@ function App() {
 
         {activeView === 'review' && (
           <ReviewDesk
+            canEdit={canEdit}
+            costSheetRows={state.costSheetRows}
+            periodLocked={state.settings.reportingPeriod.locked}
             selectedValueId={selectedValue?.id ?? ''}
             values={values}
             onApprove={(id) => updateReviewState(id, 'approved', 'approved')}
             onBulkApprove={approveCleanValues}
+            onChangeMapping={updateExtractionMapping}
             onChangeValue={updateNormalizedValue}
             onRecordCorrection={recordCorrection}
             onReject={(id) => updateReviewState(id, 'needs_correction', 'rejected')}
@@ -721,6 +795,16 @@ function App() {
 
         {activeView === 'sccs' && <SccsView />}
 
+        {activeView === 'schedule' && <ScheduleControlView />}
+
+        {activeView === 'documents' && <DocumentIntelligenceView />}
+
+        {activeView === 'mapping-studio' && <MappingStudioView />}
+
+        {activeView === 'snowflake' && <SnowflakeSyncView />}
+
+        {activeView === 'planview' && <PlanviewSyncView />}
+
         {activeView === 'rules-of-credit' && <RulesOfCreditView />}
 
         {activeView === 'long-lead' && <LongLeadView />}
@@ -745,7 +829,7 @@ function App() {
 
         {activeView === 'forex' && <ForexView />}
 
-        {activeView === 'integrations' && <IntegrationsView />}
+        {activeView === 'integrations' && (isViewEnabled('integrations') ? <IntegrationsView /> : <UnsupportedProductionFeature />)}
 
         {activeView === 'risks' && <RiskOpportunityRegister />}
 
@@ -767,15 +851,15 @@ function App() {
 
         {activeView === 'predictive' && <PredictiveIntelligence />}
 
-        {activeView === 'engineering' && <EngineeringIntelligence />}
+        {activeView === 'engineering' && (isViewEnabled('engineering') ? <EngineeringIntelligence /> : <UnsupportedProductionFeature />)}
 
-        {activeView === 'model' && <ModelIntelligence />}
+        {activeView === 'model' && (isViewEnabled('model') ? <ModelIntelligence /> : <UnsupportedProductionFeature />)}
 
-        {activeView === 'reality' && <RealityIntelligence />}
+        {activeView === 'reality' && (isViewEnabled('reality') ? <RealityIntelligence /> : <UnsupportedProductionFeature />)}
 
         {activeView === 'governance' && <Governance />}
 
-        {activeView === 'decisions' && <Decisions />}
+        {activeView === 'decisions' && (isViewEnabled('decisions') ? <Decisions /> : <UnsupportedProductionFeature />)}
         </Suspense>
       </section>
 
@@ -796,12 +880,13 @@ interface DashboardProps {
   }
   reports: ReportDocument[]
   scurveData: ReturnType<typeof buildScurveFromCostSheet>
+  schedule: ReturnType<typeof scheduleSummary>
   values: ExtractedValue[]
   onOpenReview: () => void
   onOpenValidation: () => void
 }
 
-function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenValidation }: DashboardProps) {
+function Dashboard({ metrics, reports, scurveData, schedule, values, onOpenReview, onOpenValidation }: DashboardProps) {
   const pipelineStages = [
     { label: 'Received', count: reports.length, detail: 'contractor files' },
     { label: 'Extracted', count: values.length, detail: 'structured values' },
@@ -836,6 +921,18 @@ function Dashboard({ metrics, reports, scurveData, values, onOpenReview, onOpenV
           detail="AI extraction confidence"
         />
         <MetricCard label="Critical issues" value={metrics.criticalIssues.toString()} detail="must resolve before approval" tone="risk" />
+        <MetricCard
+          label="Schedule SPI"
+          value={schedule.activityCount > 0 ? schedule.spi.toFixed(2) : '—'}
+          detail={schedule.activityCount > 0 ? `${schedule.criticalCount} critical · ${schedule.lateCount} late` : 'P6 schedule not imported'}
+          tone={schedule.activityCount > 0 && schedule.spi < 1 ? 'risk' : 'default'}
+        />
+        <MetricCard
+          label="Forecast finish"
+          value={schedule.forecastFinish ?? '—'}
+          detail={schedule.activityCount > 0 ? `${schedule.finishVarianceDays >= 0 ? '+' : ''}${schedule.finishVarianceDays} days vs baseline` : 'Awaiting schedule data'}
+          tone={schedule.finishVarianceDays > 0 ? 'risk' : 'default'}
+        />
       </section>
 
       <section className="panel">
@@ -911,17 +1008,23 @@ function MetricCard({ label, value, detail, tone = 'default' }: { label: string;
 
 function Ingestion({
   reports,
+  mappingProfiles,
   uploadMessage,
   onCsvUpload,
   onDownloadSample,
   onSimulateUpload,
 }: {
   reports: ReportDocument[]
+  mappingProfiles: MappingProfile[]
   uploadMessage: string
-  onCsvUpload: (file: File) => void
+  onCsvUpload: (file: File, mappingProfileId?: string) => void
   onDownloadSample: () => void
   onSimulateUpload: () => void
 }) {
+  const availableProfiles = mappingProfiles.filter(
+    (profile) => profile.targetDomain === 'contractor_report' && profile.status === 'active',
+  )
+  const [mappingProfileId, setMappingProfileId] = useState('')
   return (
     <div className="view-stack">
       <section className="panel split-panel">
@@ -933,6 +1036,17 @@ function Ingestion({
             the browser. Each imported row gets confidence, mapping, validation status, and source lineage.
           </p>
           <div className="upload-actions">
+            <label className="field">
+              <span>Mapping profile</span>
+              <select value={mappingProfileId} onChange={(event) => setMappingProfileId(event.target.value)}>
+                <option value="">Automatic header aliases</option>
+                {availableProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.organization} · {profile.name} v{profile.version}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="file-drop">
               <input
                 accept=".csv,text/csv"
@@ -941,7 +1055,7 @@ function Ingestion({
                   const file = event.target.files?.[0]
 
                   if (file) {
-                    onCsvUpload(file)
+                    onCsvUpload(file, mappingProfileId || undefined)
                     event.target.value = ''
                   }
                 }}
@@ -954,9 +1068,11 @@ function Ingestion({
               <button className="ghost-button" onClick={onDownloadSample} type="button">
                 Download sample CSV
               </button>
-              <button className="ghost-button" onClick={onSimulateUpload} type="button">
-                Simulate document only
-              </button>
+              {simulatedFeaturesEnabled && (
+                <button className="ghost-button" onClick={onSimulateUpload} type="button">
+                  Simulate document only
+                </button>
+              )}
             </div>
           </div>
           <p className="upload-message">{uploadMessage}</p>
@@ -967,7 +1083,7 @@ function Ingestion({
             <li>CSV tabular contractor cost and progress exports</li>
             <li>Browser-side parsing; no document leaves the machine</li>
             <li>Warnings generated for low confidence, unmapped codes, and risk terms</li>
-            <li>OCR, P6, ERP, CAD, and PDF extraction remain future integration work</li>
+            <li>P6 CSV status imports are supported in Schedule Control; live APIs, OCR, ERP, CAD, and PDF extraction remain integration work</li>
           </ul>
         </div>
       </section>
@@ -1010,20 +1126,28 @@ function ReportCard({ report }: { report: ReportDocument }) {
 }
 
 interface ReviewDeskProps {
+  canEdit: boolean
+  costSheetRows: CostRow[]
+  periodLocked: boolean
   selectedValueId: string
   values: ExtractedValue[]
   onApprove: (id: string) => void
   onBulkApprove: (ids: string[]) => void
+  onChangeMapping: (id: string, draft: ExtractionMappingDraft) => void
   onChangeValue: (id: string, nextValue: string) => void
   onRecordCorrection: (id: string) => void
   onReject: (id: string) => void
   onSelect: (id: string) => void
 }
 function ReviewDesk({
+  canEdit,
+  costSheetRows,
+  periodLocked,
   selectedValueId,
   values,
   onApprove,
   onBulkApprove,
+  onChangeMapping,
   onChangeValue,
   onRecordCorrection,
   onReject,
@@ -1033,6 +1157,20 @@ function ReviewDesk({
   const [categoryFilter, setCategoryFilter] = useState<ExtractedValue['category'] | 'all'>('all')
   const [reviewFilter, setReviewFilter] = useState<ReviewStatus | 'all'>('all')
   const selectedValue = values.find((value) => value.id === selectedValueId) ?? values[0]
+  const editingDisabled = !canEdit || periodLocked
+  const editingDisabledReason = !canEdit
+    ? 'Your current role is read-only.'
+    : periodLocked
+      ? 'The reporting period is locked. Unlock it before changing mappings.'
+      : undefined
+  const matchingMappingCount = selectedValue
+    ? values.filter(
+        (value) =>
+          value.reportId === selectedValue.reportId &&
+          value.wbs === selectedValue.wbs &&
+          value.cbs === selectedValue.cbs,
+      ).length
+    : 0
   const categories = Array.from(new Set(values.map((value) => value.category)))
   const filteredValues = useMemo(
     () =>
@@ -1082,7 +1220,7 @@ function ReviewDesk({
             <span className="badge badge-watch">{filteredValues.length} visible</span>
             <button
               className="ghost-button"
-              disabled={cleanApprovalIds.length === 0}
+              disabled={editingDisabled || cleanApprovalIds.length === 0}
               onClick={() => onBulkApprove(cleanApprovalIds)}
               type="button"
             >
@@ -1154,7 +1292,8 @@ function ReviewDesk({
                 </tr>
               ) : (
                 filteredValues.map((value) => {
-                  const approvalBlocked = !canApproveValue(value)
+                  const approvalReason = approvalBlockReason(value)
+                  const approvalBlocked = editingDisabled || approvalReason !== null
 
                   return (
                     <tr className={selectedValueId === value.id ? 'selected-row' : ''} key={value.id}>
@@ -1168,6 +1307,7 @@ function ReviewDesk({
                         <input
                           aria-label={`Normalized value for ${value.field}`}
                           className="value-input"
+                          disabled={editingDisabled}
                           onChange={(event) => onChangeValue(value.id, event.target.value)}
                           type="number"
                           value={value.normalizedValue}
@@ -1209,12 +1349,17 @@ function ReviewDesk({
                             className="small-button"
                             disabled={approvalBlocked}
                             onClick={() => onApprove(value.id)}
-                            title={approvalBlocked ? 'Resolve critical validation issues before approval.' : 'Approve value'}
+                            title={editingDisabled ? editingDisabledReason : approvalReason ?? 'Approve value'}
                             type="button"
                           >
                             Approve
                           </button>
-                          <button className="small-button secondary" onClick={() => onReject(value.id)} type="button">
+                          <button
+                            className="small-button secondary"
+                            disabled={editingDisabled}
+                            onClick={() => onReject(value.id)}
+                            type="button"
+                          >
                             Flag
                           </button>
                         </div>
@@ -1226,6 +1371,17 @@ function ReviewDesk({
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="panel">
+        <ExtractionMappingEditor
+          costSheetRows={costSheetRows}
+          disabled={editingDisabled}
+          disabledReason={editingDisabledReason}
+          matchingCount={matchingMappingCount}
+          onSave={(draft) => onChangeMapping(selectedValue.id, draft)}
+          value={selectedValue}
+        />
       </section>
 
       <section className="two-column">
@@ -1250,7 +1406,12 @@ function ReviewDesk({
               <dd>{selectedValue.reviewer}</dd>
             </div>
           </dl>
-          <button className="ghost-button" onClick={() => onRecordCorrection(selectedValue.id)} type="button">
+          <button
+            className="ghost-button"
+            disabled={editingDisabled}
+            onClick={() => onRecordCorrection(selectedValue.id)}
+            type="button"
+          >
             Record correction note
           </button>
         </div>
@@ -1260,7 +1421,7 @@ function ReviewDesk({
           <h3>What blocks approval</h3>
           {!canApproveValue(selectedValue) && (
             <div className="notice-card risk">
-              Resolve critical validation issues before this value can be approved.
+              {approvalBlockReason(selectedValue)}
             </div>
           )}
           {selectedValue.validationIssues.length === 0 ? (
@@ -1282,8 +1443,8 @@ function ReviewDesk({
 }
 
 function Validation({ values, onSelect }: { values: ExtractedValue[]; onSelect: (id: string) => void }) {
-  const mappedValues = values.filter((value) => value.wbs !== 'N/A').length
-  const mappingCoverage = Math.round((mappedValues / values.length) * 100)
+  const mappedValues = values.filter((value) => !/UNMAPPED/i.test(`${value.wbs} ${value.cbs}`)).length
+  const mappingCoverage = values.length === 0 ? 0 : Math.round((mappedValues / values.length) * 100)
 
   return (
     <div className="view-stack">
@@ -1307,16 +1468,14 @@ function Validation({ values, onSelect }: { values: ExtractedValue[]; onSelect: 
         <div className="panel">
           <div className="panel-header">
             <div>
-              <span className="eyebrow">Rules engine</span>
-              <h3>Validation checks</h3>
+              <span className="eyebrow">Rule catalog · reference</span>
+              <h3>Configured validation checks</h3>
             </div>
           </div>
           <div className="rule-list">
             {validationRules.map((rule) => (
               <article className="rule-card" key={rule.id}>
-                <span className={`badge badge-${rule.result === 'fail' ? 'risk' : rule.result === 'warning' ? 'watch' : 'good'}`}>
-                  {rule.result}
-                </span>
+                <span className="badge badge-watch">Reference rule</span>
                 <h4>{rule.name}</h4>
                 <p>{rule.description}</p>
                 <small>Affects: {rule.affectedFields.join(', ')}</small>
@@ -1389,7 +1548,7 @@ function Lineage({ value }: { value: ExtractedValue }) {
         </div>
 
         <div className="panel source-preview">
-          <span className="eyebrow">Source preview</span>
+          <span className="eyebrow">Structured preview · not the source document</span>
           <div className="sheet-preview">
             <div className="sheet-row header">
               <span>WBS</span>

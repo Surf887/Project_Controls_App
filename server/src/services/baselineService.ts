@@ -1,12 +1,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { randomUUID } from 'node:crypto'
 import type { CostRow } from '@pc/data/costSheet.js'
 import type { BasisOfEstimate, WbsNode } from '@pc/store/types.js'
 import { assertSafeId, resolveUnderRoot } from '../utils/safePath.js'
+import { isPostgresEnabled, query } from '../db/postgres.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const baselineRoot = path.resolve(__dirname, '../../data/baselines')
+
+function baselineRoot(): string {
+  return process.env.BASELINE_DIR ?? path.resolve(__dirname, '../../data/baselines')
+}
 
 export interface BaselineSnapshot {
   id: string
@@ -24,7 +29,7 @@ export interface BaselineSnapshot {
 }
 
 function projectDir(projectId: string): string {
-  return resolveUnderRoot(baselineRoot, assertSafeId(projectId, 'projectId'))
+  return resolveUnderRoot(baselineRoot(), assertSafeId(projectId, 'projectId'))
 }
 
 function snapshotPath(projectId: string, snapshotId: string): string {
@@ -35,7 +40,7 @@ function ensureDir(projectId: string) {
   fs.mkdirSync(projectDir(projectId), { recursive: true })
 }
 
-export function createBaselineSnapshot(input: {
+export async function createBaselineSnapshot(input: {
   projectId: string
   label: string
   status?: BaselineSnapshot['status']
@@ -45,9 +50,8 @@ export function createBaselineSnapshot(input: {
   wbsNodes: WbsNode[]
   basisOfEstimate: BasisOfEstimate
   notes?: string
-}): BaselineSnapshot {
-  ensureDir(input.projectId)
-  const id = `BL-${Date.now()}`
+}): Promise<BaselineSnapshot> {
+  const id = `BL-${randomUUID()}`
   const bacTotal = input.costSheetRows
     .filter((row) => row.parentId === null)
     .reduce((sum, row) => sum + row.originalBudget + row.approvedChanges, 0)
@@ -67,11 +71,38 @@ export function createBaselineSnapshot(input: {
     notes: input.notes,
   }
 
+  if (isPostgresEnabled()) {
+    await query(
+      `INSERT INTO baseline_snapshots
+        (id, project_id, label, status, snapshot, bac_total, created_by, created_at)
+       VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7,$8)`,
+      [
+        snapshot.id,
+        snapshot.projectId,
+        snapshot.label,
+        snapshot.status,
+        JSON.stringify(snapshot),
+        snapshot.bacTotal,
+        snapshot.createdBy,
+        snapshot.createdAt,
+      ],
+    )
+    return snapshot
+  }
+
+  ensureDir(input.projectId)
   fs.writeFileSync(snapshotPath(input.projectId, id), JSON.stringify(snapshot, null, 2), 'utf8')
   return snapshot
 }
 
-export function listBaselineSnapshots(projectId: string): BaselineSnapshot[] {
+export async function listBaselineSnapshots(projectId: string): Promise<BaselineSnapshot[]> {
+  if (isPostgresEnabled()) {
+    const result = await query<{ snapshot: BaselineSnapshot }>(
+      `SELECT snapshot FROM baseline_snapshots WHERE project_id = $1 ORDER BY created_at DESC`,
+      [assertSafeId(projectId, 'projectId')],
+    )
+    return result.rows.map((row) => row.snapshot)
+  }
   const dir = projectDir(projectId)
   if (!fs.existsSync(dir)) {
     return []
@@ -83,7 +114,14 @@ export function listBaselineSnapshots(projectId: string): BaselineSnapshot[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-export function getBaselineSnapshot(projectId: string, snapshotId: string): BaselineSnapshot | null {
+export async function getBaselineSnapshot(projectId: string, snapshotId: string): Promise<BaselineSnapshot | null> {
+  if (isPostgresEnabled()) {
+    const result = await query<{ snapshot: BaselineSnapshot }>(
+      `SELECT snapshot FROM baseline_snapshots WHERE project_id = $1 AND id = $2`,
+      [assertSafeId(projectId, 'projectId'), assertSafeId(snapshotId, 'snapshotId')],
+    )
+    return result.rows[0]?.snapshot ?? null
+  }
   const file = snapshotPath(projectId, snapshotId)
   if (!fs.existsSync(file)) {
     return null
@@ -91,12 +129,25 @@ export function getBaselineSnapshot(projectId: string, snapshotId: string): Base
   return JSON.parse(fs.readFileSync(file, 'utf8')) as BaselineSnapshot
 }
 
-export function lockBaselineSnapshot(projectId: string, snapshotId: string): BaselineSnapshot | null {
-  const snapshot = getBaselineSnapshot(projectId, snapshotId)
+export async function lockBaselineSnapshot(projectId: string, snapshotId: string): Promise<BaselineSnapshot | null> {
+  const snapshot = await getBaselineSnapshot(projectId, snapshotId)
   if (!snapshot || snapshot.status === 'locked') {
     return snapshot
   }
   snapshot.status = 'locked'
+  if (isPostgresEnabled()) {
+    await query(
+      `UPDATE baseline_snapshots
+       SET status = 'locked', snapshot = $3::jsonb
+       WHERE project_id = $1 AND id = $2`,
+      [
+        assertSafeId(projectId, 'projectId'),
+        assertSafeId(snapshotId, 'snapshotId'),
+        JSON.stringify(snapshot),
+      ],
+    )
+    return snapshot
+  }
   fs.writeFileSync(snapshotPath(projectId, snapshotId), JSON.stringify(snapshot, null, 2), 'utf8')
   return snapshot
 }

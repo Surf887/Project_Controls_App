@@ -1,16 +1,18 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { teamReportTemplates } from '../data/governance'
 import { downloadCsv, generateTeamReportCsv } from '../engine/governance'
 import { useProjectStore } from '../store/projectStore'
+import { fetchImmutableAudit, type ImmutableAuditEvent } from '../api/client'
 
 export function TeamReportsView() {
-  const { state, dispatch } = useProjectStore()
+  const { state, dispatch, currentUser } = useProjectStore()
 
   function generate(templateId: string) {
     const template = teamReportTemplates.find((item) => item.id === templateId)
     if (!template) return
 
-    const report = generateTeamReportCsv(template, state, 'You')
+    const report = generateTeamReportCsv(template, state, currentUser?.name ?? 'Report user')
     dispatch({ type: 'ADD_GENERATED_REPORT', payload: report })
     downloadCsv(`${template.id}-${Date.now()}.csv`, report.content)
   }
@@ -86,7 +88,33 @@ export function TeamReportsView() {
 }
 
 export function AuditTrailView() {
-  const { state } = useProjectStore()
+  const { state, backendEnabled } = useProjectStore()
+  const [events, setEvents] = useState<ImmutableAuditEvent[]>([])
+  const [integrity, setIntegrity] = useState<{ ok: boolean; errors: string[] } | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!backendEnabled) return
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    void fetchImmutableAudit(state.meta.id)
+      .then((result) => {
+        if (cancelled) return
+        setEvents(result.events)
+        setIntegrity(result.integrity)
+      })
+      .catch((loadError) => {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Audit trail unavailable')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [backendEnabled, state.meta.id])
 
   return (
     <div className="view-stack">
@@ -99,9 +127,60 @@ export function AuditTrailView() {
       <section className="panel">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">Immutable log</span>
-            <h3>Forecast, change, and settings history</h3>
+            <span className="eyebrow">Server immutable audit</span>
+            <h3>HMAC-verified action history</h3>
           </div>
+          {integrity && (
+            <span className={`badge ${integrity.ok ? 'badge-good' : 'badge-risk'}`}>
+              {integrity.ok ? 'Chain verified' : 'Integrity failure'}
+            </span>
+          )}
+        </div>
+        {!backendEnabled && <p className="empty-state">Connect to the API to verify the immutable audit chain.</p>}
+        {loading && <p className="empty-state">Loading immutable audit events…</p>}
+        {error && <p className="notice-card risk">{error}</p>}
+        {integrity && !integrity.ok && (
+          <p className="notice-card risk">{integrity.errors.join('; ')}</p>
+        )}
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Actor</th>
+                <th>Team</th>
+                <th>Type</th>
+                <th>Entity</th>
+                <th>Action</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && backendEnabled && events.length === 0 && (
+                <tr><td colSpan={7}>No immutable audit events recorded yet.</td></tr>
+              )}
+              {events.map((entry) => (
+                <tr key={entry.id}>
+                  <td>{entry.at}</td>
+                  <td><strong>{entry.actor}</strong></td>
+                  <td>{entry.team}</td>
+                  <td>{entry.entityType}</td>
+                  <td>{entry.entityId}</td>
+                  <td>{entry.action}</td>
+                  <td>{entry.summary}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <span className="eyebrow">Workflow history</span>
+            <h3>Project-state activity for in-app drill-down</h3>
+          </div>
+          <span className="badge badge-watch">Not the immutable chain</span>
         </div>
         <div className="table-wrap">
           <table>
@@ -124,9 +203,7 @@ export function AuditTrailView() {
                   <td>{entry.team}</td>
                   <td>{entry.entityType}</td>
                   <td>{entry.entityId}</td>
-                  <td>
-                    <Link to={`/audit/${entry.id}`}>{entry.action}</Link>
-                  </td>
+                  <td><Link to={`/audit/${entry.id}`}>{entry.action}</Link></td>
                   <td>{entry.summary}</td>
                 </tr>
               ))}

@@ -11,6 +11,9 @@ import {
 import { reconcileContingencyInState } from '../engine/projectReconcile'
 import { syncCommitmentsToCostSheet } from '../engine/commitmentSync'
 import { applyApprovedExtractions } from '../engine/ingestionPosting'
+import { findOwningControlAccount } from '../engine/applyExtractionsCore'
+import { postCostTransactionBatch } from '../engine/costTransactionStaging'
+import { postPlanviewBatch } from '../engine/planviewStaging'
 import { approveContingencyDraw, submitContingencyDraw } from '../engine/contingency'
 import { applyValuesUpdate } from '../engine/extractionIntegrity'
 import { validateProjectAction } from '../engine/actionValidation'
@@ -31,14 +34,59 @@ function normalizeState(state: ProjectState): ProjectState {
   const needsSettings = !state.settings.reportingPeriod || !state.settings.fx
   const needsSccs = state.costSheetRows.some((row) => row.parentId === null && !row.sccs?.composite)
   const needsPostings = state.ingestionPostings == null
+  const needsSchedule =
+    state.scheduleActivities == null ||
+    state.scheduleRelationships == null ||
+    state.scheduleImports == null
+  const needsDocumentIntelligence =
+    state.forecastDrivers == null || state.sourceDocuments == null
+  const needsMappingProfiles = state.mappingProfiles == null
+  const needsCostTransactions =
+    state.costTransactions == null || state.costTransactionBatches == null
+  const needsPlanview = state.planviewItems == null || state.planviewSyncBatches == null
 
-  if (!needsSettings && !needsSccs && !needsPostings) {
+  if (
+    !needsSettings &&
+    !needsSccs &&
+    !needsPostings &&
+    !needsSchedule &&
+    !needsDocumentIntelligence &&
+    !needsMappingProfiles &&
+    !needsCostTransactions &&
+    !needsPlanview
+  ) {
     return state
   }
 
   return {
     ...state,
     ...(needsPostings ? { ingestionPostings: [] } : {}),
+    ...(needsSchedule
+      ? {
+          scheduleActivities: state.scheduleActivities ?? [],
+          scheduleRelationships: state.scheduleRelationships ?? [],
+          scheduleImports: state.scheduleImports ?? [],
+        }
+      : {}),
+    ...(needsDocumentIntelligence
+      ? {
+          forecastDrivers: state.forecastDrivers ?? [],
+          sourceDocuments: state.sourceDocuments ?? [],
+        }
+      : {}),
+    ...(needsMappingProfiles ? { mappingProfiles: [] } : {}),
+    ...(needsCostTransactions
+      ? {
+          costTransactions: state.costTransactions ?? [],
+          costTransactionBatches: state.costTransactionBatches ?? [],
+        }
+      : {}),
+    ...(needsPlanview
+      ? {
+          planviewItems: state.planviewItems ?? [],
+          planviewSyncBatches: state.planviewSyncBatches ?? [],
+        }
+      : {}),
     ...(needsSettings
       ? {
           settings: {
@@ -72,6 +120,9 @@ function applyContingencyIfNeeded(state: ProjectState): ProjectState {
 }
 
 export function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
+  if (action.type !== 'HYDRATE' && action.type !== 'RESET') {
+    state = normalizeState(state)
+  }
   switch (action.type) {
     case 'HYDRATE':
       return normalizeState(action.payload)
@@ -494,9 +545,351 @@ export function projectReducer(state: ProjectState, action: ProjectAction): Proj
     case 'SET_REPORTS':
       return { ...state, reports: action.payload }
     case 'SET_VALUES':
+      if (isPeriodLocked(state)) {
+        return state
+      }
       return applyValuesUpdate(state, action.payload, 'Cost Controller')
     case 'SET_SELECTED_VALUE':
       return { ...state, selectedValueId: action.payload }
+    case 'IMPORT_SCHEDULE': {
+      const { batch, activities, relationships } = action.payload
+      const accepted = batch.status !== 'rejected'
+      const sourceSystem = batch.sourceSystem
+      const sameSourceFamily = (candidate: typeof sourceSystem) =>
+        candidate === sourceSystem ||
+        (candidate.startsWith('p6_') && sourceSystem.startsWith('p6_'))
+      const rememberedMappings = new Map(
+        state.scheduleActivities
+          .filter(
+            (activity) =>
+              sameSourceFamily(activity.sourceSystem) &&
+              activity.mappingStatus === 'manual' &&
+              findOwningControlAccount(state.costSheetRows, activity.wbs) != null,
+          )
+          .map((activity) => [activity.sourceActivityId, activity.wbs] as const),
+      )
+      const mappedActivities = activities.map((activity) => {
+        const rememberedWbs = rememberedMappings.get(activity.sourceActivityId)
+        return rememberedWbs
+          ? { ...activity, wbs: rememberedWbs, mappingStatus: 'manual' as const }
+          : activity
+      })
+      return {
+        ...state,
+        scheduleActivities: accepted
+          ? [
+              ...state.scheduleActivities.filter((activity) => !sameSourceFamily(activity.sourceSystem)),
+              ...mappedActivities,
+            ]
+          : state.scheduleActivities,
+        scheduleRelationships: accepted
+          ? [
+              ...state.scheduleRelationships.filter(
+                (relationship) => !sameSourceFamily(relationship.sourceSystem),
+              ),
+              ...relationships,
+            ]
+          : state.scheduleRelationships,
+        scheduleImports: [batch, ...state.scheduleImports].slice(0, 50),
+        auditLog: appendAudit(state, {
+          actor: batch.importedBy,
+          team: 'Planning & scheduling',
+          entityType: 'schedule',
+          entityId: batch.id,
+          action: batch.status,
+          summary:
+            batch.status === 'rejected'
+              ? `Rejected schedule import ${batch.fileName} (${batch.errorCount} errors).`
+              : `Imported ${batch.activityCount} schedule activities from ${batch.fileName}.`,
+        }),
+      }
+    }
+    case 'UPDATE_SCHEDULE_ACTIVITY_MAPPING': {
+      const activity = state.scheduleActivities.find((entry) => entry.id === action.payload.activityId)
+      if (!activity) return state
+      return {
+        ...state,
+        scheduleActivities: state.scheduleActivities.map((entry) =>
+          entry.id === action.payload.activityId
+            ? { ...entry, wbs: action.payload.wbs, mappingStatus: 'manual' as const }
+            : entry,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Planning & scheduling',
+          entityType: 'schedule',
+          entityId: activity.id,
+          action: 'mapped',
+          summary: `Mapped schedule activity ${activity.sourceActivityId} to WBS ${action.payload.wbs}.`,
+        }),
+      }
+    }
+    case 'IMPORT_DOCUMENT_DRAFTS': {
+      const nextDrivers = new Map(state.forecastDrivers.map((driver) => [driver.id, driver]))
+      action.payload.drivers.forEach((driver) => nextDrivers.set(driver.id, driver))
+      return {
+        ...state,
+        sourceDocuments: [
+          action.payload.document,
+          ...state.sourceDocuments.filter((document) => document.id !== action.payload.document.id),
+        ].slice(0, 100),
+        forecastDrivers: [...nextDrivers.values()],
+        auditLog: appendAudit(state, {
+          actor: action.payload.document.uploadedBy,
+          team: 'Document intelligence',
+          entityType: 'document',
+          entityId: action.payload.document.id,
+          action: 'extracted',
+          summary: `Extracted ${action.payload.drivers.length} draft forecast driver(s) from ${action.payload.document.fileName}.`,
+        }),
+      }
+    }
+    case 'UPDATE_FORECAST_DRIVER': {
+      const exists = state.forecastDrivers.some((driver) => driver.id === action.payload.id)
+      if (!exists) return state
+      return {
+        ...state,
+        forecastDrivers: state.forecastDrivers.map((driver) =>
+          driver.id === action.payload.id ? action.payload : driver,
+        ),
+        sourceDocuments: state.sourceDocuments.map((document) =>
+          document.id === action.payload.evidence?.documentId
+            ? {
+                ...document,
+                draftDrivers: document.draftDrivers.map((driver) =>
+                  driver.id === action.payload.id ? action.payload : driver,
+                ),
+              }
+            : document,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.reviewedBy ?? action.payload.createdBy,
+          team: 'Forecast control',
+          entityType: 'forecast',
+          entityId: action.payload.id,
+          action: action.payload.status,
+          summary: `${action.payload.status} forecast driver ${action.payload.title}.`,
+        }),
+      }
+    }
+    case 'DECIDE_FORECAST_DRIVER': {
+      const existing = state.forecastDrivers.find((driver) => driver.id === action.payload.driverId)
+      if (!existing) return state
+      const updated = {
+        ...existing,
+        status: action.payload.decision,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: action.payload.actor,
+        reviewComment: action.payload.comment,
+      } as const
+      const forecastDrivers = state.forecastDrivers.map((driver) =>
+        driver.id === updated.id ? updated : driver,
+      )
+      return {
+        ...state,
+        forecastDrivers,
+        sourceDocuments: state.sourceDocuments.map((document) => {
+          if (document.id !== updated.evidence?.documentId) return document
+          const draftDrivers = document.draftDrivers.map((driver) =>
+            driver.id === updated.id ? updated : driver,
+          )
+          const complete = draftDrivers.every(
+            (driver) => driver.status === 'approved' || driver.status === 'rejected',
+          )
+          return {
+            ...document,
+            draftDrivers,
+            status: complete
+              ? draftDrivers.some((driver) => driver.status === 'approved')
+                ? 'accepted' as const
+                : 'rejected' as const
+              : document.status,
+          }
+        }),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Forecast approval',
+          entityType: 'forecast',
+          entityId: updated.id,
+          action: action.payload.decision,
+          summary: `${action.payload.decision} document forecast driver ${updated.title}.`,
+        }),
+      }
+    }
+    case 'UPSERT_MAPPING_PROFILE': {
+      const existing = state.mappingProfiles.find((profile) => profile.id === action.payload.id)
+      return {
+        ...state,
+        mappingProfiles: [
+          action.payload,
+          ...state.mappingProfiles.filter((profile) => profile.id !== action.payload.id),
+        ],
+        auditLog: appendAudit(state, {
+          actor: action.payload.updatedBy,
+          team: 'Data governance',
+          entityType: 'settings',
+          entityId: action.payload.id,
+          action: existing ? 'updated' : 'created',
+          summary: `${existing ? 'Updated' : 'Created'} mapping profile ${action.payload.name} v${action.payload.version}.`,
+        }),
+      }
+    }
+    case 'DELETE_MAPPING_PROFILE': {
+      const profile = state.mappingProfiles.find((entry) => entry.id === action.payload.profileId)
+      if (!profile) return state
+      return {
+        ...state,
+        mappingProfiles: state.mappingProfiles.filter((entry) => entry.id !== action.payload.profileId),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Data governance',
+          entityType: 'settings',
+          entityId: profile.id,
+          action: 'deleted',
+          summary: `Deleted mapping profile ${profile.name}.`,
+        }),
+      }
+    }
+    case 'IMPORT_COST_TRANSACTION_BATCH': {
+      const replacementIds = new Set(
+        action.payload.transactions
+          .filter((transaction) => !transaction.duplicate)
+          .map((transaction) => transaction.externalId),
+      )
+      return {
+        ...state,
+        costTransactions: [
+          ...action.payload.transactions,
+          ...state.costTransactions.filter(
+            (transaction) =>
+              transaction.sourceSystem !== action.payload.batch.sourceSystem ||
+              !replacementIds.has(transaction.externalId),
+          ),
+        ],
+        costTransactionBatches: [
+          action.payload.batch,
+          ...state.costTransactionBatches.filter((batch) => batch.id !== action.payload.batch.id),
+        ].slice(0, 100),
+        auditLog: appendAudit(state, {
+          actor: action.payload.batch.importedBy,
+          team: 'Cost integration',
+          entityType: 'accrual',
+          entityId: action.payload.batch.id,
+          action: action.payload.batch.status,
+          summary: `Staged ${action.payload.batch.rowCount} mapped cost transaction(s) from ${action.payload.batch.dataset}.`,
+        }),
+      }
+    }
+    case 'UPDATE_COST_TRANSACTION_MAPPING':
+      return {
+        ...state,
+        costTransactions: state.costTransactions.map((transaction) =>
+          transaction.id === action.payload.transactionId
+            ? { ...transaction, wbs: action.payload.wbs, mappingStatus: 'mapped' as const }
+            : transaction,
+        ),
+      }
+    case 'DECIDE_COST_TRANSACTION_BATCH': {
+      const batch = state.costTransactionBatches.find((entry) => entry.id === action.payload.batchId)
+      if (!batch) return state
+      return {
+        ...state,
+        costTransactions: state.costTransactions.map((transaction) =>
+          transaction.batchId === batch.id && !transaction.duplicate
+            ? { ...transaction, status: action.payload.decision }
+            : transaction,
+        ),
+        costTransactionBatches: state.costTransactionBatches.map((entry) =>
+          entry.id === batch.id ? { ...entry, status: action.payload.decision } : entry,
+        ),
+        auditLog: appendAudit(state, {
+          actor: action.payload.actor,
+          team: 'Cost integration approval',
+          entityType: 'accrual',
+          entityId: batch.id,
+          action: action.payload.decision,
+          summary: `${action.payload.decision} Snowflake cost transaction batch ${batch.id}.`,
+        }),
+      }
+    }
+    case 'POST_COST_TRANSACTION_BATCH': {
+      const posted = postCostTransactionBatch(state, action.payload.batchId, action.payload.actor)
+      if (posted === state) return state
+      return {
+        ...posted,
+        auditLog: appendAudit(posted, {
+          actor: action.payload.actor,
+          team: 'Cost control',
+          entityType: 'cost_sheet',
+          entityId: action.payload.batchId,
+          action: 'posted',
+          summary: `Posted approved Snowflake transaction batch ${action.payload.batchId}.`,
+        }),
+      }
+    }
+    case 'IMPORT_PLANVIEW_BATCH': {
+      const replacementIds = new Set(
+        action.payload.items.filter((item) => !item.duplicate).map((item) => item.externalId),
+      )
+      return {
+        ...state,
+        planviewItems: [
+          ...action.payload.items,
+          ...state.planviewItems.filter((item) => !replacementIds.has(item.externalId)),
+        ],
+        planviewSyncBatches: [
+          action.payload.batch,
+          ...state.planviewSyncBatches.filter((batch) => batch.id !== action.payload.batch.id),
+        ].slice(0, 100),
+        auditLog: appendAudit(state, {
+          actor: action.payload.batch.importedBy,
+          team: 'Project governance integration',
+          entityType: 'settings',
+          entityId: action.payload.batch.id,
+          action: action.payload.batch.status,
+          summary: `Staged ${action.payload.batch.rowCount} Planview governance item(s).`,
+        }),
+      }
+    }
+    case 'UPDATE_PLANVIEW_ITEM_MAPPING':
+      return {
+        ...state,
+        planviewItems: state.planviewItems.map((item) =>
+          item.id === action.payload.itemId
+            ? { ...item, wbs: action.payload.wbs, mappingStatus: 'mapped' as const }
+            : item,
+        ),
+      }
+    case 'DECIDE_PLANVIEW_BATCH': {
+      const batch = state.planviewSyncBatches.find((entry) => entry.id === action.payload.batchId)
+      if (!batch) return state
+      return {
+        ...state,
+        planviewItems: state.planviewItems.map((item) =>
+          item.batchId === batch.id && !item.duplicate
+            ? { ...item, status: action.payload.decision }
+            : item,
+        ),
+        planviewSyncBatches: state.planviewSyncBatches.map((entry) =>
+          entry.id === batch.id ? { ...entry, status: action.payload.decision } : entry,
+        ),
+      }
+    }
+    case 'POST_PLANVIEW_BATCH': {
+      const posted = postPlanviewBatch(state, action.payload.batchId, action.payload.actor)
+      if (posted === state) return state
+      return {
+        ...posted,
+        auditLog: appendAudit(posted, {
+          actor: action.payload.actor,
+          team: 'Project controls',
+          entityType: 'settings',
+          entityId: action.payload.batchId,
+          action: 'posted',
+          summary: `Posted approved Planview governance batch ${action.payload.batchId}.`,
+        }),
+      }
+    }
     default:
       return state
   }

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { navGroups } from '../data/navigationModel'
 import { monthlyClosePath, pathForView } from '../routes/viewPaths'
 import { costControlLogCount, costControlLogPath } from '../data/costControlLogs'
+import { isViewEnabled } from '../config/features'
 
 interface CommandPaletteProps {
   open: boolean
@@ -12,10 +13,12 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const items = useMemo(() => {
     const navItems = navGroups.flatMap((group) =>
-      group.items.map((item) => ({
+      group.items.filter((item) => isViewEnabled(item.id)).map((item) => ({
         id: item.id,
         label: item.label,
         eyebrow: `${group.group} · ${item.eyebrow}`,
@@ -89,6 +92,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     }
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    inputRef.current?.focus()
+    return () => previous?.focus()
+  }, [open])
+
   if (!open) {
     return null
   }
@@ -102,21 +112,39 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     <div className="command-palette-backdrop" onClick={onClose} role="presentation">
       <div
         className="command-palette"
+        ref={dialogRef}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            onClose()
+            return
+          }
+          if (event.key !== 'Tab') return
+          const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('input, button:not(:disabled)')
+          if (!focusable?.length) return
+          const first = focusable[0]
+          const last = focusable[focusable.length - 1]
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault()
+            last.focus()
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault()
+            first.focus()
+          }
+        }}
         role="dialog"
         aria-label="Command palette"
         data-testid="command-palette"
       >
         <input
           autoFocus
+          ref={inputRef}
           className="command-palette-input"
           placeholder="Search views, close steps, exports… (Ctrl+K)"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              onClose()
-            }
             if (event.key === 'Enter' && filtered[0]) {
               go(filtered[0].path)
             }

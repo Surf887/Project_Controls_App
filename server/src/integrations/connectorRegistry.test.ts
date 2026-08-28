@@ -1,5 +1,14 @@
-import { describe, expect, it } from 'vitest'
-import { validatePartialLoad } from './connectorRegistry.js'
+import { afterEach, describe, expect, it } from 'vitest'
+import { runSyncJob, validatePartialLoad } from './connectorRegistry.js'
+
+const originalNodeEnv = process.env.NODE_ENV
+const originalSimulationFlag = process.env.ENABLE_SIMULATED_INTEGRATIONS
+
+afterEach(() => {
+  process.env.NODE_ENV = originalNodeEnv
+  if (originalSimulationFlag == null) delete process.env.ENABLE_SIMULATED_INTEGRATIONS
+  else process.env.ENABLE_SIMULATED_INTEGRATIONS = originalSimulationFlag
+})
 
 describe('validatePartialLoad', () => {
   it('skips unmatched WBS without silent overwrite (EC-INT-001)', () => {
@@ -22,5 +31,18 @@ describe('validatePartialLoad', () => {
     const result = validatePartialLoad([{ wbs: 'A.01', amount: -1 }], new Set(['A.01']))
     expect(result.ok).toBe(false)
     expect(result.errors.length).toBeGreaterThan(0)
+  })
+
+  it('never returns simulated SAP success in production', async () => {
+    process.env.NODE_ENV = 'production'
+    process.env.ENABLE_SIMULATED_INTEGRATIONS = 'true'
+    const result = await runSyncJob({
+      connectorId: 'sap-s4',
+      domain: 'erp',
+      direction: 'inbound',
+    })
+    expect(result.status).toBe('failed')
+    expect(result.recordsProcessed).toBe(0)
+    expect(result.errors.join(' ')).toMatch(/simulated sync is disabled/i)
   })
 })

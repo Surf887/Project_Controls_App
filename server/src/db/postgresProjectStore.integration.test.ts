@@ -1,0 +1,174 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { applyProjectAction } from '@pc/store/projectReducer.js'
+import { validateProjectAction } from '@pc/engine/actionValidation.js'
+import type { AuthUser } from '../auth/rbac.js'
+import { closePool, query, runSqlMigrations } from './postgres.js'
+import { PostgresProjectStore } from './postgresProjectStore.js'
+import { VersionConflictError } from './store.js'
+import {
+  appendPostgresAudit,
+  listImmutableAuditAsync,
+  verifyAuditChainAsync,
+} from '../services/auditService.js'
+import {
+  createBaselineSnapshot,
+  getBaselineSnapshot,
+  listBaselineSnapshots,
+  lockBaselineSnapshot,
+} from '../services/baselineService.js'
+import {
+  createSourceDocument,
+  getSourceDocumentContent,
+  listSourceDocuments,
+} from '../services/documentStore.js'
+import type { SourceDocument } from '@pc/data/documentIntelligence.js'
+import {
+  claimIngestionJob,
+  completeIngestionJob,
+  enqueueIngestionJob,
+  getIngestionJob,
+} from '../services/ingestionJobService.js'
+import { isSessionActive, issueSession, revokeSession } from '../auth/sessionStore.js'
+
+const describePostgres = process.env.DATABASE_URL ? describe : describe.skip
+
+describePostgres('Postgres project store integration', () => {
+  let store: PostgresProjectStore
+  const actor: AuthUser = { id: 'postgres-test', name: 'Postgres test', role: 'admin' }
+
+  beforeAll(async () => {
+    await runSqlMigrations()
+    store = new PostgresProjectStore()
+    await store.init()
+  })
+
+  afterAll(async () => {
+    await closePool()
+  })
+
+  it('applies every SQL migration and seeds readable projects', async () => {
+    const migrations = await query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations')
+    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(8)
+
+    const projects = await store.listProjectsAsync()
+    const active = await store.getActiveProjectRecordAsync()
+    expect(projects.length).toBeGreaterThan(0)
+    expect(active.state.meta.id).toBeTruthy()
+    expect(active.version).toBeGreaterThan(0)
+  })
+
+  it('atomically rejects a stale state version', async () => {
+    const current = await store.getActiveProjectRecordAsync()
+    const projectId = current.state.meta.id
+    const action = {
+      type: 'SET_META' as const,
+      payload: { baselineLabel: `Postgres integration ${Date.now()}` },
+    }
+    const apply = () =>
+      store.applyActionAsync(
+        projectId,
+        action,
+        actor,
+        current.version,
+        applyProjectAction,
+        (state, nextAction) => validateProjectAction(state, nextAction),
+        (client, auditedProjectId, auditedActor, auditedAction, version) =>
+          appendPostgresAudit(client, auditedProjectId, {
+            actor: auditedActor.name,
+            actorId: auditedActor.id,
+            team: auditedActor.role,
+            entityType: 'project',
+            entityId: auditedProjectId,
+            action: auditedAction.type,
+            summary: `Dispatched ${auditedAction.type}`,
+            payload: { actionType: auditedAction.type, version },
+          }).then(() => undefined),
+      )
+
+    const updated = await apply()
+    expect(updated.version).toBe(current.version + 1)
+    const audit = await listImmutableAuditAsync(projectId)
+    expect(audit[0]?.action).toBe('SET_META')
+    expect((await verifyAuditChainAsync(projectId)).ok).toBe(true)
+    await expect(apply()).rejects.toBeInstanceOf(VersionConflictError)
+  })
+
+  it('persists and locks baseline snapshots in Postgres', async () => {
+    const current = await store.getActiveProjectRecordAsync()
+    const snapshot = await createBaselineSnapshot({
+      projectId: current.state.meta.id,
+      label: 'Integration baseline',
+      createdBy: actor.name,
+      createdById: actor.id,
+      costSheetRows: current.state.costSheetRows,
+      wbsNodes: current.state.wbsNodes,
+      basisOfEstimate: current.state.basisOfEstimate,
+    })
+
+    expect((await listBaselineSnapshots(current.state.meta.id)).some((item) => item.id === snapshot.id)).toBe(true)
+    expect((await getBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('sanctioned')
+    expect((await lockBaselineSnapshot(current.state.meta.id, snapshot.id))?.status).toBe('locked')
+  })
+
+  it('persists encrypted source documents in Postgres', async () => {
+    process.env.DOCUMENT_ENCRYPTION_KEY = 'postgres-document-test-key'
+    const current = await store.getActiveProjectRecordAsync()
+    const document: SourceDocument = {
+      id: `DOC-${Date.now()}`,
+      projectId: current.state.meta.id,
+      fileName: 'forecast.txt',
+      mimeType: 'text/plain',
+      sizeBytes: 20,
+      sha256: `${Date.now()}`.padStart(64, '0'),
+      provider: 'local',
+      status: 'uploaded',
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: actor.name,
+      draftDrivers: [],
+    }
+    const content = Buffer.from('private forecast USD 1m')
+    await createSourceDocument(document, content)
+    expect((await listSourceDocuments(current.state.meta.id)).some((entry) => entry.id === document.id)).toBe(true)
+    expect((await getSourceDocumentContent(current.state.meta.id, document.id))?.equals(content)).toBe(true)
+  })
+
+  it('claims asynchronous ingestion jobs once across workers', async () => {
+    const current = await store.getActiveProjectRecordAsync()
+    await query(
+      `INSERT INTO users (id, email, name, role, provider)
+       VALUES ($1,$2,$3,'cost_controller','oidc')
+       ON CONFLICT (id) DO NOTHING`,
+      ['queue-test-user', 'queue-test@example.com', 'Queue Tester'],
+    )
+    const queued = await enqueueIngestionJob({
+      projectId: current.state.meta.id,
+      jobType: 'ocr_document',
+      request: { documentId: 'DOC-queue-test' },
+      idempotencyKey: `queue-${Date.now()}`,
+      createdById: 'queue-test-user',
+      createdByName: 'Queue Tester',
+      createdByRole: 'cost_controller',
+    })
+    const claimed = await claimIngestionJob('worker-a')
+    expect(claimed?.id).toBe(queued.id)
+    expect(await claimIngestionJob('worker-b')).toBeNull()
+    await completeIngestionJob(queued.id, 'worker-a', { ok: true })
+    expect((await getIngestionJob(current.state.meta.id, queued.id))?.status).toBe('completed')
+  })
+
+  it('persists and revokes authenticated sessions in Postgres', async () => {
+    await query(
+      `INSERT INTO users (id, email, name, role, provider)
+       VALUES ($1,$2,$3,'viewer','oidc')
+       ON CONFLICT (id) DO NOTHING`,
+      ['session-test-user', 'session-test@example.com', 'Session Tester'],
+    )
+    const session = await issueSession(
+      { id: 'session-test-user', name: 'Session Tester', role: 'viewer' },
+      3600,
+    )
+    expect(await isSessionActive(session.sessionId, 'session-test-user')).toBe(true)
+    await revokeSession(session.sessionId)
+    expect(await isSessionActive(session.sessionId, 'session-test-user')).toBe(false)
+  })
+})

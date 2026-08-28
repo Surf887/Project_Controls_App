@@ -2,7 +2,12 @@ import type { ProjectAction, ProjectState } from '@pc/store/types.js'
 import { applyProjectAction } from '@pc/store/projectReducer.js'
 import { validateProjectAction } from '@pc/engine/actionValidation.js'
 import type { AuthUser } from '../auth/rbac.js'
-import { appendImmutableAudit } from '../services/auditService.js'
+import type { PoolClient } from 'pg'
+import {
+  appendImmutableAudit,
+  appendPostgresAudit,
+  type ImmutableAuditInput,
+} from '../services/auditService.js'
 import {
   assertChangeWorkflowTransition,
   assertForecastWorkflowTransition,
@@ -13,6 +18,7 @@ import { isPostgresStore, PostgresProjectStore } from './postgresProjectStore.js
 import { isPostgresEnabled, runSqlMigrations } from './postgres.js'
 import type { ProjectRecord, ProjectSummary } from './projectStoreTypes.js'
 import { VersionConflictError } from './store.js'
+import { logger } from '../utils/logger.js'
 
 export type { ProjectSummary, WorkflowValidationError }
 export { VersionConflictError } from './store.js'
@@ -20,8 +26,8 @@ export { VersionConflictError } from './store.js'
 let store: JsonProjectStore | PostgresProjectStore = new JsonProjectStore()
 let postgresMode = false
 
-function auditHook(projectId: string, actor: AuthUser, action: ProjectAction, version: number) {
-  appendImmutableAudit(projectId, {
+function auditInput(projectId: string, actor: AuthUser, action: ProjectAction, version: number): ImmutableAuditInput {
+  return {
     actor: actor.name,
     actorId: actor.id,
     team: actor.role,
@@ -30,7 +36,21 @@ function auditHook(projectId: string, actor: AuthUser, action: ProjectAction, ve
     action: action.type,
     summary: `Dispatched ${action.type}`,
     payload: { actionType: action.type, version },
-  })
+  }
+}
+
+function fileAuditHook(projectId: string, actor: AuthUser, action: ProjectAction, version: number) {
+  appendImmutableAudit(projectId, auditInput(projectId, actor, action, version))
+}
+
+async function postgresAuditHook(
+  client: PoolClient,
+  projectId: string,
+  actor: AuthUser,
+  action: ProjectAction,
+  version: number,
+) {
+  await appendPostgresAudit(client, projectId, auditInput(projectId, actor, action, version))
 }
 
 function validateWorkflowGate(current: ProjectState, action: ProjectAction, actor?: AuthUser): void {
@@ -66,7 +86,7 @@ export async function initDatabase() {
     store = new PostgresProjectStore()
     await store.init()
     postgresMode = true
-    console.log('[database] using Postgres')
+    logger.info('database_initialized', { store: 'postgres' })
   } else {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('DATABASE_URL is required in production')
@@ -74,7 +94,7 @@ export async function initDatabase() {
     store = new JsonProjectStore()
     store.init()
     postgresMode = false
-    console.log('[database] using JSON file store')
+    logger.info('database_initialized', { store: 'json' })
   }
 }
 
@@ -131,7 +151,7 @@ export async function applyAction(
       expectedVersion,
       applyProjectAction,
       validateWorkflowGate,
-      auditHook,
+      postgresAuditHook,
     )
   }
   return store.applyAction(
@@ -141,7 +161,7 @@ export async function applyAction(
     expectedVersion,
     applyProjectAction,
     validateWorkflowGate,
-    auditHook,
+    fileAuditHook,
   )
 }
 

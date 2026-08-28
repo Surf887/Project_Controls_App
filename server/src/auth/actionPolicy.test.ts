@@ -22,6 +22,39 @@ describe('actionPolicy', () => {
     expect(canPerformActionType('cost_controller', 'SET_COST_SHEET')).toBe(true)
   })
 
+  it('requires cost_controller for schedule imports and mappings', () => {
+    expect(canPerformActionType('viewer', 'IMPORT_SCHEDULE')).toBe(false)
+    expect(canPerformActionType('cost_controller', 'IMPORT_SCHEDULE')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'UPDATE_SCHEDULE_ACTIVITY_MAPPING')).toBe(true)
+  })
+
+  it('separates document review from forecast-driver approval', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_DOCUMENT_DRAFTS')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'UPDATE_FORECAST_DRIVER')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_FORECAST_DRIVER')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_FORECAST_DRIVER')).toBe(true)
+  })
+
+  it('allows data stewards to version profiles but reserves deletion for admins', () => {
+    expect(canPerformActionType('cost_controller', 'UPSERT_MAPPING_PROFILE')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DELETE_MAPPING_PROFILE')).toBe(false)
+    expect(canPerformActionType('admin', 'DELETE_MAPPING_PROFILE')).toBe(true)
+  })
+
+  it('separates Snowflake staging, approval, and posting duties', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_COST_TRANSACTION_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_COST_TRANSACTION_BATCH')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_COST_TRANSACTION_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'POST_COST_TRANSACTION_BATCH')).toBe(true)
+  })
+
+  it('separates Planview staging, approval, and posting duties', () => {
+    expect(canPerformActionType('cost_controller', 'IMPORT_PLANVIEW_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'DECIDE_PLANVIEW_BATCH')).toBe(false)
+    expect(canPerformActionType('approver', 'DECIDE_PLANVIEW_BATCH')).toBe(true)
+    expect(canPerformActionType('cost_controller', 'POST_PLANVIEW_BATCH')).toBe(true)
+  })
+
   it('maps SUBMIT_FORECAST not legacy DRAFT names', () => {
     expect(minimumRoleForAction('SUBMIT_FORECAST')).toBe('cost_controller')
     expect(canPerformActionType('cost_controller', 'SUBMIT_FORECAST')).toBe(true)

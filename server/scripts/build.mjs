@@ -1,7 +1,7 @@
 import * as esbuild from 'esbuild'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mkdirSync } from 'node:fs'
+import { cpSync, mkdirSync, rmSync } from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
@@ -33,6 +33,13 @@ await esbuild.build({
   packages: 'external',
   plugins: [aliasPlugin],
   logLevel: 'info',
+})
+
+// SQL migrations are runtime assets. Bundling flattens index.ts into dist/, so
+// runSqlMigrations resolves them from dist/migrations.
+rmSync(path.join(root, 'dist', 'migrations'), { recursive: true, force: true })
+cpSync(path.join(root, 'src', 'db', 'migrations'), path.join(root, 'dist', 'migrations'), {
+  recursive: true,
 })
 
 console.log('[build] server bundle written to dist/')

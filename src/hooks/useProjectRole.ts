@@ -14,8 +14,8 @@ function normalizeRole(role: string | undefined | null): ProjectRole {
   if (role === 'viewer' || role === 'cost_controller' || role === 'approver' || role === 'admin') {
     return role
   }
-  // Unknown/absent role -> least-privileged default that can still operate.
-  return 'cost_controller'
+  // Unknown/absent role -> least-privileged default.
+  return 'viewer'
 }
 
 /**
@@ -48,6 +48,21 @@ export function canPerformAction(actionType: string, role: ProjectRole): boolean
     UNLOCK_REPORTING_PERIOD: 'admin',
     APPROVE_CONTINGENCY_DRAW: 'approver',
     SYNC_COMMITMENTS: 'cost_controller',
+    IMPORT_SCHEDULE: 'cost_controller',
+    UPDATE_SCHEDULE_ACTIVITY_MAPPING: 'cost_controller',
+    IMPORT_DOCUMENT_DRAFTS: 'cost_controller',
+    UPDATE_FORECAST_DRIVER: 'cost_controller',
+    DECIDE_FORECAST_DRIVER: 'approver',
+    UPSERT_MAPPING_PROFILE: 'cost_controller',
+    DELETE_MAPPING_PROFILE: 'admin',
+    IMPORT_COST_TRANSACTION_BATCH: 'cost_controller',
+    UPDATE_COST_TRANSACTION_MAPPING: 'cost_controller',
+    DECIDE_COST_TRANSACTION_BATCH: 'approver',
+    POST_COST_TRANSACTION_BATCH: 'cost_controller',
+    IMPORT_PLANVIEW_BATCH: 'cost_controller',
+    UPDATE_PLANVIEW_ITEM_MAPPING: 'cost_controller',
+    DECIDE_PLANVIEW_BATCH: 'approver',
+    POST_PLANVIEW_BATCH: 'cost_controller',
   }
   const minRole = minRoleByAction[actionType] ?? 'cost_controller'
   return ROLE_RANK[role] >= ROLE_RANK[minRole]

@@ -1,7 +1,9 @@
-import type { ChangeItem, RiskItem } from '../data/registers'
+import type { ChangeItem, OpportunityItem, RiskItem } from '../data/registers'
 import type { MonteCarloResult, ScenarioInputs } from '../store/types'
+import type { ForecastDriver } from '../data/forecastDrivers'
 
 function randomTriangular(min: number, mode: number, max: number): number {
+  if (max <= min) return min
   const u = Math.random()
   const f = (mode - min) / (max - min)
   if (u < f) {
@@ -25,6 +27,11 @@ export function runMonteCarlo(
   risks: RiskItem[],
   inputs: ScenarioInputs,
   iterations = 2000,
+  options?: {
+    opportunities?: OpportunityItem[]
+    supplementalDrivers?: ForecastDriver[]
+    supersededRiskIds?: Set<string>
+  },
 ): MonteCarloResult {
   const samples: number[] = []
 
@@ -42,12 +49,52 @@ export function runMonteCarlo(
       }, 0)
 
     const riskDelta = risks
-      .filter((risk) => risk.status !== 'closed' && risk.status !== 'rejected')
+      .filter(
+        (risk) =>
+          risk.status !== 'closed' &&
+          risk.status !== 'rejected' &&
+          !options?.supersededRiskIds?.has(risk.id),
+      )
       .reduce((sum, risk) => {
         const low = risk.costExposureUsd * 0.5
         const high = risk.costExposureUsd * 1.1
         const probability = risk.postMitigationLikelihood / 5
         return sum + randomTriangular(low, risk.costExposureUsd, high) * probability
+      }, 0)
+
+    const opportunityDelta = (options?.opportunities ?? [])
+      .filter((opportunity) => opportunity.status !== 'closed' && opportunity.status !== 'rejected')
+      .reduce((sum, opportunity) => {
+        const probability = opportunity.likelihood / 5
+        return (
+          sum -
+          randomTriangular(
+            opportunity.costSavingUsd * 0.5,
+            opportunity.costSavingUsd,
+            opportunity.costSavingUsd,
+          ) *
+            probability
+        )
+      }, 0)
+
+    const driverDelta = (options?.supplementalDrivers ?? [])
+      .filter(
+        (driver) =>
+          driver.treatment !== 'excluded' &&
+          driver.treatment !== 'deterministic' &&
+          driver.status !== 'rejected' &&
+          driver.status !== 'superseded' &&
+          ((driver.sourceType !== 'document' && driver.sourceType !== 'manual') ||
+            driver.status === 'approved'),
+      )
+      .reduce((sum, driver) => {
+        const sign = driver.impactDirection === 'saving' ? -1 : 1
+        return (
+          sum +
+          sign *
+            randomTriangular(driver.lowUsd, driver.mostLikelyUsd, driver.highUsd) *
+            driver.probability
+        )
       }, 0)
 
     const escalation = baseEac * (inputs.escalationRatePct / 100) * 0.25
@@ -56,7 +103,16 @@ export function runMonteCarlo(
     const contingencyDraw = baseEac * (inputs.contingencyDrawPct / 100) * 0.1
 
     samples.push(
-      baseEac + productivityDelta + pendingDelta + riskDelta + escalation + scopeGrowth + scheduleBurn - contingencyDraw,
+      baseEac +
+        productivityDelta +
+        pendingDelta +
+        riskDelta +
+        opportunityDelta +
+        driverDelta +
+        escalation +
+        scopeGrowth +
+        scheduleBurn -
+        contingencyDraw,
     )
   }
 
@@ -65,7 +121,9 @@ export function runMonteCarlo(
   const drivers = [
     { label: 'Productivity', impact: baseEac * Math.abs(inputs.productivityFactor - 1) * 0.35 },
     { label: 'Pending changes', impact: changes.filter((c) => c.status === 'pending').reduce((s, c) => s + c.costImpactUsd, 0) },
-    { label: 'Open risks', impact: risks.filter((r) => r.status !== 'closed').reduce((s, r) => s + r.costExposureUsd * (r.postMitigationLikelihood / 5), 0) },
+    { label: 'Open risks', impact: risks.filter((r) => r.status !== 'closed' && !options?.supersededRiskIds?.has(r.id)).reduce((s, r) => s + r.costExposureUsd * (r.postMitigationLikelihood / 5), 0) },
+    { label: 'Opportunities', impact: -(options?.opportunities ?? []).filter((o) => o.status !== 'closed').reduce((s, o) => s + o.costSavingUsd * (o.likelihood / 5), 0) },
+    { label: 'Control logs / documents', impact: (options?.supplementalDrivers ?? []).filter((driver) => driver.treatment !== 'excluded' && driver.treatment !== 'deterministic').reduce((sum, driver) => sum + Math.abs(driver.mostLikelyUsd * driver.probability), 0) },
     { label: 'Escalation', impact: baseEac * (inputs.escalationRatePct / 100) * 0.25 },
     { label: 'Scope growth', impact: baseEac * (inputs.scopeGrowthPct / 100) },
     { label: 'Schedule extension', impact: inputs.scheduleExtensionMonths * 1_800_000 },

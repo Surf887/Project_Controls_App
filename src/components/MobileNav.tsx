@@ -22,6 +22,7 @@ export function MobileNav() {
             className={active ? 'mobile-nav-item active' : 'mobile-nav-item'}
             to={tab.path}
             data-testid={tab.testId}
+            aria-current={active ? 'page' : undefined}
           >
             {tab.label}
           </Link>

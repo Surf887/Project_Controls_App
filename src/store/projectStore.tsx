@@ -45,6 +45,8 @@ class AuthRequiredError extends Error {
   }
 }
 
+const offlineFallbackEnabled = import.meta.env.DEV || import.meta.env.VITE_ALLOW_OFFLINE === 'true'
+
 function demoRole(): string {
   return typeof localStorage !== 'undefined' ? localStorage.getItem('pc-role') ?? 'cost_controller' : 'cost_controller'
 }
@@ -121,10 +123,18 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
     }
 
     if (!api.hasToken()) {
-      if (config?.demoAuthEnabled) {
-        await api.signIn(demoRole()).catch(() => undefined)
-      } else {
-        throw new AuthRequiredError()
+      try {
+        const restoredUser = await api.restoreSession()
+        setCurrentUser(restoredUser)
+      } catch (restoreError) {
+        if (!(restoreError instanceof api.ApiError) || restoreError.status !== 401) {
+          throw restoreError
+        }
+        if (config?.demoAuthEnabled) {
+          await api.signIn(demoRole())
+        } else {
+          throw new AuthRequiredError()
+        }
       }
     }
 
@@ -165,9 +175,21 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
         if (bootstrapError instanceof AuthRequiredError) {
           // Backend is reachable but we need credentials — show the login
           // screen instead of silently falling back to local storage.
+          api.clearAuthSession()
           backendRef.current = false
           setBackendEnabled(false)
+          setCurrentUser(null)
           setAuthRequired(true)
+          setReady(true)
+          return
+        }
+
+        if (!offlineFallbackEnabled) {
+          backendRef.current = false
+          setBackendEnabled(false)
+          setCurrentUser(null)
+          setAuthRequired(true)
+          setError('The Project Controls API is unavailable. Data access is paused until the service reconnects.')
           setReady(true)
           return
         }
@@ -176,6 +198,7 @@ export function ProjectStoreProvider({ children }: { children: ReactNode }) {
         backendRef.current = false
         setBackendEnabled(false)
         setAuthRequired(false)
+        setCurrentUser({ id: 'offline-demo', name: 'Offline demo', role: 'cost_controller' })
         hydrate(loadProjectState())
         setProjects([
           {

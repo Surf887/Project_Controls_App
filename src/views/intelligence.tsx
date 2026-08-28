@@ -17,8 +17,11 @@ import { sumBac, sumCostSheetMetric } from '../engine/costAggregation'
 import { computeForecast } from '../engine/forecast'
 import { computeEvmWithMethod, costSheetToEvmAccounts } from '../engine/evmFromCostSheet'
 import { buildScurveFromCostSheet } from '../engine/loading'
+import { latestAcceptedScheduleImport } from '../engine/scheduleControl'
 import { useProjectStore } from '../store/projectStore'
 import { CashFlowChart, ResourceHistogram, SCurveChart } from './charts'
+import { simulatedFeaturesEnabled } from '../config/features'
+import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
 
 function statusBadgeClass(status: ItemStatus | 'in_place' | 'partial' | 'planned') {
   switch (status) {
@@ -264,15 +267,21 @@ function ProgressBar({ label, value, tone }: { label: string; value: number; ton
 
 export function ControlsIntelligence() {
   const { state } = useProjectStore()
+  const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports)
   const forecastByWbs = useMemo(
-    () => new Map(computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities).map((row) => [row.wbs, row.eacMostLikely])),
-    [state.changes, state.costSheetRows, state.opportunities, state.risks],
+    () => new Map(computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
+      supplementalDrivers: supplementalForecastDrivers(state),
+      supersededRiskIds: supersededRiskIds(state),
+    }).map((row) => [row.wbs, row.eacMostLikely])),
+    [state],
   )
   const results = useMemo(
     () =>
       costSheetToEvmAccounts(state.costSheetRows, {
         templates: state.ruleOfCreditTemplates,
         progressCredits: state.progressCredits,
+        scheduleActivities: state.scheduleActivities,
+        scheduleDataDate: scheduleImport?.dataDate,
       }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod, forecastByWbs.get(account.wbs)),
       ),
@@ -281,7 +290,9 @@ export function ControlsIntelligence() {
       state.costSheetRows,
       state.progressCredits,
       state.ruleOfCreditTemplates,
+      state.scheduleActivities,
       state.settings.evmEacMethod,
+      scheduleImport?.dataDate,
     ],
   )
   const scurve = useMemo(() => buildScurveFromCostSheet(state.costSheetRows), [state.costSheetRows])
@@ -335,15 +346,17 @@ export function ControlsIntelligence() {
       </section>
 
       <section className="two-column">
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <span className="eyebrow">Resource histogram</span>
-              <h3>Man-hours by discipline</h3>
+        {simulatedFeaturesEnabled && (
+          <div className="panel">
+            <div className="panel-header">
+              <div>
+                <span className="eyebrow">Illustrative resource profile</span>
+                <h3>Sample man-hours by discipline</h3>
+              </div>
             </div>
+            <ResourceHistogram />
           </div>
-          <ResourceHistogram />
-        </div>
+        )}
         <div className="panel">
           <div className="panel-header">
             <div>
@@ -400,12 +413,16 @@ export function ControlsIntelligence() {
 
 export function PredictiveIntelligence() {
   const { state } = useProjectStore()
+  const scheduleImport = latestAcceptedScheduleImport(state.scheduleImports)
   const results = useMemo(
     () =>
-      costSheetToEvmAccounts(state.costSheetRows).map((account) =>
+      costSheetToEvmAccounts(state.costSheetRows, {
+        scheduleActivities: state.scheduleActivities,
+        scheduleDataDate: scheduleImport?.dataDate,
+      }).map((account) =>
         computeEvmWithMethod(account, state.settings.evmEacMethod),
       ),
-    [state.costSheetRows, state.settings.evmEacMethod],
+    [scheduleImport?.dataDate, state.costSheetRows, state.scheduleActivities, state.settings.evmEacMethod],
   )
   const signals = buildPredictiveSignals(results)
 

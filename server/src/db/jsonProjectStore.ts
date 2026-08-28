@@ -7,6 +7,7 @@ import { createSeedState } from '@pc/store/seedState.js'
 import type { AuthUser } from '../auth/rbac.js'
 import { VersionConflictError } from './store.js'
 import type { ProjectRecord, ProjectStoreAdapter, ProjectSummary } from './projectStoreTypes.js'
+import { logger } from '../utils/logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const dataDir = path.resolve(__dirname, '../../data')
@@ -82,7 +83,7 @@ export class JsonProjectStore implements ProjectStoreAdapter {
       if (process.env.NODE_ENV === 'production') {
         throw new Error('Project database is empty — restore from backup or run initial seed')
       }
-      console.warn('[database] projects.json empty or corrupt — re-seeding from defaults')
+      logger.warn('json_store_reseeded', { reason: 'empty_or_corrupt' })
       this.cache = this.seedDatabase()
       this.writeDb(this.cache)
     }

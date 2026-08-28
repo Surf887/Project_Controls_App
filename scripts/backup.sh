@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # Backup script for the Project Controls Intelligence Platform.
-# Dumps the PostgreSQL database and archives filesystem-resident audit/baseline
-# data, with simple retention. Intended to be run on a schedule (cron/systemd).
+# Dumps the PostgreSQL database (including audit and baseline tables) and
+# optionally archives the development JSON/file fallback, with simple retention.
 #
 # Usage:
 #   DATABASE_URL=postgres://user:pass@host:5432/db ./scripts/backup.sh [DEST_DIR]
@@ -30,7 +30,7 @@ else
   echo "[backup] DATABASE_URL not set — skipping DB dump (JSON-store deployments back up DATA_DIR below)"
 fi
 
-# 2) Filesystem data (audit log, baselines, and JSON store if used).
+# 2) Development fallback data (JSON store and any legacy file records).
 if [[ -d "$DATA_DIR" ]]; then
   echo "[backup] archiving data dir -> data-${TIMESTAMP}.tar.gz"
   tar -czf "${DEST_DIR}/data-${TIMESTAMP}.tar.gz" -C "$(dirname "$DATA_DIR")" "$(basename "$DATA_DIR")"

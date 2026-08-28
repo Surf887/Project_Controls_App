@@ -9,7 +9,7 @@ export const projectStorageKey = 'project-controls-platform-v2'
  * payload whose embedded schemaVersion is missing or different, rather than
  * merging stale shapes onto the current seed.
  */
-export const schemaVersion = 2
+export const schemaVersion = 8
 
 /** Envelope persisted to localStorage: state plus the schema it was saved under. */
 interface PersistedEnvelope {

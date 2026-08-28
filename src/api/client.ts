@@ -1,6 +1,12 @@
 import type { ProjectAction, ProjectState } from '../store/types'
+import type { OcrProviderCapability, OcrProviderId, SourceDocument } from '../data/documentIntelligence'
+import type { ForecastDriver } from '../data/forecastDrivers'
+import type { CostTransaction, CostTransactionBatch } from '../data/costTransactions'
+import type { PlanviewGovernanceItem, PlanviewSyncBatch } from '../data/planview'
+import type { IngestionJob } from '../data/ingestionJobs'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
+let sessionToken: string | null = null
 
 export interface ProjectSummary {
   id: string
@@ -25,6 +31,23 @@ export interface AuthSession {
 export interface AuthConfig {
   demoAuthEnabled: boolean
   oidcEnabled: boolean
+  oidcLoginUrl?: string
+}
+
+export interface ImmutableAuditEvent {
+  seq: number
+  id: string
+  projectId: string
+  at: string
+  actor: string
+  actorId: string
+  team: string
+  entityType: string
+  entityId: string
+  action: string
+  summary: string
+  prevHash: string
+  hash: string
 }
 
 /** Error carrying the HTTP status so callers can branch (e.g. 401 -> re-login). */
@@ -40,8 +63,11 @@ export class ApiError extends Error {
 }
 
 function persistSession(data: AuthSession) {
+  sessionToken = data.token
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('pc-token', data.token)
+    // The signed credential is retained in memory and in the server-issued
+    // HttpOnly cookie, never in persistent browser storage.
+    localStorage.removeItem('pc-token')
     localStorage.setItem('pc-role', data.user.role)
     localStorage.setItem('pc-user', JSON.stringify(data.user))
     // Persist an absolute expiry (ms epoch) derived from expiresIn (seconds) so
@@ -56,7 +82,7 @@ function persistSession(data: AuthSession) {
 }
 
 export function hasToken(): boolean {
-  return typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('pc-token'))
+  return Boolean(sessionToken)
 }
 
 /** Absolute session expiry as ms-epoch, or null if unknown/not set. */
@@ -78,9 +104,8 @@ function authHeaders(): Record<string, string> {
   if (typeof localStorage === 'undefined') {
     return import.meta.env.VITE_DEMO_AUTH === 'true' ? { 'x-pc-role': 'cost_controller' } : {}
   }
-  const token = localStorage.getItem('pc-token')
-  if (token) {
-    return { Authorization: `Bearer ${token}` }
+  if (sessionToken) {
+    return { Authorization: `Bearer ${sessionToken}` }
   }
   // x-pc-role is a local-demo convenience only; the server ignores it unless
   // DEMO_AUTH is enabled (never in production).
@@ -94,6 +119,16 @@ function authHeaders(): Record<string, string> {
 /** Public: which login options the server supports. */
 export async function getAuthConfig(): Promise<AuthConfig> {
   return request('/platform/auth/config')
+}
+
+/** Restore an authenticated browser session from the HttpOnly session cookie. */
+export async function restoreSession(): Promise<AuthUser> {
+  const data = await request<{ user: AuthUser }>('/platform/auth/me')
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('pc-user', JSON.stringify(data.user))
+    localStorage.removeItem('pc-token')
+  }
+  return data.user
 }
 
 /** Real password login. */
@@ -133,6 +168,11 @@ export function getStoredUser(): AuthUser | null {
 }
 
 export function clearAuthSession() {
+  sessionToken = null
+  void fetch(`${API_BASE}/platform/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => undefined)
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem('pc-token')
     localStorage.removeItem('pc-role')
@@ -142,14 +182,19 @@ export function clearAuthSession() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers)
+  headers.set('Accept', 'application/json')
+  for (const [name, value] of Object.entries(authHeaders())) {
+    headers.set(name, value)
+  }
+  if (init?.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      Accept: 'application/json',
-      ...authHeaders(),
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...init?.headers,
-    },
     ...init,
+    headers,
+    credentials: 'include',
   })
 
   if (response.status === 409) {
@@ -183,6 +228,7 @@ export async function checkHealth(): Promise<{ ok: boolean; version: string; pos
 export async function downloadClosePackPdf(projectId: string): Promise<Blob> {
   const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectId)}/exports/close-pack.pdf`, {
     headers: authHeaders(),
+    credentials: 'include',
   })
   if (!response.ok) {
     throw new Error('PDF download failed')
@@ -247,6 +293,7 @@ export interface ForecastTotals {
   approvedChangesDelta: number
   pendingChangesExpectedDelta: number
   riskExposure: number
+  controlLogExposure: number
   contingencyDraw: number
   fxExposure: number
 }
@@ -270,6 +317,103 @@ export async function fetchForecastTotals(projectId: string): Promise<ForecastTo
 
 export async function fetchEvmSummary(projectId: string) {
   return request(`/projects/${encodeURIComponent(projectId)}/compute/evm`)
+}
+
+export async function fetchImmutableAudit(projectId: string): Promise<{
+  events: ImmutableAuditEvent[]
+  integrity: { ok: boolean; errors: string[] }
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/audit`)
+}
+
+export async function fetchOcrProviders(projectId: string): Promise<OcrProviderCapability[]> {
+  const data = await request<{ providers: OcrProviderCapability[] }>(
+    `/projects/${encodeURIComponent(projectId)}/documents/providers`,
+  )
+  return data.providers
+}
+
+export async function fetchSourceDocuments(projectId: string): Promise<SourceDocument[]> {
+  const data = await request<{ documents: SourceDocument[] }>(
+    `/projects/${encodeURIComponent(projectId)}/documents`,
+  )
+  return data.documents
+}
+
+export async function ingestSourceDocument(
+  projectId: string,
+  file: File,
+  provider: OcrProviderId,
+): Promise<{
+  document: SourceDocument
+  drivers: ForecastDriver[]
+  duplicate: boolean
+  job?: IngestionJob
+}> {
+  const form = new FormData()
+  form.set('provider', provider)
+  form.set('file', file)
+  return request(`/projects/${encodeURIComponent(projectId)}/documents/ingest`, {
+    method: 'POST',
+    body: form,
+  })
+}
+
+export async function fetchIngestionJob(
+  projectId: string,
+  jobId: string,
+): Promise<IngestionJob> {
+  const data = await request<{ job: IngestionJob }>(
+    `/projects/${encodeURIComponent(projectId)}/ingestion-jobs/${encodeURIComponent(jobId)}`,
+  )
+  return data.job
+}
+
+export async function fetchIngestionJobs(projectId: string): Promise<IngestionJob[]> {
+  const data = await request<{ jobs: IngestionJob[] }>(
+    `/projects/${encodeURIComponent(projectId)}/ingestion-jobs`,
+  )
+  return data.jobs
+}
+
+export async function fetchSnowflakeStatus(projectId: string): Promise<{
+  configured: boolean
+  authentication: 'oauth' | 'key_pair' | 'password' | 'none'
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/snowflake/status`)
+}
+
+export async function stageSnowflakeTransactions(
+  projectId: string,
+  input: {
+    profileId: string
+    limit?: number
+    watermarkColumn?: string
+    afterWatermark?: string
+  },
+): Promise<{ batch: CostTransactionBatch; transactions: CostTransaction[] }> {
+  return request(`/projects/${encodeURIComponent(projectId)}/snowflake/stage`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchPlanviewStatus(projectId: string): Promise<{
+  configured: boolean
+  product: string
+  authentication: string
+}> {
+  return request(`/projects/${encodeURIComponent(projectId)}/planview/status`)
+}
+
+export async function stagePlanviewItems(
+  projectId: string,
+  input: { profileId: string; limit?: number; cursor?: string },
+): Promise<{ batch: PlanviewSyncBatch; items: PlanviewGovernanceItem[] }> {
+  return request(`/projects/${encodeURIComponent(projectId)}/planview/stage`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 export interface ClosePackFile {

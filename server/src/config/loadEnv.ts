@@ -3,10 +3,24 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /** Load project-root `.env` into process.env (does not override existing vars). */
-export function loadRootEnvFile(): void {
-  const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-  const envPath = resolve(rootDir, '.env')
-  if (!existsSync(envPath)) return
+export function resolveRootEnvFile(
+  cwd = process.cwd(),
+  moduleUrl = import.meta.url,
+): string | null {
+  const moduleDir = dirname(fileURLToPath(moduleUrl))
+  const candidates = [
+    process.env.ENV_FILE ? resolve(cwd, process.env.ENV_FILE) : null,
+    resolve(cwd, '../.env'),
+    resolve(cwd, '.env'),
+    resolve(moduleDir, '../../../.env'),
+    resolve(moduleDir, '../../.env'),
+  ].filter((candidate): candidate is string => Boolean(candidate))
+  return [...new Set(candidates)].find(existsSync) ?? null
+}
+
+export function loadRootEnvFile(cwd?: string, moduleUrl?: string): void {
+  const envPath = resolveRootEnvFile(cwd, moduleUrl)
+  if (!envPath) return
 
   for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
     const trimmed = line.trim()

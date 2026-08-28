@@ -6,11 +6,13 @@ import { findUserById } from '../auth/userStore.js'
 import { param } from '../utils/params.js'
 import { assertSafeId } from '../utils/safePath.js'
 import type { RequestHandler } from 'express'
+import { isSessionActive } from '../auth/sessionStore.js'
 
 declare module 'express-serve-static-core' {
   interface Request {
     user?: AuthUser | null
     globalRole?: Role
+    sessionId?: string
   }
 }
 
@@ -34,11 +36,22 @@ export function enforceProjectMembership(): boolean {
  */
 export const attachUser: RequestHandler = async (req, _res, next) => {
   const auth = req.headers.authorization
-  if (auth?.startsWith('Bearer ')) {
-    const token = auth.slice(7).trim()
+  const cookieToken = req.headers.cookie
+    ?.split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith('pc_session='))
+    ?.slice('pc_session='.length)
+  const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : cookieToken
+  if (token) {
 
     const claims = await verifySessionToken(token)
     if (claims) {
+      if (!(await isSessionActive(claims.sessionId, claims.sub))) {
+        req.user = null
+        req.globalRole = undefined
+        return next()
+      }
+      req.sessionId = claims.sessionId
       const record = await findUserById(claims.sub)
       if (!record || record.disabled) {
         // Demo tokens (minted by /auth/token) reference synthetic demo users

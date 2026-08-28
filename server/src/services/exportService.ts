@@ -2,6 +2,7 @@ import type { ProjectState } from '@pc/store/types.js'
 import { generateTeamReportCsv } from '@pc/engine/governance.js'
 import { teamReportTemplates } from '@pc/data/governance.js'
 import { sumBac, sumCostSheetMetric } from '@pc/engine/costAggregation.js'
+import { latestAcceptedScheduleImport, scheduleSummary } from '@pc/engine/scheduleControl.js'
 
 export interface ClosePackFile {
   name: string
@@ -27,6 +28,7 @@ export function generateClosePack(state: ProjectState, generatedBy: string): Clo
   const accrualReport = teamReportTemplates.find((template) => template.template === 'accrual_report')
   const contingencyReport = teamReportTemplates.find((template) => template.template === 'contingency_report')
   const sccsReport = teamReportTemplates.find((template) => template.template === 'sccs_rollup')
+  const scheduleReport = teamReportTemplates.find((template) => template.template === 'schedule_performance')
 
   const files: ClosePackFile[] = []
 
@@ -66,6 +68,17 @@ export function generateClosePack(state: ProjectState, generatedBy: string): Clo
     const report = generateTeamReportCsv(sccsReport, state, generatedBy)
     files.push({ name: 'iso-19008-sccs-rollup.csv', mimeType: 'text/csv', content: report.content })
   }
+  if (scheduleReport) {
+    const report = generateTeamReportCsv(scheduleReport, state, generatedBy)
+    files.push({ name: 'schedule-cost-performance.csv', mimeType: 'text/csv', content: report.content })
+  }
+
+  const latestSchedule = latestAcceptedScheduleImport(state.scheduleImports ?? [])
+  const schedule = scheduleSummary(
+    state.scheduleActivities ?? [],
+    state.scheduleRelationships ?? [],
+    latestSchedule?.dataDate ?? null,
+  )
 
   const executiveSummary = [
     `Executive Close Summary — ${state.meta.name}`,
@@ -76,6 +89,14 @@ export function generateClosePack(state: ProjectState, generatedBy: string): Clo
     `BAC (control accounts): ${sumBac(state.costSheetRows).toLocaleString()}`,
     `Actuals: ${sumCostSheetMetric(state.costSheetRows, 'actualsToDate').toLocaleString()}`,
     `EAC: ${sumCostSheetMetric(state.costSheetRows, 'eac').toLocaleString()}`,
+    ...(schedule.activityCount > 0
+      ? [
+          `Schedule data date: ${schedule.dataDate}`,
+          `Schedule SPI: ${schedule.spi.toFixed(2)}`,
+          `Forecast finish: ${schedule.forecastFinish} (${schedule.finishVarianceDays >= 0 ? '+' : ''}${schedule.finishVarianceDays} days)`,
+          `Schedule exceptions: ${schedule.criticalCount} critical, ${schedule.lateCount} late, ${schedule.unmappedCount} unmapped`,
+        ]
+      : ['Schedule: no accepted programme imported']),
     '',
     'Financial grain: control accounts only — no WBS parent/child double-count.',
     `Files in pack: ${files.map((file) => file.name).join(', ')}`,

@@ -18,3 +18,5 @@ import path from 'node:path'
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-server-test-'))
 process.env.DATABASE_PATH = path.join(dir, 'projects.json')
 process.env.AUDIT_DIR = path.join(dir, 'audit')
+process.env.DOCUMENT_STORAGE_DIR = path.join(dir, 'documents')
+process.env.DOCUMENT_ENCRYPTION_KEY = 'test-document-encryption-key'

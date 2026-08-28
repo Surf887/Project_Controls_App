@@ -4,6 +4,7 @@ import { changeMechanismMeta } from '../data/registers'
 import type { ForecastRowSnapshot } from '../store/types'
 import { controlAccountRows, snapshotsForControlAccounts } from './costAggregation'
 import { isReserveCostType } from './contingency'
+import type { ForecastDriver } from '../data/forecastDrivers'
 
 function likelihoodToProbability(likelihood: number): number {
   return likelihood / 5
@@ -52,7 +53,11 @@ export function computeForecast(
   changes: ChangeItem[],
   risks: RiskItem[],
   opportunities: OpportunityItem[],
-  options?: { fxAdverseUsd?: number },
+  options?: {
+    fxAdverseUsd?: number
+    supplementalDrivers?: ForecastDriver[]
+    supersededRiskIds?: Set<string>
+  },
 ): ForecastRowSnapshot[] {
   // Project-level risk/opportunity exposure is allocated across control accounts only
   // (the same rows that totalForecastSnapshot sums), so the per-row share and the
@@ -66,7 +71,12 @@ export function computeForecast(
       : 0
 
   const threatExposure = risks
-    .filter((risk) => risk.status !== 'closed' && risk.status !== 'rejected')
+    .filter(
+      (risk) =>
+        risk.status !== 'closed' &&
+        risk.status !== 'rejected' &&
+        !options?.supersededRiskIds?.has(risk.id),
+    )
     .reduce((sum, risk) => {
       const probability = likelihoodToProbability(risk.postMitigationLikelihood)
       return sum + probability * risk.costExposureUsd
@@ -83,7 +93,12 @@ export function computeForecast(
   const riskShare = activeControlAccounts.length === 0 ? 0 : netRiskExposure / activeControlAccounts.length
 
   const openRiskWorstCase = risks
-    .filter((risk) => risk.status !== 'closed' && risk.status !== 'rejected')
+    .filter(
+      (risk) =>
+        risk.status !== 'closed' &&
+        risk.status !== 'rejected' &&
+        !options?.supersededRiskIds?.has(risk.id),
+    )
     .reduce((sum, risk) => sum + risk.costExposureUsd, 0)
   const worstCaseShare =
     activeControlAccounts.length === 0 ? 0 : openRiskWorstCase / activeControlAccounts.length
@@ -97,6 +112,7 @@ export function computeForecast(
         approvedChangesDelta: row.approvedChanges,
         pendingChangesExpectedDelta: 0,
         riskExposure: 0,
+        controlLogExposure: 0,
         contingencyDraw: Math.abs(Math.min(row.approvedChanges, 0)),
         fxExposure: 0,
         eacBestCase: eacBase,
@@ -134,11 +150,76 @@ export function computeForecast(
       row.parentId === null && !isReserveCostType(row.costType)
     const riskExposure = isAllocatableControlAccount ? riskShare : 0
     const openRiskWorstCaseShare = isAllocatableControlAccount ? worstCaseShare : 0
+    const relevantDrivers = isAllocatableControlAccount
+      ? (options?.supplementalDrivers ?? []).flatMap((driver) => {
+          if (driver.treatment === 'excluded' || driver.status === 'rejected' || driver.status === 'superseded') {
+            return []
+          }
+          if (
+            (driver.sourceType === 'document' || driver.sourceType === 'manual') &&
+            driver.status !== 'approved'
+          ) {
+            return []
+          }
+          const candidateAccounts =
+            driver.wbs.length === 0
+              ? activeControlAccounts
+              : activeControlAccounts.filter((account) =>
+                  driver.wbs.some(
+                    (code) =>
+                      account.wbs === code ||
+                      account.wbs.startsWith(`${code}.`) ||
+                      code.startsWith(`${account.wbs}.`),
+                  ),
+                )
+          if (!candidateAccounts.some((account) => account.id === row.id)) return []
+          return [{ driver, divisor: Math.max(candidateAccounts.length, 1) }]
+        })
+      : []
+    const signed = (driver: ForecastDriver, amount: number) =>
+      (driver.impactDirection === 'saving' ? -1 : 1) * amount
+    const controlLogExposure = relevantDrivers.reduce(
+      (sum, { driver, divisor }) =>
+        sum +
+        signed(
+          driver,
+          driver.treatment === 'deterministic'
+            ? driver.mostLikelyUsd / divisor
+            : (driver.mostLikelyUsd * driver.probability) / divisor,
+        ),
+      0,
+    )
+    const deterministicLogExposure = relevantDrivers
+      .filter(({ driver }) => driver.treatment === 'deterministic')
+      .reduce(
+        (sum, { driver, divisor }) => sum + signed(driver, driver.mostLikelyUsd / divisor),
+        0,
+      )
+    const worstCaseLogExposure = relevantDrivers.reduce(
+      (sum, { driver, divisor }) =>
+        sum +
+        signed(
+          driver,
+          (driver.impactDirection === 'saving' ? driver.lowUsd : driver.highUsd) / divisor,
+        ),
+      0,
+    )
 
-    const eacBestCase = eacBase + approvedChangesDelta
-    const eacMostLikely = eacBase + approvedChangesDelta + pendingChangesExpectedDelta + riskExposure + fxShare
+    const eacBestCase = eacBase + approvedChangesDelta + deterministicLogExposure
+    const eacMostLikely =
+      eacBase +
+      approvedChangesDelta +
+      pendingChangesExpectedDelta +
+      riskExposure +
+      controlLogExposure +
+      fxShare
     const eacWorstCase =
-      eacBase + approvedChangesDelta + pendingChangesFullDelta + openRiskWorstCaseShare + fxShare * 2
+      eacBase +
+      approvedChangesDelta +
+      pendingChangesFullDelta +
+      openRiskWorstCaseShare +
+      worstCaseLogExposure +
+      fxShare * 2
 
     return {
       wbs: row.wbs,
@@ -146,6 +227,7 @@ export function computeForecast(
       approvedChangesDelta,
       pendingChangesExpectedDelta,
       riskExposure,
+      controlLogExposure,
       contingencyDraw: 0,
       fxExposure: fxShare,
       eacBestCase,
@@ -163,6 +245,7 @@ export function totalForecastSnapshot(snapshots: ForecastRowSnapshot[], rows?: C
       approvedChangesDelta: acc.approvedChangesDelta + row.approvedChangesDelta,
       pendingChangesExpectedDelta: acc.pendingChangesExpectedDelta + row.pendingChangesExpectedDelta,
       riskExposure: acc.riskExposure + row.riskExposure,
+      controlLogExposure: acc.controlLogExposure + row.controlLogExposure,
       contingencyDraw: acc.contingencyDraw + row.contingencyDraw,
       fxExposure: acc.fxExposure + row.fxExposure,
       eacBestCase: acc.eacBestCase + row.eacBestCase,
@@ -174,6 +257,7 @@ export function totalForecastSnapshot(snapshots: ForecastRowSnapshot[], rows?: C
       approvedChangesDelta: 0,
       pendingChangesExpectedDelta: 0,
       riskExposure: 0,
+      controlLogExposure: 0,
       contingencyDraw: 0,
       fxExposure: 0,
       eacBestCase: 0,

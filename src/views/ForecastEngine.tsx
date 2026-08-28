@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { computeForecast, totalForecastSnapshot } from '../engine/forecast'
 import { buildPoExposures, computeFxRiskUsd } from '../engine/forex'
 import { useProjectStore } from '../store/projectStore'
+import { supplementalForecastDrivers, supersededRiskIds } from '../engine/forecastDrivers'
 
 function formatUsd(value: number) {
   return new Intl.NumberFormat('en-US', {
@@ -30,8 +31,10 @@ export function ForecastEngineView() {
     () =>
       computeForecast(state.costSheetRows, state.changes, state.risks, state.opportunities, {
         fxAdverseUsd,
+        supplementalDrivers: supplementalForecastDrivers(state),
+        supersededRiskIds: supersededRiskIds(state),
       }),
-    [fxAdverseUsd, state.changes, state.costSheetRows, state.opportunities, state.risks],
+    [fxAdverseUsd, state],
   )
 
   const totals = useMemo(() => totalForecastSnapshot(snapshots, state.costSheetRows), [snapshots, state.costSheetRows])
@@ -47,10 +50,11 @@ export function ForecastEngineView() {
       <section className="metric-grid metric-grid--3">
         <MetricTile label="EAC base" value={formatUsd(totals.eacBase)} detail="Actuals + remaining budget" />
         <MetricTile label="Best case EAC" value={formatUsd(totals.eacBestCase)} detail="Approved changes only" />
-        <MetricTile label="Most likely EAC" value={formatUsd(totals.eacMostLikely)} detail="Pending × probability + risk + FX" tone="risk" />
-        <MetricTile label="Worst case EAC" value={formatUsd(totals.eacWorstCase)} detail="Full pending + open-risk worst case + 2× FX" tone="risk" />
+        <MetricTile label="Most likely EAC" value={formatUsd(totals.eacMostLikely)} detail="Pending + risks/opportunities + control logs + FX" tone="risk" />
+        <MetricTile label="Worst case EAC" value={formatUsd(totals.eacWorstCase)} detail="Full pending, risk, claim/document ranges, and FX stress" tone="risk" />
         <MetricTile label="Contingency draws" value={formatUsd(totals.contingencyDraw)} detail="Posted from reserve WBS" />
         <MetricTile label="FX load (most likely)" value={formatUsd(totals.fxExposure)} detail={`Unhedged stress at ${state.settings.fx.adverseMovePct}%`} />
+        <MetricTile label="Control-log exposure" value={formatUsd(totals.controlLogExposure)} detail="Issues, unlinked claims, and approved document drivers" tone="risk" />
       </section>
 
       <section className="panel">
@@ -70,6 +74,7 @@ export function ForecastEngineView() {
                 <th>Approved Δ</th>
                 <th>Pending (prob.)</th>
                 <th>Risk</th>
+                <th>Control logs</th>
                 <th>FX</th>
                 <th>Reserve draw</th>
                 <th>Best</th>
@@ -85,6 +90,7 @@ export function ForecastEngineView() {
                   <td>{formatUsd(row.approvedChangesDelta)}</td>
                   <td>{formatUsd(row.pendingChangesExpectedDelta)}</td>
                   <td>{formatUsd(row.riskExposure)}</td>
+                  <td>{formatUsd(row.controlLogExposure)}</td>
                   <td>{formatUsd(row.fxExposure)}</td>
                   <td>{formatUsd(row.contingencyDraw)}</td>
                   <td>{formatUsd(row.eacBestCase)}</td>

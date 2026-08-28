@@ -39,12 +39,17 @@ export type NavView =
   | 'accruals'
   | 'cost-structure'
   | 'sccs'
+  | 'schedule'
   | 'rules-of-credit'
   | 'long-lead'
   | 'ingestion'
   | 'review'
   | 'validation'
   | 'lineage'
+  | 'documents'
+  | 'mapping-studio'
+  | 'snowflake'
+  | 'planview'
   | 'controls'
   | 'predictive'
   | 'engineering'
@@ -83,6 +88,13 @@ export const navGroups: NavGroup[] = [
       { id: 'wbs', label: 'WBS Manager', eyebrow: 'Control accounts · CapEx tags' },
       { id: 'cost-structure', label: 'Cost Structure', eyebrow: 'CBS · TECOP/NTR · burden' },
       { id: 'sccs', label: 'ISO 19008 SCCS', eyebrow: 'PBS · SAB · COR · mapping' },
+    ],
+  },
+  {
+    group: 'Schedule control',
+    rationale: 'P6 baseline, current programme, critical path, and control-account integration',
+    items: [
+      { id: 'schedule', label: 'Integrated Schedule', eyebrow: 'P6 · critical path · cost linkage' },
     ],
   },
   {
@@ -149,6 +161,10 @@ export const navGroups: NavGroup[] = [
     rationale: 'Early variation capture — contractor data before month-end close',
     items: [
       { id: 'ingestion', label: 'Ingestion', eyebrow: 'Progress & cost CSVs' },
+      { id: 'documents', label: 'Document Intelligence', eyebrow: 'Private OCR · forecast drivers' },
+      { id: 'mapping-studio', label: 'Mapping Studio', eyebrow: 'Company schemas · Snowflake · CSV' },
+      { id: 'snowflake', label: 'Snowflake Cost Sync', eyebrow: 'Actuals · commitments · accruals' },
+      { id: 'planview', label: 'Planview Governance', eyebrow: 'Milestones · actions · issues · decisions' },
       { id: 'review', label: 'Review Desk', eyebrow: 'Human-in-the-loop QA' },
       { id: 'validation', label: 'Validation', eyebrow: 'Mapping rules' },
       { id: 'lineage', label: 'Lineage', eyebrow: 'Source traceability' },

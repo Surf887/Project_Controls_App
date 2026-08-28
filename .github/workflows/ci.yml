@@ -37,6 +37,39 @@ jobs:
         env:
           DEMO_AUTH: 'true'
 
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pc
+          POSTGRES_PASSWORD: postgres-test-password
+          POSTGRES_DB: project_controls_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pc -d project_controls_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://pc:postgres-test-password@127.0.0.1:5432/project_controls_test
+      JWT_SECRET: postgres-test-jwt-secret
+      DEMO_AUTH: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix server
+      - run: npm run test:postgres --prefix server
+      - run: npm run build --prefix server
+      - run: npm run smoke --prefix server
+
   e2e:
     runs-on: ubuntu-latest
     steps:
@@ -53,8 +86,8 @@ jobs:
           CI: true
           DEMO_AUTH: 'true'
 
-  # Dependency vulnerability scan. Advisory (non-blocking) so a new upstream
-  # advisory doesn't block delivery, but surfaces in the run logs.
+  # Production dependency vulnerabilities are a release gate. Dev-tool
+  # advisories stay visible in Dependabot without blocking the runtime image.
   security:
     runs-on: ubuntu-latest
     steps:
@@ -62,12 +95,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: npm audit (root)
-        run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
-      - name: npm audit (server)
-        run: npm audit --omit=dev --audit-level=high --prefix server
-        continue-on-error: true
+      - name: Audit production dependencies
+        run: npm run audit:prod
 
   # Verify the production image actually builds (client + server compile and the
   # multi-stage Dockerfile is valid). This is the gate that was missing when the

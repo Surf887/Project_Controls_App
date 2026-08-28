@@ -5,19 +5,17 @@ interface LoginScreenProps {
   onSso: (idToken: string) => Promise<void>
   onDemoLogin?: (role: string) => Promise<void>
   oidcEnabled?: boolean
+  oidcLoginUrl?: string
   demoAuthEnabled?: boolean
   globalError?: string | null
 }
-
-// Optional SSO entry point. If your IdP is configured to redirect back with an
-// id_token in the URL fragment, the app will pick it up automatically on load.
-const SSO_LOGIN_URL = import.meta.env.VITE_OIDC_LOGIN_URL as string | undefined
 
 export function LoginScreen({
   onLogin,
   onSso,
   onDemoLogin,
   oidcEnabled,
+  oidcLoginUrl,
   demoAuthEnabled,
   globalError,
 }: LoginScreenProps) {
@@ -41,6 +39,21 @@ export function LoginScreen({
       .catch((err) => setError(err instanceof Error ? err.message : 'SSO sign-in failed'))
       .finally(() => setBusy(false))
   }, [onSso])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const ssoError = params.get('sso_error')
+    if (!ssoError) return
+    setError(
+      ssoError === 'account_link'
+        ? 'SSO account linking requires administrator review.'
+        : 'SSO authentication failed. Please retry or use password login.',
+    )
+    params.delete('sso_error')
+    const query = params.toString()
+    window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+  }, [])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -112,22 +125,22 @@ export function LoginScreen({
           </button>
         </form>
 
-        {oidcEnabled && SSO_LOGIN_URL && (
+        {oidcEnabled && oidcLoginUrl && (
           <button
             className="ghost-button"
             type="button"
             style={{ marginTop: 12, width: '100%' }}
             disabled={busy}
             onClick={() => {
-              window.location.href = SSO_LOGIN_URL
+              window.location.href = oidcLoginUrl
             }}
           >
             Sign in with SSO
           </button>
         )}
-        {oidcEnabled && !SSO_LOGIN_URL && (
+        {oidcEnabled && !oidcLoginUrl && (
           <p className="muted" style={{ marginTop: 12, fontSize: 12 }}>
-            SSO is available — set VITE_OIDC_LOGIN_URL to enable the SSO button.
+            SSO configuration is incomplete; contact an administrator.
           </p>
         )}
 

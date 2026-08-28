@@ -7,6 +7,7 @@ import { computeFxRiskUsd, buildPoExposures } from './forex'
 import { distributeForecastPeriods, type LoadingMethod } from './loading'
 import type { PurchaseOrder } from '../data/phases'
 import type { FxRate, FxSettings } from '../store/types'
+import type { ForecastDriver } from '../data/forecastDrivers'
 
 function changeMatchesWbs(change: ChangeItem, wbs: string): boolean {
   if (change.affectedWbs.length === 0) {
@@ -43,6 +44,8 @@ export function syncCostSheetFromRegisters(
     purchaseOrders?: PurchaseOrder[]
     fxRates?: FxRate[]
     fxSettings?: FxSettings
+    supplementalDrivers?: ForecastDriver[]
+    supersededRiskIds?: Set<string>
   },
 ): CostRow[] {
   const fxAdverseUsd =
@@ -53,7 +56,11 @@ export function syncCostSheetFromRegisters(
         ).adverseImpactUsd
       : 0
 
-  const snapshots = computeForecast(rows, changes, risks, opportunities, { fxAdverseUsd })
+  const snapshots = computeForecast(rows, changes, risks, opportunities, {
+    fxAdverseUsd,
+    supplementalDrivers: options.supplementalDrivers,
+    supersededRiskIds: options.supersededRiskIds,
+  })
   const snapshotByWbs = new Map(snapshots.map((snapshot) => [snapshot.wbs, snapshot]))
 
   return rows.map((row) => {
@@ -86,7 +93,11 @@ export function forecastSnapshotsByWbs(
   changes: ChangeItem[],
   risks: RiskItem[],
   opportunities: OpportunityItem[],
-  options?: { fxAdverseUsd?: number },
+  options?: {
+    fxAdverseUsd?: number
+    supplementalDrivers?: ForecastDriver[]
+    supersededRiskIds?: Set<string>
+  },
 ): Map<string, ForecastRowSnapshot> {
   return new Map(computeForecast(rows, changes, risks, opportunities, options).map((row) => [row.wbs, row]))
 }

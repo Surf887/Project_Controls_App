@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { isPostgresEnabled, query } from '../db/postgres.js'
 import type { Role } from './roles.js'
+import { logger } from '../utils/logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const usersPath = process.env.USERS_PATH ?? path.resolve(__dirname, '../../data/users.json')
@@ -19,6 +20,7 @@ export interface UserRecord {
   provider: 'local' | 'oidc'
   passwordHash: string | null
   oidcSubject: string | null
+  scimExternalId: string | null
   disabled: boolean
   createdAt: string
 }
@@ -74,6 +76,7 @@ interface UserRow {
   provider: 'local' | 'oidc'
   password_hash: string | null
   oidc_subject: string | null
+  scim_external_id: string | null
   disabled: boolean
   created_at: string | Date
 }
@@ -87,6 +90,7 @@ function rowToRecord(row: UserRow): UserRecord {
     provider: row.provider,
     passwordHash: row.password_hash,
     oidcSubject: row.oidc_subject,
+    scimExternalId: row.scim_external_id,
     disabled: row.disabled,
     createdAt: typeof row.created_at === 'string' ? row.created_at : row.created_at.toISOString(),
   }
@@ -104,12 +108,16 @@ export async function countUsers(): Promise<number> {
   return readJsonUsers().length
 }
 
-export async function listUsers(): Promise<PublicUser[]> {
+export async function listUserRecords(): Promise<UserRecord[]> {
   if (isPostgresEnabled()) {
     const result = await query<UserRow>('SELECT * FROM users ORDER BY created_at ASC')
-    return result.rows.map((row) => toPublicUser(rowToRecord(row)))
+    return result.rows.map(rowToRecord)
   }
-  return readJsonUsers().map(toPublicUser)
+  return readJsonUsers()
+}
+
+export async function listUsers(): Promise<PublicUser[]> {
+  return (await listUserRecords()).map(toPublicUser)
 }
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
@@ -137,6 +145,14 @@ export async function findUserByOidcSubject(subject: string): Promise<UserRecord
   return readJsonUsers().find((u) => u.oidcSubject === subject) ?? null
 }
 
+export async function findUserByScimExternalId(externalId: string): Promise<UserRecord | null> {
+  if (isPostgresEnabled()) {
+    const result = await query<UserRow>('SELECT * FROM users WHERE scim_external_id = $1', [externalId])
+    return result.rows[0] ? rowToRecord(result.rows[0]) : null
+  }
+  return readJsonUsers().find((user) => user.scimExternalId === externalId) ?? null
+}
+
 export interface CreateUserInput {
   email: string
   name: string
@@ -144,6 +160,7 @@ export interface CreateUserInput {
   password?: string
   provider?: 'local' | 'oidc'
   oidcSubject?: string | null
+  scimExternalId?: string | null
 }
 
 export async function createUser(input: CreateUserInput): Promise<UserRecord> {
@@ -163,14 +180,15 @@ export async function createUser(input: CreateUserInput): Promise<UserRecord> {
     provider,
     passwordHash,
     oidcSubject: input.oidcSubject ?? null,
+    scimExternalId: input.scimExternalId ?? null,
     disabled: false,
     createdAt: new Date().toISOString(),
   }
 
   if (isPostgresEnabled()) {
     await query(
-      `INSERT INTO users (id, email, name, role, provider, password_hash, oidc_subject, disabled, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      `INSERT INTO users (id, email, name, role, provider, password_hash, oidc_subject, scim_external_id, disabled, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
       [
         record.id,
         record.email,
@@ -179,6 +197,7 @@ export async function createUser(input: CreateUserInput): Promise<UserRecord> {
         record.provider,
         record.passwordHash,
         record.oidcSubject,
+        record.scimExternalId,
         record.disabled,
         record.createdAt,
       ],
@@ -221,6 +240,42 @@ export async function setUserDisabled(id: string, disabled: boolean): Promise<vo
   }
 }
 
+export async function updateProvisionedUser(
+  id: string,
+  patch: { email?: string; name?: string; role?: Role; disabled?: boolean; scimExternalId?: string },
+): Promise<void> {
+  if (isPostgresEnabled()) {
+    await query(
+      `UPDATE users
+       SET email = COALESCE($2, email),
+           name = COALESCE($3, name),
+           role = COALESCE($4, role),
+           disabled = COALESCE($5, disabled),
+           scim_external_id = COALESCE($6, scim_external_id),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [
+        id,
+        patch.email ? normalizeEmail(patch.email) : null,
+        patch.name ?? null,
+        patch.role ?? null,
+        patch.disabled ?? null,
+        patch.scimExternalId ?? null,
+      ],
+    )
+    return
+  }
+  const rows = readJsonUsers()
+  const user = rows.find((entry) => entry.id === id)
+  if (!user) return
+  if (patch.email) user.email = normalizeEmail(patch.email)
+  if (patch.name) user.name = patch.name
+  if (patch.role) user.role = patch.role
+  if (patch.disabled != null) user.disabled = patch.disabled
+  if (patch.scimExternalId) user.scimExternalId = patch.scimExternalId
+  writeJsonUsers(rows)
+}
+
 /** Constant-time-ish password check via bcrypt. Returns false for OIDC users. */
 export async function verifyUserPassword(user: UserRecord, password: string): Promise<boolean> {
   if (!user.passwordHash) return false
@@ -234,11 +289,16 @@ export async function verifyUserPassword(user: UserRecord, password: string): Pr
 export async function ensureBootstrapAdmin(): Promise<void> {
   const email = process.env.ADMIN_EMAIL
   const password = process.env.ADMIN_PASSWORD
-  if (!email || !password) return
+  if ((await countUsers()) > 0) return
+  if (!email || !password) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD are required when initializing an empty production user store')
+    }
+    return
+  }
   if (process.env.NODE_ENV === 'production' && password.length < 12) {
     throw new Error('ADMIN_PASSWORD must be at least 12 characters in production')
   }
-  if ((await countUsers()) > 0) return
   await createUser({
     email,
     name: process.env.ADMIN_NAME ?? 'Administrator',
@@ -246,5 +306,5 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     password,
     provider: 'local',
   })
-  console.log(`[auth] bootstrapped initial admin user: ${normalizeEmail(email)}`)
+  logger.info('bootstrap_admin_created', { email: normalizeEmail(email) })
 }

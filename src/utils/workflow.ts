@@ -1,6 +1,8 @@
 import type { ExtractedValue, ReportDocument, ValidationIssue } from '../data/projectData'
 import { buildSccsAssignment } from '../data/sccsMappings'
 import type { SccsAssignment } from '../data/sccs'
+import type { MappingProfile } from '../data/mappingProfiles'
+import { applyMappingProfile } from '../engine/dynamicMapping'
 
 export interface StoredAppState {
   reports: ReportDocument[]
@@ -50,32 +52,60 @@ export function clearStoredState() {
   window.localStorage.removeItem(storageKey)
 }
 
-export function parseCsv(text: string): Record<string, string>[] {
+export interface ParsedCsvTable {
+  headers: string[]
+  normalizedHeaders: string[]
+  rows: Record<string, string>[]
+}
+
+export function parseCsvTable(text: string): ParsedCsvTable {
   const lines = text
     .replace(/^\uFEFF/, '')
     .split(/\r?\n/)
     .filter((line) => line.trim().length > 0)
 
   if (lines.length < 2) {
-    return []
+    return { headers: [], normalizedHeaders: [], rows: [] }
   }
 
-  const headers = splitCsvLine(lines[0]).map(normalizeHeader)
+  const headers = splitCsvLine(lines[0]).map((header) => header.trim())
+  const normalizedHeaders = headers.map(normalizeHeader)
 
-  return lines.slice(1).map((line) => {
+  const rows = lines.slice(1).map((line) => {
     const cells = splitCsvLine(line)
     const row: Record<string, string> = {}
 
-    headers.forEach((header, index) => {
+    normalizedHeaders.forEach((header, index) => {
       row[header] = cells[index]?.trim() ?? ''
     })
 
     return row
   })
+
+  return { headers, normalizedHeaders, rows }
 }
 
-export function buildCsvImport(fileName: string, text: string, existingReportCount: number) {
-  const rows = parseCsv(text).filter((row) => Object.values(row).some((value) => value.trim().length > 0))
+export function parseCsv(text: string): Record<string, string>[] {
+  return parseCsvTable(text).rows
+}
+
+export function buildCsvImport(
+  fileName: string,
+  text: string,
+  existingReportCount: number,
+  mappingProfile?: MappingProfile,
+) {
+  const table = parseCsvTable(text)
+  const mapping = mappingProfile
+    ? applyMappingProfile(mappingProfile, table.headers, table.rows)
+    : null
+  const rows = (mapping?.rows ?? table.rows)
+    .map((row) =>
+      mappingProfile
+        ? Object.fromEntries(Object.entries(row).map(([key, value]) => [normalizeHeader(key), value]))
+        : row,
+    )
+    .filter((row) => Object.values(row).some((value) => value.trim().length > 0))
   const importId = `rpt-csv-${Date.now()}`
 
   if (rows.length === 0) {
@@ -98,7 +128,12 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
     const pbsOverride = readCell(row, ['pbs'])
     const sabOverride = readCell(row, ['sab'])
     const corOverride = readCell(row, ['cor'])
-    const issues = generateValidationIssues({ field, unit, confidence, normalizedValue, wbs, cbs })
+    const issues = [
+      ...generateValidationIssues({ field, unit, confidence, normalizedValue, wbs, cbs }),
+      ...(mapping?.issues ?? [])
+        .filter((issue) => issue.row === index + 2)
+        .map((issue) => ({ severity: issue.severity === 'error' ? 'critical' as const : 'warning' as const, message: issue.message })),
+    ]
 
     let sccs: SccsAssignment | undefined
     if (pbsOverride || sabOverride || corOverride) {
@@ -172,11 +207,23 @@ export function buildCsvImport(fileName: string, text: string, existingReportCou
     error: null,
     report,
     values,
+    mappingIssues: mapping?.issues ?? [],
+    schemaChanged: mapping?.schemaChanged ?? false,
   }
 }
 
+export function approvalBlockReason(value: ExtractedValue): string | null {
+  if (value.wbs.trim().length === 0 || value.cbs.trim().length === 0 || /UNMAPPED/i.test(`${value.wbs} ${value.cbs}`)) {
+    return 'Map this value to a valid WBS and CBS before approval.'
+  }
+  if (value.validationIssues.some((issue) => issue.severity === 'critical')) {
+    return 'Resolve critical validation issues before approval.'
+  }
+  return null
+}
+
 export function canApproveValue(value: ExtractedValue) {
-  return !value.validationIssues.some((issue) => issue.severity === 'critical')
+  return approvalBlockReason(value) === null
 }
 
 export function sampleCsvContent() {
@@ -189,7 +236,7 @@ export function sampleCsvContent() {
   ].join('\n')
 }
 
-function splitCsvLine(line: string) {
+export function splitCsvLine(line: string) {
   const cells: string[] = []
   let current = ''
   let inQuotes = false
@@ -223,7 +270,7 @@ function splitCsvLine(line: string) {
   return cells
 }
 
-function normalizeHeader(header: string) {
+export function normalizeHeader(header: string) {
   return header.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
@@ -323,7 +370,7 @@ function inferOwner(category: ExtractedValue['category']) {
   }
 }
 
-function generateValidationIssues(input: {
+export function generateValidationIssues(input: {
   field: string
   unit: string
   confidence: number

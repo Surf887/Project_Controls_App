@@ -2358,6 +2358,50 @@ td strong { display: block; font-size: 0.88rem; }
   font-size: 0.8rem;
 }
 
+.sccs-mapping-filter {
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, 0.45fr);
+  margin-top: 16px;
+}
+
+.sccs-override-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sccs-override-layout td small {
+  display: block;
+  max-width: 320px;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.sccs-override-editor {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.sccs-override-editor h4 {
+  margin: 4px 0 6px;
+}
+
+@media (max-width: 1100px) {
+  .sccs-override-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .sccs-mapping-filter {
+    grid-template-columns: 1fr;
+  }
+}
+
 .sccs-inline-code {
   font-size: 0.72rem;
   letter-spacing: -0.02em;
@@ -2368,6 +2412,200 @@ td strong { display: block; font-size: 0.88rem; }
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Manual source-to-target mapping */
+.mapping-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.mapping-editor-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mapping-editor-heading h3 {
+  margin-top: 4px;
+}
+
+.mapping-editor .field small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.mapping-mode-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.mapping-mode-toggle input {
+  margin-top: 3px;
+}
+
+.mapping-facet-fields {
+  margin-top: 0;
+}
+
+.mapping-preview {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.mapping-preview span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mapping-preview code {
+  color: var(--blue-dark);
+  font-weight: 800;
+}
+
+.mapping-preview small {
+  color: var(--muted);
+}
+
+.mapping-validation {
+  color: var(--critical-fg, #c0392b);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.schedule-file-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.schedule-file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.p6-column-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  max-height: 430px;
+  margin-top: 16px;
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.schedule-metrics {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.schedule-map-select {
+  min-width: 230px;
+}
+
+.schedule-view table td small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.schedule-view .report-card {
+  flex-wrap: wrap;
+}
+
+.schedule-issue-list {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 10px 0 0 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.document-file-drop {
+  margin-top: 16px;
+}
+
+.driver-review-card {
+  border-left: 4px solid var(--blue);
+}
+
+.driver-evidence {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--line);
+  background: #f8fbff;
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.driver-evidence small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.mapping-sample-upload {
+  margin-top: 16px;
+}
+
+.mapping-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.mapping-rule-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.mapping-rule-card > div small {
+  display: block;
+  color: var(--muted);
+}
+
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  resize: vertical;
+  background: #fff;
+  font: inherit;
+}
+
+@media (max-width: 700px) {
+  .mapping-editor-heading {
+    flex-direction: column;
+  }
+
+  .mapping-preview {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Panel stack (view wrapper with topbar-style header) ────────── */

@@ -7,12 +7,18 @@ import { isCloseFlowRoute } from '../data/monthlyCloseSteps'
 import { costControlLogCount, costControlLogPath } from '../data/costControlLogs'
 import { monthlyClosePath, pathForView, viewFromPath } from '../routes/viewPaths'
 import type { ProjectState } from '../store/types'
+import { isViewEnabled } from '../config/features'
 
 const adminLinks = [
   { label: 'PMO dashboard', path: '/admin/pmo' },
   { label: 'Workflow admin', path: '/admin/workflows' },
   { label: 'Connectors', path: pathForView('integrations') },
 ] as const
+
+const visibleNavGroups = navGroups
+  .map((group) => ({ ...group, items: group.items.filter((item) => isViewEnabled(item.id)) }))
+  .filter((group) => group.items.length > 0)
+const visibleAdminLinks = adminLinks.filter((link) => link.path !== pathForView('integrations') || isViewEnabled('integrations'))
 
 const statusDot: Record<'live' | 'local' | 'syncing', string> = {
   live: 'sidebar-status-dot--live',
@@ -235,7 +241,7 @@ export function AppSidebar({ state, backendEnabled, syncing, onReconnect, onSear
               <span className="sidebar-link-meta">Budget · claims · FX · lessons…</span>
             </button>
 
-            {navGroups.map((group) => (
+            {visibleNavGroups.map((group) => (
               <div className={`sidebar-group ${collapsedGroups[group.group] ? 'is-collapsed' : ''}`} key={group.group}>
                 <button type="button" className="sidebar-group-head" onClick={() => toggleGroup(group.group)}>
                   <span>{group.group}</span>
@@ -263,11 +269,11 @@ export function AppSidebar({ state, backendEnabled, syncing, onReconnect, onSear
               <div className="sidebar-group">
                 <button type="button" className="sidebar-group-head" onClick={() => toggleGroup('Administration')}>
                   <span>Administration</span>
-                  <span className="sidebar-group-count">{adminLinks.length}</span>
+                  <span className="sidebar-group-count">{visibleAdminLinks.length}</span>
                 </button>
                 {!collapsedGroups['Administration'] && (
                   <ul className="sidebar-group-list">
-                    {adminLinks.map((link) => (
+                    {visibleAdminLinks.map((link) => (
                       <li key={link.path}>
                         <button
                           type="button"

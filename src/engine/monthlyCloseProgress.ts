@@ -191,9 +191,8 @@ function evaluateReports(state: ProjectState): CloseStepProgress {
     { label: 'Period', value: state.meta.baselineLabel, ok: true },
   ]
 
-  const approved = state.forecastApprovals.some((pkg) => pkg.status === 'approved')
   const blockers: string[] = []
-  const done = reports > 0 || approved
+  const done = reports > 0
   if (!done) blockers.push('Generate leadership close pack from Export centre')
   return { step, status: done ? 'complete' : 'ready', blockers, signals }
 }

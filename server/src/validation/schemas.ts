@@ -1,14 +1,280 @@
 import { z } from 'zod'
 import { ACTION_MIN_ROLE, isBlockedClientAction } from '../auth/actionPolicy.js'
 
+const sccsAssignmentSchema = z.object({
+  pbs: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  sab: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  cor: z.string().regex(/^[A-Z0-9]{1,8}$/),
+  composite: z.string().regex(/^[A-Z0-9]{1,8}\.[A-Z0-9]{1,8}\.[A-Z0-9]{1,8}$/),
+  source: z.enum(['mapped', 'manual', 'import']),
+})
+
 const costRowSchema = z
   .object({
-    id: z.string(),
-    wbs: z.string(),
-    description: z.string(),
+    id: z.string().min(1).max(128),
+    wbs: z.string().min(1).max(128),
+    cbs: z.string().max(128),
+    description: z.string().min(1).max(1000),
     parentId: z.string().nullable(),
+    sccs: sccsAssignmentSchema.optional(),
   })
   .passthrough()
+
+const extractedValueSchema = z
+  .object({
+    id: z.string().min(1).max(128),
+    reportId: z.string().min(1).max(128),
+    field: z.string().min(1).max(500),
+    category: z.enum(['cost', 'progress', 'change', 'procurement', 'forecast']),
+    normalizedValue: z.number().finite(),
+    unit: z.string().min(1).max(32),
+    wbs: z.string().min(1).max(128),
+    cbs: z.string().min(1).max(128),
+    reviewStatus: z.enum(['pending_review', 'needs_correction', 'approved']),
+    approvalStatus: z.enum(['unapproved', 'approved', 'rejected']),
+    sccs: sccsAssignmentSchema.optional(),
+  })
+  .passthrough()
+
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const scheduleSourceSchema = z.enum(['p6_csv', 'p6_xer', 'planview', 'manual'])
+const scheduleActivitySchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceActivityId: z.string().min(1).max(128),
+  sourceWbs: z.string().max(256),
+  wbs: z.string().min(1).max(256),
+  name: z.string().min(1).max(1000),
+  activityType: z.enum(['task', 'start_milestone', 'finish_milestone', 'level_of_effort']),
+  status: z.enum(['not_started', 'in_progress', 'completed']),
+  calendar: z.string().max(200),
+  baselineStart: isoDateSchema,
+  baselineFinish: isoDateSchema,
+  currentStart: isoDateSchema,
+  currentFinish: isoDateSchema,
+  actualStart: isoDateSchema.optional(),
+  actualFinish: isoDateSchema.optional(),
+  remainingDurationDays: z.number().finite().min(0).max(100_000),
+  totalFloatDays: z.number().finite().min(-100_000).max(100_000),
+  percentComplete: z.number().finite().min(0).max(100),
+  physicalPercentComplete: z.number().finite().min(0).max(100),
+  plannedLaborHours: z.number().finite().min(0).max(1_000_000_000),
+  actualLaborHours: z.number().finite().min(0).max(1_000_000_000),
+  primaryResource: z.string().max(200).optional(),
+  sourceSystem: scheduleSourceSchema,
+  sourceBatchId: z.string().min(1).max(256),
+  mappingStatus: z.enum(['mapped', 'manual', 'unmapped']),
+})
+const scheduleRelationshipSchema = z.object({
+  id: z.string().min(1).max(512),
+  predecessorId: z.string().min(1).max(256),
+  successorId: z.string().min(1).max(256),
+  type: z.enum(['FS', 'SS', 'FF', 'SF']),
+  lagDays: z.number().finite().min(-100_000).max(100_000),
+  sourceSystem: scheduleSourceSchema,
+  sourceBatchId: z.string().min(1).max(256),
+})
+const scheduleImportIssueSchema = z.object({
+  id: z.string().min(1).max(256),
+  row: z.number().int().min(0).max(10_000_000),
+  severity: z.enum(['warning', 'error']),
+  field: z.string().min(1).max(128),
+  message: z.string().min(1).max(2000),
+  sourceActivityId: z.string().max(128).optional(),
+})
+const scheduleImportBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceSystem: scheduleSourceSchema,
+  fileName: z.string().min(1).max(500),
+  dataDate: isoDateSchema,
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['accepted', 'accepted_with_warnings', 'rejected']),
+  activityCount: z.number().int().min(0).max(1_000_000),
+  relationshipCount: z.number().int().min(0).max(5_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  issues: z.array(scheduleImportIssueSchema).max(100_000),
+  columnMap: z
+    .record(z.string().min(1).max(128), z.string().min(1).max(500))
+    .refine((mapping) => Object.keys(mapping).length <= 50, 'Too many schedule column mappings'),
+})
+const forecastDriverSchema = z.object({
+  id: z.string().min(1).max(256),
+  title: z.string().min(1).max(1000),
+  sourceType: z.enum(['risk', 'opportunity', 'change', 'issue', 'claim', 'schedule', 'productivity', 'document', 'manual']),
+  sourceEntityId: z.string().min(1).max(256),
+  linkedEntityIds: z.array(z.string().min(1).max(256)).max(100),
+  wbs: z.array(z.string().min(1).max(256)).max(100),
+  cbs: z.string().max(128).optional(),
+  impactDirection: z.enum(['cost', 'saving']),
+  lowUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  mostLikelyUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  highUsd: z.number().finite().min(0).max(1_000_000_000_000),
+  probability: z.number().finite().min(0).max(1),
+  scheduleImpactDays: z.number().finite().min(-100_000).max(100_000),
+  treatment: z.enum(['deterministic', 'expected_value', 'triangular', 'excluded']),
+  status: z.enum(['draft', 'in_review', 'approved', 'rejected', 'superseded']),
+  confidence: z.number().finite().min(0).max(1),
+  rationale: z.string().max(4000),
+  evidence: z.object({
+    documentId: z.string().min(1).max(256),
+    fileName: z.string().min(1).max(500),
+    page: z.number().int().min(1).max(100_000).optional(),
+    excerpt: z.string().max(10_000),
+    boundingBox: z.array(z.number().finite()).max(16).optional(),
+  }).optional(),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().min(1).max(200),
+  reviewedAt: z.string().datetime().optional(),
+  reviewedBy: z.string().max(200).optional(),
+  reviewComment: z.string().max(4000).optional(),
+})
+const sourceDocumentSchema = z.object({
+  id: z.string().min(1).max(256),
+  projectId: z.string().min(1).max(256),
+  fileName: z.string().min(1).max(500),
+  mimeType: z.string().min(1).max(200),
+  sizeBytes: z.number().int().min(0).max(25 * 1024 * 1024),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  provider: z.enum(['local', 'azure', 'aws']),
+  status: z.enum(['uploaded', 'extracting', 'review_required', 'accepted', 'rejected', 'failed']),
+  uploadedAt: z.string().datetime(),
+  uploadedBy: z.string().min(1).max(200),
+  extraction: z.object({
+    provider: z.enum(['local', 'azure', 'aws']),
+    model: z.string().min(1).max(200),
+    extractedAt: z.string().datetime(),
+    pages: z.array(z.object({
+      page: z.number().int().min(1).max(100_000),
+      text: z.string().max(1_000_000),
+      confidence: z.number().finite().min(0).max(1),
+    })).max(10_000),
+    fullText: z.string().max(5_000_000),
+    confidence: z.number().finite().min(0).max(1),
+    warnings: z.array(z.string().max(2000)).max(1_000),
+  }).optional(),
+  draftDrivers: z.array(forecastDriverSchema).max(10_000),
+  error: z.string().max(4000).optional(),
+})
+const mappingRuleSchema = z.object({
+  id: z.string().min(1).max(256),
+  targetField: z.string().min(1).max(128),
+  sourceColumns: z.array(z.string().min(1).max(500)).max(20),
+  operation: z.enum(['direct', 'coalesce', 'concat', 'constant']),
+  constant: z.string().max(4000).optional(),
+  delimiter: z.string().max(20).optional(),
+  transforms: z.array(z.enum(['trim', 'uppercase', 'lowercase', 'number', 'date_iso'])).max(10),
+  valueMap: z
+    .record(z.string().max(500), z.string().max(500))
+    .refine((mapping) => Object.keys(mapping).length <= 500, 'Too many value mappings'),
+  required: z.boolean(),
+  defaultValue: z.string().max(4000).optional(),
+})
+const mappingProfileSchema = z.object({
+  id: z.string().min(1).max(256),
+  name: z.string().min(1).max(300),
+  organization: z.string().min(1).max(300),
+  sourceType: z.enum(['csv', 'excel', 'snowflake', 'ocr', 'api']),
+  targetDomain: z.enum(['contractor_report', 'cost_transaction', 'schedule_activity', 'project_governance']),
+  dataset: z.string().min(1).max(500),
+  version: z.number().int().min(1).max(1_000_000),
+  status: z.enum(['draft', 'active', 'retired']),
+  schemaFingerprint: z.string().max(128),
+  sourceHeaders: z.array(z.string().min(1).max(500)).max(5_000),
+  rules: z.array(mappingRuleSchema).min(1).max(500),
+  createdAt: z.string().datetime(),
+  createdBy: z.string().min(1).max(200),
+  updatedAt: z.string().datetime(),
+  updatedBy: z.string().min(1).max(200),
+})
+const costTransactionIssueSchema = z.object({
+  row: z.number().int().min(0).max(10_000_000),
+  externalId: z.string().max(500).optional(),
+  field: z.string().min(1).max(128),
+  severity: z.enum(['warning', 'error']),
+  message: z.string().min(1).max(2000),
+})
+const costTransactionSchema = z.object({
+  id: z.string().min(1).max(1000),
+  batchId: z.string().min(1).max(256),
+  sourceSystem: z.enum(['snowflake', 'csv', 'api']),
+  externalId: z.string().min(1).max(500),
+  projectCode: z.string().max(256),
+  wbs: z.string().min(1).max(256),
+  sourceWbs: z.string().max(256),
+  cbs: z.string().max(128).optional(),
+  recordType: z.enum(['actual', 'commitment', 'accrual', 'invoice']),
+  postingDate: isoDateSchema,
+  fiscalPeriod: z.string().min(1).max(64),
+  amount: z.number().finite().min(-1_000_000_000_000).max(1_000_000_000_000),
+  currency: z.string().min(3).max(8),
+  poNumber: z.string().max(256).optional(),
+  vendor: z.string().max(500).optional(),
+  description: z.string().max(2000).optional(),
+  sourceUpdatedAt: isoDateSchema.optional(),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  mappingStatus: z.enum(['mapped', 'unmapped']),
+  duplicate: z.boolean(),
+  postedAt: z.string().datetime().optional(),
+  postedBy: z.string().max(200).optional(),
+})
+const costTransactionBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  sourceSystem: z.enum(['snowflake', 'csv', 'api']),
+  profileId: z.string().min(1).max(256),
+  profileVersion: z.number().int().min(1).max(1_000_000),
+  dataset: z.string().min(1).max(500),
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  rowCount: z.number().int().min(0).max(1_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  duplicateCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  watermark: z.string().max(500).optional(),
+  issues: z.array(costTransactionIssueSchema).max(100_000),
+})
+const planviewItemSchema = z.object({
+  id: z.string().min(1).max(1000),
+  batchId: z.string().min(1).max(256),
+  externalId: z.string().min(1).max(500),
+  projectCode: z.string().max(256),
+  itemType: z.enum(['milestone', 'action', 'issue', 'decision']),
+  title: z.string().min(1).max(1000),
+  description: z.string().max(4000),
+  owner: z.string().min(1).max(500),
+  sourceStatus: z.string().min(1).max(200),
+  dueDate: isoDateSchema,
+  progressPercent: z.number().finite().min(0).max(100),
+  sourceWbs: z.string().max(256),
+  wbs: z.string().max(256),
+  costImpactUsd: z.number().finite().min(-1_000_000_000_000).max(1_000_000_000_000),
+  scheduleImpactDays: z.number().finite().min(-100_000).max(100_000),
+  sourceUpdatedAt: isoDateSchema.optional(),
+  mappingStatus: z.enum(['mapped', 'unmapped']),
+  duplicate: z.boolean(),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  postedAt: z.string().datetime().optional(),
+  postedBy: z.string().max(200).optional(),
+})
+const planviewBatchSchema = z.object({
+  id: z.string().min(1).max(256),
+  profileId: z.string().min(1).max(256),
+  profileVersion: z.number().int().min(1).max(1_000_000),
+  dataset: z.string().min(1).max(1000),
+  importedAt: z.string().datetime(),
+  importedBy: z.string().min(1).max(200),
+  status: z.enum(['staged', 'approved', 'rejected', 'posted']),
+  rowCount: z.number().int().min(0).max(1_000_000),
+  mappedCount: z.number().int().min(0).max(1_000_000),
+  duplicateCount: z.number().int().min(0).max(1_000_000),
+  errorCount: z.number().int().min(0).max(1_000_000),
+  warningCount: z.number().int().min(0).max(1_000_000),
+  cursor: z.string().max(2000).optional(),
+  issues: z.array(costTransactionIssueSchema).max(100_000),
+})
 
 const wbsNodeSchema = z.object({ id: z.string(), code: z.string() }).passthrough()
 const changeItemSchema = z.object({ id: z.string(), title: z.string() }).passthrough()
@@ -111,8 +377,110 @@ const actionSchemas = [
     payload: z.object({ drawId: z.string().min(1), actor: z.string().min(1) }),
   }),
   z.object({ type: z.literal('SET_REPORTS'), payload: z.array(z.record(z.string(), z.unknown())) }),
-  z.object({ type: z.literal('SET_VALUES'), payload: z.array(z.record(z.string(), z.unknown())) }),
+  z.object({ type: z.literal('SET_VALUES'), payload: z.array(extractedValueSchema).max(10_000) }),
   z.object({ type: z.literal('SET_SELECTED_VALUE'), payload: z.string().min(1) }),
+  z.object({
+    type: z.literal('IMPORT_SCHEDULE'),
+    payload: z.object({
+      batch: scheduleImportBatchSchema,
+      activities: z.array(scheduleActivitySchema).max(1_000_000),
+      relationships: z.array(scheduleRelationshipSchema).max(5_000_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_SCHEDULE_ACTIVITY_MAPPING'),
+    payload: z.object({
+      activityId: z.string().min(1).max(256),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('IMPORT_DOCUMENT_DRAFTS'),
+    payload: z.object({
+      document: sourceDocumentSchema,
+      drivers: z.array(forecastDriverSchema).max(10_000),
+    }),
+  }),
+  z.object({ type: z.literal('UPDATE_FORECAST_DRIVER'), payload: forecastDriverSchema }),
+  z.object({
+    type: z.literal('DECIDE_FORECAST_DRIVER'),
+    payload: z.object({
+      driverId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+      comment: z.string().max(4000).optional(),
+    }),
+  }),
+  z.object({ type: z.literal('UPSERT_MAPPING_PROFILE'), payload: mappingProfileSchema }),
+  z.object({
+    type: z.literal('DELETE_MAPPING_PROFILE'),
+    payload: z.object({
+      profileId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('IMPORT_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batch: costTransactionBatchSchema,
+      transactions: z.array(costTransactionSchema).max(10_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_COST_TRANSACTION_MAPPING'),
+    payload: z.object({
+      transactionId: z.string().min(1).max(1000),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('DECIDE_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+      comment: z.string().max(4000).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('POST_COST_TRANSACTION_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('IMPORT_PLANVIEW_BATCH'),
+    payload: z.object({
+      batch: planviewBatchSchema,
+      items: z.array(planviewItemSchema).max(10_000),
+    }),
+  }),
+  z.object({
+    type: z.literal('UPDATE_PLANVIEW_ITEM_MAPPING'),
+    payload: z.object({
+      itemId: z.string().min(1).max(1000),
+      wbs: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('DECIDE_PLANVIEW_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      decision: z.enum(['approved', 'rejected']),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
+  z.object({
+    type: z.literal('POST_PLANVIEW_BATCH'),
+    payload: z.object({
+      batchId: z.string().min(1).max(256),
+      actor: z.string().min(1).max(200),
+    }),
+  }),
   z.object({ type: z.literal('APPLY_APPROVED_EXTRACTIONS'), payload: z.object({ actor: z.string().min(1) }) }),
 ] as const satisfies ReadonlyArray<z.ZodTypeAny>
 
@@ -172,7 +540,7 @@ export const registerUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(200),
   role: roleSchema,
-  password: z.string().min(8).max(200),
+  password: z.string().min(12).max(200),
 })
 
 export const projectRoleSchema = z.object({
@@ -214,6 +582,19 @@ export const connectorOAuthSchema = z.record(z.string().max(128), z.string().max
   (obj) => Object.keys(obj).length <= 20,
   'Too many OAuth fields',
 )
+
+export const snowflakeStageSchema = z.object({
+  profileId: z.string().min(1).max(256),
+  limit: z.number().int().min(1).max(1_000).optional(),
+  watermarkColumn: z.string().min(1).max(256).optional(),
+  afterWatermark: z.string().max(500).optional(),
+})
+
+export const planviewStageSchema = z.object({
+  profileId: z.string().min(1).max(256),
+  limit: z.number().int().min(1).max(1_000).optional(),
+  cursor: z.string().max(2000).optional(),
+})
 
 export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterUserInput = z.infer<typeof registerUserSchema>

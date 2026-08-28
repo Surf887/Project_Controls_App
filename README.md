@@ -163,7 +163,7 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 
 - Active project is single-project at a time; portfolio comparison shows only configured snapshots. Seeded benchmarks are development/demo data and are never created in production.
 - PostgreSQL is mandatory in production; the JSON/file store is a local-development fallback. Project state remains a versioned JSONB document while immutable audit events and baseline snapshots use dedicated PostgreSQL tables.
-- Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with per-project RBAC. Demo role switching is hard-disabled in production; optional enterprise SSO uses server-side OIDC Authorization Code + PKCE.
+- Browser sessions use Secure, HttpOnly, SameSite=Strict cookies with server-side revocation and per-project RBAC. Demo role switching is hard-disabled in production; enterprise identity supports OIDC Authorization Code + PKCE, group-to-project role mapping, and bearer-protected SCIM user lifecycle.
 - Simulated connectors and illustrative intelligence modules are disabled by default (`VITE_ENABLE_SIMULATED_FEATURES=false`, `ENABLE_SIMULATED_INTEGRATIONS=false`)
 - P6 CSV and native XER status imports are supported; live P6 API and SAP/EcoSys feeds are not yet implemented
 - OCR supports local text-layer PDF/text extraction plus configured local, Azure, or AWS providers; scanned-PDF quality depends on the selected provider

@@ -60,6 +60,10 @@ An empty production database creates one blank project from `BOOTSTRAP_PROJECT_N
 
 Configure `OIDC_ISSUER`, `OIDC_CLIENT_ID`, and the public HTTPS `OIDC_REDIRECT_URI` ending at `/api/platform/auth/oidc/callback`. Discovery resolves authorization/token endpoints unless explicit endpoints are supplied. The server generates PKCE verifier/challenge, signed state and nonce, performs the code exchange, verifies the ID token, provisions the local identity, and issues the HttpOnly application session. `OIDC_CLIENT_SECRET` is optional for public PKCE clients. The legacy client-posted ID-token endpoint is disabled in production.
 
+`OIDC_GROUPS_CLAIM` and `OIDC_GROUP_MAPPINGS` can assign the highest matching global role and explicit per-project roles. Sessions are server-recorded and revocable; administrators can revoke all sessions for a user through the auth administration API.
+
+For automated identity lifecycle, configure a ≥32-character `SCIM_BEARER_TOKEN` and point the IdP at `/api/scim/v2`. The SCIM Users endpoint supports discovery, filtering, provisioning, updates, role changes, and deactivation. Disabling or changing a user’s role revokes their active sessions immediately. SCIM is unavailable (404) when no bearer token is configured.
+
 ## Health checks
 
 - `GET /api/health` — overall status incl. `ready` (real DB probe).

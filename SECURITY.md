@@ -11,6 +11,7 @@ The latest release on the default branch receives security fixes.
 ## Security controls implemented
 
 - **Authentication** — HMAC-signed (HS256) sessions with a mandatory ≥16-char `JWT_SECRET`; production credentials persist in a Secure, HttpOnly, SameSite=Strict cookie rather than browser storage; bcrypt password hashing; optional server-side OIDC Authorization Code + PKCE with signed state, nonce validation, and discovery/token exchange. Legacy browser ID-token exchange is disabled in production.
+- **Identity lifecycle** — session IDs are persisted and checked server-side, supporting immediate logout, administrator/user-wide revocation, expiry pruning, OIDC group role mapping, and bearer-protected SCIM user provisioning/deactivation.
 - **Authorization** — role-based access (viewer/cost_controller/approver/admin) enforced on every mutating route, plus per-project membership enforcement (`ENFORCE_PROJECT_MEMBERSHIP`, default on in production) to prevent cross-project IDOR. A path-safety guard validates project identifiers.
 - **Input validation** — Zod schemas validate request payloads on mutating endpoints; the action envelope is type- and role-checked.
 - **Transport / HTTP** — Helmet headers, deny-by-default CORS allowlist in production, baseline + login rate limiting, `x-powered-by` disabled, capped JSON body size, and production error masking with a correlation id.

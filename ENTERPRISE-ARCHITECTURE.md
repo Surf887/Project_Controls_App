@@ -113,10 +113,9 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 1. Normalize schedule activities, relationships, snapshots, and source mappings into Postgres tables
 2. Add authenticated P6 API adapters with streaming/staged imports
-3. Add SAP commitments/actuals reconciliation against the same control-account dictionary
-4. Add Planview governance/milestone adapter and reusable source mapping profiles
-5. Add IdP group-to-project-role mapping, SCIM provisioning, and session revocation controls
-6. Add portfolio governance policies, webhooks, APM, and external penetration testing
+3. Add the AdaptiveWork POST/entity-query variant to the Planview adapter
+4. Add portfolio governance policies and outbound approval webhooks
+5. Add external APM/tracing and complete penetration/restore testing
 
 ## Phase 3 — Production scale
 

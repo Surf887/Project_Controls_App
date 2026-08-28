@@ -37,6 +37,7 @@ This pass also closes gaps found after the original audit: production images inc
 - ✅ Production client disables offline/local seed fallback unless `VITE_ALLOW_OFFLINE=true` is explicitly set.
 - ✅ Browser credentials use Secure, HttpOnly, SameSite=Strict cookies; JWTs are no longer persisted in browser storage.
 - ✅ Production SSO uses server-side OIDC Authorization Code + PKCE with signed state, nonce validation, discovery/token exchange, and secure callback sessions.
+- ✅ Sessions are server-recorded and revocable; OIDC groups map to global/project roles and SCIM manages user provisioning, role changes, deactivation, and session revocation.
 - ✅ Protected Prometheus request metrics are available when `METRICS_TOKEN` is configured.
 - ✅ Manual WBS/CBS and ISO 19008 mapping supports reviewed per-row overrides, reuse across matching source rows, and automatic rollback to rule-based assignments.
 - ✅ Enterprise schedule foundation: governed P6 CSV mapping/import, canonical activities and relationships, reusable mappings, control-account PV/EV, SPI/CPI, schedule S-curve, close gates, and reports.
@@ -75,4 +76,4 @@ These are either operational (not code we can complete here) or larger initiativ
 
 ## Verification
 
-After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 101 server tests pass locally; and all 16 Playwright workflows pass. CI executes five PostgreSQL migration/concurrency/governance/document/queue tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.
+After this pass: client typecheck + production build pass; 97 client/domain tests pass; server bundle + typecheck pass; 106 server tests pass locally; and all 16 Playwright workflows pass. CI executes six PostgreSQL migration/concurrency/governance/document/queue/session tests and builds the production Docker image. The production dependency gate has no unacknowledged high/critical findings.

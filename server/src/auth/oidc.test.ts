@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { SignJWT, generateKeyPair, exportJWK, type KeyLike } from 'jose'
 import { randomUUID } from 'node:crypto'
 import { createUser } from './userStore.js'
+import { getProjectRole } from './projectRoles.js'
 
 process.env.OIDC_ISSUER = 'https://idp.example.com'
 process.env.OIDC_CLIENT_ID = 'pc-app-client'
@@ -69,5 +70,29 @@ describe('OIDC account linking', () => {
         name: 'Attacker',
       }),
     ).rejects.toMatchObject({ name: 'OidcAccountError' })
+  })
+
+  it('maps IdP groups to global and project-scoped roles', async () => {
+    const user = await createUser({
+      email: `group-${randomUUID()}@example.com`,
+      name: 'Group User',
+      role: 'viewer',
+      provider: 'oidc',
+      oidcSubject: `group-sub-${randomUUID()}`,
+    })
+    process.env.OIDC_GROUP_MAPPINGS = JSON.stringify([
+      {
+        group: 'Project Controls Approvers',
+        globalRole: 'approver',
+        projects: { 'proj-demo-001': 'cost_controller' },
+      },
+    ])
+    try {
+      const updated = await oidc.applyOidcGroupMappings(user, ['Project Controls Approvers'])
+      expect(updated.role).toBe('approver')
+      expect(await getProjectRole(user.id, 'proj-demo-001')).toBe('cost_controller')
+    } finally {
+      delete process.env.OIDC_GROUP_MAPPINGS
+    }
   })
 })

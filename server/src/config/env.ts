@@ -146,6 +146,33 @@ export function validateEnv(): void {
   ) {
     throw new Error('OIDC_TOKEN_AUTH_METHOD must be client_secret_post or client_secret_basic')
   }
+  if (process.env.OIDC_GROUP_MAPPINGS) {
+    try {
+      const mappings = JSON.parse(process.env.OIDC_GROUP_MAPPINGS) as Array<{
+        group?: unknown
+        globalRole?: unknown
+        projects?: Record<string, unknown>
+      }>
+      if (
+        !Array.isArray(mappings) ||
+        mappings.some(
+          (mapping) =>
+            typeof mapping.group !== 'string' ||
+            (mapping.globalRole != null && !VALID_ROLES.includes(mapping.globalRole as Role)) ||
+            Object.values(mapping.projects ?? {}).some(
+              (role) => !VALID_ROLES.includes(role as Role),
+            ),
+        )
+      ) {
+        throw new Error('invalid')
+      }
+    } catch {
+      throw new Error('OIDC_GROUP_MAPPINGS must be valid role-mapping JSON')
+    }
+  }
+  if (process.env.SCIM_BEARER_TOKEN && process.env.SCIM_BEARER_TOKEN.length < 32) {
+    throw new Error('SCIM_BEARER_TOKEN must be at least 32 characters')
+  }
 
   if (isProduction() && process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 12) {
     throw new Error('ADMIN_PASSWORD must be at least 12 characters in production')

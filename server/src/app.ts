@@ -11,6 +11,7 @@ import { computeRouter, projectsRouter } from './routes/projects.js'
 import { enterpriseRouter } from './routes/enterprise.js'
 import { platformRouter } from './routes/platform.js'
 import { authRouter } from './routes/auth.js'
+import { scimRouter } from './routes/scim.js'
 import { attachUser } from './middleware/auth.js'
 import { logger } from './utils/logger.js'
 import { beginRequestMetric, renderPrometheusMetrics } from './utils/metrics.js'
@@ -147,6 +148,7 @@ export function createApp() {
   })
 
   app.use('/api/platform/auth', authRouter)
+  app.use('/api/scim/v2', scimRouter)
   app.use('/api/platform', platformRouter)
   app.use('/api/projects', projectsRouter)
   app.use('/api/projects/:projectId/compute', computeRouter)

@@ -3,9 +3,12 @@ import type { Role } from './roles.js'
 import {
   createUser,
   findUserByEmail,
+  findUserById,
   findUserByOidcSubject,
   type UserRecord,
+  setUserRole,
 } from './userStore.js'
+import { setProjectRole } from './projectRoles.js'
 
 const VALID_OIDC_ROLES: Role[] = ['viewer', 'cost_controller', 'approver', 'admin']
 
@@ -44,6 +47,7 @@ export interface OidcProfile {
   subject: string
   email: string
   name: string
+  groups?: string[]
 }
 
 export async function verifyOidcIdToken(
@@ -68,7 +72,14 @@ export async function verifyOidcIdToken(
     if (expectedNonce && payload.nonce !== expectedNonce) return null
     const email = typeof payload.email === 'string' ? payload.email : ''
     const name = typeof payload.name === 'string' ? payload.name : email || payload.sub
-    return { subject: payload.sub, email, name }
+    const groupsClaim = process.env.OIDC_GROUPS_CLAIM ?? 'groups'
+    const rawGroups = payload[groupsClaim]
+    const groups = Array.isArray(rawGroups)
+      ? rawGroups.filter((group): group is string => typeof group === 'string')
+      : typeof rawGroups === 'string'
+        ? [rawGroups]
+        : []
+    return { subject: payload.sub, email, name, groups }
   } catch {
     return null
   }
@@ -104,4 +115,56 @@ export async function findOrProvisionOidcUser(profile: OidcProfile): Promise<Use
     provider: 'oidc',
     oidcSubject: profile.subject,
   })
+}
+
+interface OidcGroupMapping {
+  group: string
+  globalRole?: Role
+  projects?: Record<string, Role>
+}
+
+function configuredGroupMappings(): OidcGroupMapping[] {
+  if (!process.env.OIDC_GROUP_MAPPINGS) return []
+  const parsed = JSON.parse(process.env.OIDC_GROUP_MAPPINGS) as unknown
+  if (!Array.isArray(parsed)) throw new Error('OIDC_GROUP_MAPPINGS must be a JSON array')
+  return parsed.filter(
+    (entry): entry is OidcGroupMapping =>
+      Boolean(
+        entry &&
+          typeof entry === 'object' &&
+          'group' in entry &&
+          typeof (entry as { group?: unknown }).group === 'string',
+      ),
+  )
+}
+
+export async function applyOidcGroupMappings(
+  user: UserRecord,
+  groups: string[],
+): Promise<UserRecord> {
+  const groupSet = new Set(groups.map((group) => group.toLowerCase()))
+  const mappings = configuredGroupMappings().filter((mapping) =>
+    groupSet.has(mapping.group.toLowerCase()),
+  )
+  const roleRank: Record<Role, number> = {
+    viewer: 1,
+    cost_controller: 2,
+    approver: 3,
+    admin: 4,
+  }
+  const globalRoles = mappings
+    .map((mapping) => mapping.globalRole)
+    .filter((role): role is Role => Boolean(role && VALID_OIDC_ROLES.includes(role)))
+    .sort((left, right) => roleRank[right] - roleRank[left])
+  if (globalRoles[0] && globalRoles[0] !== user.role) {
+    await setUserRole(user.id, globalRoles[0])
+  }
+  for (const mapping of mappings) {
+    for (const [projectId, projectRole] of Object.entries(mapping.projects ?? {})) {
+      if (VALID_OIDC_ROLES.includes(projectRole)) {
+        await setProjectRole(user.id, projectId, projectRole)
+      }
+    }
+  }
+  return (await findUserById(user.id)) ?? user
 }

@@ -16,6 +16,8 @@ describe('validateEnv', () => {
     delete process.env.OIDC_AUTHORIZATION_ENDPOINT
     delete process.env.OIDC_TOKEN_ENDPOINT
     delete process.env.OIDC_TOKEN_AUTH_METHOD
+    delete process.env.OIDC_GROUP_MAPPINGS
+    delete process.env.SCIM_BEARER_TOKEN
     delete process.env.ADMIN_PASSWORD
     delete process.env.USERS_PATH
     delete process.env.AUDIT_HMAC_SECRET

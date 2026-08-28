@@ -28,6 +28,7 @@ import {
   enqueueIngestionJob,
   getIngestionJob,
 } from '../services/ingestionJobService.js'
+import { isSessionActive, issueSession, revokeSession } from '../auth/sessionStore.js'
 
 const describePostgres = process.env.DATABASE_URL ? describe : describe.skip
 
@@ -47,7 +48,7 @@ describePostgres('Postgres project store integration', () => {
 
   it('applies every SQL migration and seeds readable projects', async () => {
     const migrations = await query<{ count: number }>('SELECT COUNT(*)::int AS count FROM schema_migrations')
-    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(7)
+    expect(migrations.rows[0]?.count).toBeGreaterThanOrEqual(8)
 
     const projects = await store.listProjectsAsync()
     const active = await store.getActiveProjectRecordAsync()
@@ -153,5 +154,21 @@ describePostgres('Postgres project store integration', () => {
     expect(await claimIngestionJob('worker-b')).toBeNull()
     await completeIngestionJob(queued.id, 'worker-a', { ok: true })
     expect((await getIngestionJob(current.state.meta.id, queued.id))?.status).toBe('completed')
+  })
+
+  it('persists and revokes authenticated sessions in Postgres', async () => {
+    await query(
+      `INSERT INTO users (id, email, name, role, provider)
+       VALUES ($1,$2,$3,'viewer','oidc')
+       ON CONFLICT (id) DO NOTHING`,
+      ['session-test-user', 'session-test@example.com', 'Session Tester'],
+    )
+    const session = await issueSession(
+      { id: 'session-test-user', name: 'Session Tester', role: 'viewer' },
+      3600,
+    )
+    expect(await isSessionActive(session.sessionId, 'session-test-user')).toBe(true)
+    await revokeSession(session.sessionId)
+    expect(await isSessionActive(session.sessionId, 'session-test-user')).toBe(false)
   })
 })

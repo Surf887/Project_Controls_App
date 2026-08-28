@@ -11,6 +11,7 @@ import { ensureBootstrapAdmin } from './auth/userStore.js'
 import { logger } from './utils/logger.js'
 import { startIngestionWorker } from './services/ingestionWorker.js'
 import { closeRedis } from './services/redisService.js'
+import { pruneExpiredSessions } from './auth/sessionStore.js'
 
 loadRootEnvFile()
 
@@ -67,6 +68,12 @@ triggerScheduledExports()
 const exportInterval = setInterval(triggerScheduledExports, 60 * 60 * 1000)
 const stopIngestionWorker =
   process.env.INGESTION_ASYNC === 'true' ? startIngestionWorker() : () => undefined
+const sessionPruneInterval = setInterval(
+  () => void pruneExpiredSessions().catch((error) =>
+    logger.error('session_prune_failed', { error: error instanceof Error ? error.message : 'unknown' }),
+  ),
+  60 * 60 * 1000,
+)
 
 const app = createApp()
 const server = app.listen(port, () => {
@@ -81,6 +88,7 @@ function shutdown(signal: string) {
   logger.info('shutdown_started', { signal })
   clearInterval(exportInterval)
   stopIngestionWorker()
+  clearInterval(sessionPruneInterval)
   server.close(() => {
     closeDatabase()
     void Promise.all([closePool(), closeRedis()]).finally(() => process.exit(0))

@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose'
+import { randomUUID } from 'node:crypto'
 import type { Role } from './roles.js'
 
 const ISSUER = process.env.JWT_ISSUER ?? 'project-controls'
@@ -38,14 +39,20 @@ export interface SessionClaims {
   email?: string
   name: string
   role: Role
+  sessionId: string
 }
 
-export async function signSessionToken(user: SessionUser, expiresInSec = 3600): Promise<string> {
+export async function signSessionToken(
+  user: SessionUser,
+  expiresInSec = 3600,
+  sessionId = randomUUID(),
+): Promise<string> {
   return new SignJWT({ email: user.email, name: user.name, role: user.role })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setSubject(user.id)
     .setIssuer(ISSUER)
     .setAudience(AUDIENCE)
+    .setJti(sessionId)
     .setIssuedAt()
     .setExpirationTime(`${expiresInSec}s`)
     .sign(getJwtSecret())
@@ -57,7 +64,7 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
       issuer: ISSUER,
       audience: AUDIENCE,
     })
-    if (typeof payload.sub !== 'string' || typeof payload.role !== 'string') {
+    if (typeof payload.sub !== 'string' || typeof payload.role !== 'string' || typeof payload.jti !== 'string') {
       return null
     }
     return {
@@ -65,6 +72,7 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
       email: typeof payload.email === 'string' ? payload.email : undefined,
       name: typeof payload.name === 'string' ? payload.name : payload.sub,
       role: payload.role as Role,
+      sessionId: payload.jti,
     }
   } catch {
     return null

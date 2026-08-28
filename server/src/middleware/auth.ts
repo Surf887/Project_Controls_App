@@ -6,11 +6,13 @@ import { findUserById } from '../auth/userStore.js'
 import { param } from '../utils/params.js'
 import { assertSafeId } from '../utils/safePath.js'
 import type { RequestHandler } from 'express'
+import { isSessionActive } from '../auth/sessionStore.js'
 
 declare module 'express-serve-static-core' {
   interface Request {
     user?: AuthUser | null
     globalRole?: Role
+    sessionId?: string
   }
 }
 
@@ -44,6 +46,12 @@ export const attachUser: RequestHandler = async (req, _res, next) => {
 
     const claims = await verifySessionToken(token)
     if (claims) {
+      if (!(await isSessionActive(claims.sessionId, claims.sub))) {
+        req.user = null
+        req.globalRole = undefined
+        return next()
+      }
+      req.sessionId = claims.sessionId
       const record = await findUserById(claims.sub)
       if (!record || record.disabled) {
         // Demo tokens (minted by /auth/token) reference synthetic demo users

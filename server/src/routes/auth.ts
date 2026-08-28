@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import { rateLimitDisabled } from '../config/env.js'
-import { signSessionToken } from '../auth/jwt.js'
 import { DEMO_USERS, isDemoAuthEnabled, type Role } from '../auth/rbac.js'
 import { requireAdmin, requireRole } from '../middleware/auth.js'
 import {
@@ -11,7 +10,7 @@ import {
   toPublicUser,
   verifyUserPassword,
 } from '../auth/userStore.js'
-import { isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
+import { applyOidcGroupMappings, isOidcEnabled, verifyOidcIdToken, findOrProvisionOidcUser, OidcAccountError } from '../auth/oidc.js'
 import { loginSchema, oidcLoginSchema, registerUserSchema } from '../validation/schemas.js'
 import type { Response } from 'express'
 import { redisRateLimitStore } from '../services/redisService.js'
@@ -20,6 +19,7 @@ import {
   exchangeOidcCode,
   verifyOidcFlowCookie,
 } from '../auth/oidcFlow.js'
+import { issueSession, revokeSession, revokeUserSessions } from '../auth/sessionStore.js'
 
 export const authRouter = Router()
 
@@ -92,7 +92,7 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
     res.status(401).json({ error: 'Invalid email or password' })
     return
   }
-  const token = await signSessionToken(user, SESSION_TTL_SEC)
+  const { token } = await issueSession(user, SESSION_TTL_SEC)
   setSessionCookie(res, token)
   res.json({ token, user: toPublicUser(user), expiresIn: SESSION_TTL_SEC })
 })
@@ -132,9 +132,10 @@ authRouter.get('/oidc/callback', loginLimiter, async (req, res) => {
     const idToken = await exchangeOidcCode(code, flow.verifier)
     const profile = await verifyOidcIdToken(idToken, undefined, flow.nonce)
     if (!profile) throw new Error('OIDC token verification failed')
-    const user = await findOrProvisionOidcUser(profile)
+    let user = await findOrProvisionOidcUser(profile)
+    user = await applyOidcGroupMappings(user, profile.groups ?? [])
     if (user.disabled) throw new Error('Account disabled')
-    const token = await signSessionToken(user, SESSION_TTL_SEC)
+    const { token } = await issueSession(user, SESSION_TTL_SEC)
     setSessionCookie(res, token)
     const separator = flow.returnTo.includes('?') ? '&' : '?'
     res.redirect(302, `${flow.returnTo}${separator}sso=success`)
@@ -167,6 +168,7 @@ authRouter.post('/oidc', loginLimiter, async (req, res) => {
   let user
   try {
     user = await findOrProvisionOidcUser(profile)
+    user = await applyOidcGroupMappings(user, profile.groups ?? [])
   } catch (error) {
     if (error instanceof OidcAccountError) {
       res.status(409).json({ error: error.message })
@@ -178,7 +180,7 @@ authRouter.post('/oidc', loginLimiter, async (req, res) => {
     res.status(403).json({ error: 'Account disabled' })
     return
   }
-  const token = await signSessionToken(user, SESSION_TTL_SEC)
+  const { token } = await issueSession(user, SESSION_TTL_SEC)
   setSessionCookie(res, token)
   res.json({ token, user: toPublicUser(user), expiresIn: SESSION_TTL_SEC })
 })
@@ -202,13 +204,19 @@ authRouter.get('/me', requireRole('viewer'), (req, res) => {
   res.json({ user: req.user, globalRole: req.globalRole })
 })
 
-authRouter.post('/logout', (_req, res) => {
+authRouter.post('/logout', async (req, res) => {
+  if (req.sessionId) await revokeSession(req.sessionId)
   clearSessionCookie(res)
   res.status(204).send()
 })
 
 authRouter.get('/users', requireAdmin, async (_req, res) => {
   res.json({ users: await listUsers() })
+})
+
+authRouter.post('/users/:userId/revoke-sessions', requireAdmin, async (req, res) => {
+  const count = await revokeUserSessions(req.params.userId)
+  res.json({ revoked: count })
 })
 
 /**
@@ -222,7 +230,7 @@ authRouter.post('/token', async (req, res) => {
   }
   const { userId, role } = req.body as { userId?: string; role?: Role }
   const user = DEMO_USERS.find((u) => u.id === userId || u.role === role) ?? DEMO_USERS[1]!
-  const token = await signSessionToken(user, SESSION_TTL_SEC)
+  const { token } = await issueSession(user, SESSION_TTL_SEC)
   setSessionCookie(res, token)
   res.json({ token, user, expiresIn: SESSION_TTL_SEC })
 })

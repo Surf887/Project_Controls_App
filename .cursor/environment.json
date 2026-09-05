@@ -1,0 +1,11 @@
+{
+  "name": "Project Controls Intelligence",
+  "install": "npm ci && npm ci --prefix server",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "NODE_ENV=development DEMO_AUTH=true VITE_DEMO_AUTH=true npm run dev"
+    }
+  ],
+  "ports": [5173, 3001]
+}

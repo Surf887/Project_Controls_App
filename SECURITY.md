@@ -15,9 +15,9 @@ The latest release on the default branch receives security fixes.
 - **Input validation** — Zod schemas validate request payloads on mutating endpoints; the action envelope is type- and role-checked.
 - **Transport / HTTP** — Helmet headers, deny-by-default CORS allowlist in production, baseline + login rate limiting, `x-powered-by` disabled, capped JSON body size, and production error masking with a correlation id.
 - **Webhooks** — inbound webhooks require a valid HMAC-SHA256 signature (`WEBHOOK_SECRET` / per-connector secret).
-- **Data integrity** — tamper-evident audit chain keyed with `AUDIT_HMAC_SECRET`; optimistic-concurrency writes are atomic (transactional, version-conditional on Postgres; atomic file replace on the JSON store).
-- **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
+- **Data integrity** — append-only audit JSONL with a SHA-256 hash chain (`prevHash` + payload) in `server/src/services/auditService.ts`. `AUDIT_HMAC_SECRET` is documented for a future HMAC-keyed chain; the current writer does not read it. Optimistic-concurrency writes are atomic (transactional, version-conditional on Postgres; atomic file replace on the JSON store). Trailing corrupt audit lines are skipped so a bad append cannot fail an already-committed project write.
+- **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`, falling back to `JWT_SECRET`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
 
 ## Known follow-ups
 
-See `REMEDIATION-STATUS.md` for hardening still recommended (e.g. third-party penetration test, SOC 2 control mapping, full OIDC Authorization-Code+PKCE flow, shared-store rate limiting for multi-replica deployments).
+See `REMEDIATION-STATUS.md` for hardening still recommended (e.g. HMAC-keyed / DB-backed audit, request-scoped logging, third-party penetration test, SOC 2 control mapping, full OIDC Authorization-Code+PKCE flow, shared-store rate limiting for multi-replica deployments).

@@ -9,7 +9,9 @@ cp .env.example .env        # set JWT_SECRET etc. for local runs
 npm run dev                 # client (5173) + API (3001)
 ```
 
-For a quick frontend-only/demo run, set `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (local only — never in production).
+For a quick frontend-only/demo run, set `VITE_DEMO_AUTH=true` (and `DEMO_AUTH=true` if you want to be explicit). The API enables demo auth automatically when `NODE_ENV=development` and `DEMO_AUTH` is unset; it is always off in production.
+
+The server reads the **repo-root** `.env` at boot and will not override variables already in the environment. If tooling injects `PORT`, set `API_PORT=3001`.
 
 ## Checks before opening a PR
 
@@ -20,7 +22,7 @@ npm run build                       # client typecheck (tsc) + vite build
 npm test                            # client/engine unit tests (vitest)
 npm run build --prefix server       # server bundle + typecheck
 DEMO_AUTH=true npm test --prefix server   # server unit/route tests
-npm run test:e2e                    # Playwright (set DEMO_AUTH=true)
+DEMO_AUTH=true npm run test:e2e     # Playwright (needs demo auth to pass login)
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same client, server, and e2e jobs, plus a dependency audit and a production Docker build. All must pass.
@@ -31,6 +33,16 @@ CI (`.github/workflows/ci.yml`) runs the same client, server, and e2e jobs, plus
 - All server state mutations go through dispatched `ProjectAction`s validated server-side; never bypass the reducer.
 - Add or update tests with behavior changes. New API routes need at least one route test; new engine logic needs unit tests.
 - Don't commit secrets or runtime data (`.env`, `server/data/*` are gitignored).
+- Public HTTP contracts live in `API.md`. If you add a route, update that file and add a route test.
+
+## Common pitfalls
+
+- **Both demo flags matter.** `VITE_DEMO_AUTH` is baked in at Vite compile time. Restart `npm run dev:client` after changing it. Server demo auth is `DEMO_AUTH` / `NODE_ENV` (see `server/src/auth/rbac.ts`).
+- **Empty user store.** Password login needs a user. Either set `ADMIN_EMAIL` + `ADMIN_PASSWORD` before first boot, or use demo auth.
+- **`If-Match` / 409.** All `/actions` writes are versioned. Tests and scripts must send the current version; the UI reloads on conflict rather than merging.
+- **Membership in production-like runs.** `ENFORCE_PROJECT_MEMBERSHIP` defaults on when `NODE_ENV=production`. A non-admin with no project role gets 403 on `:projectId` routes.
+- **`JWT_SECRET` length.** Must be ≥16 characters whenever it is set. Unset is allowed only outside production (insecure fallback).
+- **Accrual WBS roll-up.** `accruedCostForWbs` includes the node and descendants, not ancestors. Parent-level PO accruals must not be expected on every child (see `src/engine/accruals.ts`).
 
 ## Branching & review
 

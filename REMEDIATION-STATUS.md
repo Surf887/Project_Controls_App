@@ -2,6 +2,15 @@
 
 Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Status as of this remediation pass.
 
+### Code vs this document (verify before treating a ✅ as current)
+
+Two items below drifted from the live tree and should not be taken at face value:
+
+- **Audit HMAC / serialized appends.** `server/src/services/auditService.ts` still hashes with unkeyed SHA-256 and appends with `appendFileSync` (no mutex). Corrupt trailing lines are tolerated so a failed audit write cannot 500 an already-committed action. Postgres `audit_events` is still not the live writer.
+- **Structured request logging / `x-request-id`.** `server/src/utils/logger.ts` exists but is unused. 500s and some route errors return `errorId` only; there is no request-id middleware.
+
+Health probes (`/api/health`, `/live`, `/ready`), graceful shutdown, Zod on mutating routes, membership on `:projectId` routers, webhook HMAC, and encrypted connector tokens **do** match the current code.
+
 ## P0 — Critical blockers (all fixed)
 
 | # | Finding | Status | How |

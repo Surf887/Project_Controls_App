@@ -21,13 +21,14 @@ Copy `.env.example` to `.env` and set, at minimum, for production:
 | `NODE_ENV=production` | Enables prod guards (no demo auth, strict CORS, fail-fast). |
 | `DATABASE_URL` | **Required** — the server refuses to start without it (the JSON file store is not durable enough for production). |
 | `JWT_SECRET` | **Required**, ≥16 chars. Session token signing key. |
-| `AUDIT_HMAC_SECRET` | **Required** — keys the tamper-evident audit chain. |
-| `CREDENTIALS_KEY` | **Required** — AES-256-GCM key for connector OAuth tokens at rest. |
+| `AUDIT_HMAC_SECRET` | Passed through Compose today; **not read** by `auditService.ts` (the live chain is unkeyed SHA-256). Reserve a distinct key if you later HMAC the chain — do not reuse `JWT_SECRET` in that design. |
+| `CREDENTIALS_KEY` | AES-256-GCM key for connector OAuth tokens at rest. If unset, `connectorCrypto.ts` falls back to `JWT_SECRET`. Compose does **not** currently pass `CREDENTIALS_KEY` into the app container — set it in `docker-compose.yml` if you need a key separate from `JWT_SECRET`. |
 | `CORS_ORIGIN` | Allowlist of client origins; cross-origin is denied if unset in prod. |
 | `WEBHOOK_SECRET` | Required to accept inbound webhooks (HMAC verification). |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run bootstrap admin (password ≥12 chars in prod). |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | First-run bootstrap admin (password ≥12 chars in prod). Created only when the user store is empty. |
+| `TRUST_PROXY` | Set `true` or a hop count when TLS terminates at a reverse proxy so rate-limit and `X-Forwarded-*` see the client correctly. |
 
-Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platform's secret manager — never commit `.env`.
+Generate strong secrets, e.g. `openssl rand -hex 32`. Store them in your platform's secret manager — never commit `.env`. The API loads repo-root `.env` at process start and will not override variables already present in the environment.
 
 ## Run with Docker Compose
 
@@ -46,9 +47,9 @@ SQL migrations in `server/src/db/migrations/*.sql` run automatically at startup 
 
 ## Health checks
 
-- `GET /api/health` — overall status incl. `ready` (real DB probe).
+- `GET /api/health` — process up; pings Postgres when configured. Body is `{ ok, version, service, postgres }` (no `ready` field). 503 if the ping fails. The image `HEALTHCHECK` treats a non-OK HTTP status as unhealthy.
 - `GET /api/health/live` — liveness (process up). Use for container restart policy.
-- `GET /api/health/ready` — readiness (DB reachable); returns 503 when not. Use for load-balancer/ingress readiness gating.
+- `GET /api/health/ready` — readiness (DB reachable); returns 503 when not. Prefer this for load-balancer/ingress readiness gating.
 
 ## TLS / reverse proxy
 
@@ -75,11 +76,13 @@ DATABASE_URL=postgres://... ./scripts/backup.sh /var/backups/project-controls
 
 The server handles `SIGTERM`/`SIGINT`: it stops accepting connections, drains in-flight requests, closes the DB pool, then exits (with a forced-exit timeout). This makes rolling deploys safe.
 
-For horizontal scaling (multiple replicas): move the rate-limit store to a shared backend (e.g. Redis) — the default in-memory limiter is per-instance. Postgres handles shared state; the JSON file store is single-instance only.
+For horizontal scaling (multiple replicas): move the rate-limit store to a shared backend (e.g. Redis) — the default in-memory limiter is per-instance. Postgres handles shared project state; audit JSONL, baselines, and the JSON file store are **not** multi-instance safe.
+
+Scheduled close-pack jobs (`POST /api/platform/projects/:id/export-jobs`) are polled **hourly**. `scheduleCron` is persisted but the runner always sets the next run to 06:00 UTC on the first of next month.
 
 ## Observability
 
-Logs are structured JSON (one line per event) at `LOG_LEVEL` (`info`/`warn`/`error`); each request gets an `x-request-id` echoed in responses and used as the error correlation id. Ship stdout to your log platform. Metrics/tracing/error-tracking (Prometheus/OTel/Sentry) are recommended next steps — see `REMEDIATION-STATUS.md`.
+Unhandled errors and some route failures include a generated `errorId` in the JSON body and a matching `console.error` line. A structured `logger` helper exists (`server/src/utils/logger.ts`, honors `LOG_LEVEL`) but is **not** wired into request middleware — there is no per-request `x-request-id` today. Ship stdout/stderr to your log platform. Metrics/tracing/error-tracking (Prometheus/OTel/Sentry) are still recommended — see `REMEDIATION-STATUS.md`.
 
 ## Rollback
 

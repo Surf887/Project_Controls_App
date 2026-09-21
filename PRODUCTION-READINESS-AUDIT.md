@@ -2,6 +2,8 @@
 
 **Date:** June 2026 · **Commit audited:** `a72fafb` (master) · **Method:** static review of `src/`, `server/src/`, infra, CI, and docs (read-only). Evidence is cited as `file:line`.
 
+> **Historical snapshot.** This file records the June 2026 review of `a72fafb`. P0 items (Docker server compile, IDOR, unsigned webhooks, non-atomic concurrency, client role from `localStorage`) were remediated in later commits, including merged PR #1 (`aab1279` on `master`). **Do not treat the Critical/High findings below as present on current `master`.** Current status: `REMEDIATION-STATUS.md`. Live HTTP contract: `API.md`. Ops runbook: `DEPLOYMENT.md`.
+
 ---
 
 ## Verdict

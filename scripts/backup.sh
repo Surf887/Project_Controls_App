@@ -9,7 +9,9 @@
 #
 # Env:
 #   DATABASE_URL   PostgreSQL connection string (required for the DB dump).
-#   DATA_DIR       Path to server/data (default: ./server/data).
+#   DATA_DIR       Path to filesystem data (default: ./server/data).
+#                  Under tsx that is correct. The production bundle writes
+#                  repo-root data/ (Docker: /app/data) — set DATA_DIR to match.
 #   RETENTION_DAYS Days of backups to keep (default: 30).
 #
 set -euo pipefail

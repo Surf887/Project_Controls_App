@@ -1,96 +1,87 @@
-# Enterprise architecture roadmap
+# Enterprise architecture
 
-Maps product capabilities to implementation phases. The trust milestone established control-account aggregation and monthly close; this document defines the path to enterprise-grade governance.
+Maps product capabilities to what this repo actually ships versus what is still roadmap. The trust milestone established control-account aggregation and monthly close; later passes added a real API, JWT/OIDC sessions, Postgres, and workflow gates.
 
 ## Capability matrix
 
-| Capability | Today | Phase 1 (foundation) | Phase 2 (enterprise) | Phase 3 (scale) |
-|---|---|---|---|---|
-| **Configurable workflows** | Hard-coded forecast/change flows | `workflowConfig.ts` + `workflowEngine.ts` | Admin UI, delegation, SLAs | BPMN, multi-tenant templates |
-| **Multi-project / portfolio** | 3-project compare, active sync | Portfolio API, roll-up policies | PMO dashboards, cross-project RBAC | Federated portfolios, JV structures |
-| **Role-based permissions** | Demo `x-pc-role` header | `actionPolicy.ts` aligned to reducer | OIDC/JWT, project-scoped roles | SoD, attribute-based access |
-| **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
-| **Audit immutability** | Mutable in-state array (100 cap) | Append-only JSONL + hash chain | Postgres `audit_events` (no UPDATE) | WORM storage, SIEM export |
-| **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Simulated connectors UI | Adapter registry + sync jobs API | SAP/P6 OAuth, webhooks | iPaaS, message bus |
-| **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
-| **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
-| **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
-| **Edge cases** | Core O&G scenarios in seed | Documented edge-case register | Per-domain regression suites | Production incident library |
+| Capability | Shipped in this repo | Still open |
+|---|---|---|
+| **Configurable workflows** | `src/data/workflowConfig.ts` + server gates for forecast/change (`workflowEngine.ts`); admin UI + delegation API | SLA timers, BPMN, multi-tenant templates. Monthly-close statuses are published but not asserted server-side the way forecast/change are. |
+| **Multi-project / portfolio** | Project list, activate, membership-filtered reads; `/api/platform/portfolio/governance` roll-up of the **active** project; 3-project compare UI | Cross-project consolidation, federated / JV structures. Governance currently rolls up the active project, not a full portfolio set. |
+| **Role-based permissions** | JWT sessions, `actionPolicy.ts`, per-project roles, `ENFORCE_PROJECT_MEMBERSHIP` (default on in production) | SoD / ABAC. Demo `x-pc-role` remains a **non-prod** convenience. |
+| **Database** | JSON file (dev) or Postgres JSONB blob when `DATABASE_URL` is set; SQL migrations at boot | Split cost sheet / registers into relational tables; event store. |
+| **Audit** | Append-only JSONL + SHA-256 hash chain under `server/data/audit` | HMAC-keyed chain, serialized multi-writer lock, Postgres `audit_events` writes (table may exist; the live writer is still the JSONL file). |
+| **Budget versioning** | Filesystem baseline snapshots; create / lock APIs | Sanction compare UI, full CPM baseline integration. |
+| **Integrations** | Adapter registry, inbound HMAC webhooks, OAuth tokens encrypted at rest | Live SAP/P6 OAuth; outbound webhooks on approve; iPaaS. Sync jobs are simulated. |
+| **Validation / approval gates** | Zod envelopes, domain `actionValidation`, forecast/change workflow transitions | Configurable thresholds per portfolio; ML anomaly gates. UI monthly-close gates are sequential and data-derived (`monthlyCloseProgress.ts`). |
+| **Report packs** | Server JSON close pack + PDF (`pdfExport.ts`); hourly poll of due export jobs | True cron (`scheduleCron` is stored, not executed); branded exec dashboards. |
+| **Security / deployment** | Docker Compose, fail-fast prod env, Helmet/CORS/rate-limit, backup script | Shared-store rate limiting, K8s, third-party pen-test / SOC 2. Compose does not yet inject `CREDENTIALS_KEY` / `TRUST_PROXY`. The image does not COPY SQL migrations into `server/dist/migrations` (bundled `runSqlMigrations` reads that path). |
+| **Observability** | `errorId` on 500/route errors; unused `logger.ts` helper (`LOG_LEVEL`) | Request logging, `x-request-id`, metrics, tracing, error tracking. |
+| **Edge cases** | `src/data/edgeCaseRegister.ts` + several covered cost/change tests | Remaining open rows (contingency double-draw, FX reval timing, etc.). |
 
-## Phase 1 — Foundation (implemented in this repo)
+## What is implemented
 
 ### Configurable enterprise workflows
 
 - Shared definitions: `src/data/workflowConfig.ts`
-- Server validation: `server/src/services/workflowEngine.ts`
-- Workflows: forecast approval, change board, monthly close gates
+- Server validation (forecast + change): `server/src/services/workflowEngine.ts`
+- UI progress for monthly close: `src/engine/monthlyCloseProgress.ts` (`/close`) — sequential, data-derived gates (see `API.md`)
+- Delegation CRUD: `GET/POST /api/platform/workflows/delegations`
 
 ### Role-based permissions
 
 - Single policy map: `server/src/auth/actionPolicy.ts`
-- Blocks client-only actions (`ADD_AUDIT`, `HYDRATE`, `RESET` via actions)
-- Route guards on mutating endpoints
+- Blocks client-only actions (`ADD_AUDIT`, `HYDRATE`, `RESET` via `/actions`)
+- Route guards + project membership on mutating and `:projectId` reads
+- Password login, optional OIDC **ID-token exchange** (`POST /api/platform/auth/oidc`)
 
-### Immutable audit
+### Audit and baselines
 
-- Append-only store: `server/data/audit/{projectId}.jsonl`
-- Hash chain per entry: `server/src/services/auditService.ts`
-- API: `GET /api/projects/:id/audit` (never via reducer from client)
+- Append-only store: `server/data/audit/{projectId}.jsonl` under `tsx`; repo-root `data/audit/` from the production bundle
+- Hash chain: `server/src/services/auditService.ts` (SHA-256; see `SECURITY.md`)
+- API: `GET /api/projects/:id/audit` (never via reducer from the client)
+- Immutable snapshots: `server/data/baselines/{projectId}/` under `tsx`; repo-root `data/baselines/` from the bundle — `GET/POST /api/projects/:id/baselines`
 
-### Budget versioning
+### Persistence
 
-- Immutable snapshots: `server/data/baselines/{projectId}/`
-- API: `GET/POST /api/projects/:id/baselines`
+- Postgres when `DATABASE_URL` is set (`server/src/db/postgresProjectStore.ts`)
+- JSON store remains the default for local dev without Postgres
+- Production refuses to boot without `DATABASE_URL`
+- Optimistic concurrency: `If-Match` + transactional version check (Postgres) / atomic file replace (JSON)
 
-### Real database path
-
-- Postgres schema: `server/src/db/migrations/002_core_schema.sql`
-- Enable with `DATABASE_URL` (Docker Compose included)
-- JSON store remains default for local dev without Postgres
-
-### Integrations
+### Integrations and reports
 
 - Adapter registry: `server/src/integrations/connectorRegistry.ts`
-- Types: ERP, schedule (P6), contracts, procurement, document control
-- Client connectors UI becomes config; execution moves server-side
-
-### Report packs
-
-- Server bundles: `server/src/services/exportService.ts`
-- API: `GET /api/projects/:id/exports/close-pack`
+- Inbound webhooks: HMAC `x-webhook-signature` (`webhookAuth.ts`)
+- Close pack JSON + PDF: `GET .../exports/close-pack` and `.../close-pack.pdf`
+- Scheduled jobs: hourly due-job poll; next run is first-of-month 06:00 UTC (not the stored cron)
 
 ### Deployment
 
-- `docker-compose.yml` — app + Postgres
-- `.env.example` — required variables
+- `docker-compose.yml` — app + Postgres (Postgres not published to the host)
+- `.env.example` — required and optional variables
+- `DEPLOYMENT.md` — runbook including restore; `scripts/backup.sh` — pg_dump + audit/baseline archive
 
-## Phase 2 — Enterprise hardening
+## Remaining (do not treat as shipped)
 
-1. Wire Postgres store when `DATABASE_URL` is set (dual-write migration from JSON)
-2. OIDC provider (`server/src/auth/providers/oidcProvider.ts`)
-3. Portfolio governance policies (approval thresholds, delegation)
-4. PDF close packs (puppeteer or pdfkit)
-5. Webhook delivery for approved forecast/change events
-6. Optimistic concurrency (`version` column, 409 on conflict)
-
-## Phase 3 — Production scale
-
-1. Event sourcing for cost sheet mutations
-2. Cross-portfolio consolidation currency
-3. Backup automation (pg_dump schedule, audit archive)
-4. Pen-test remediation, SOC2 controls mapping
-5. Edge-case library from field deployments (accrual reversals, FX revals, JV splits, etc.)
+1. Full OIDC Authorization-Code + PKCE (current flow verifies a client-supplied ID token).
+2. HMAC + DB-backed audit; request-scoped structured logs.
+3. Relational normalization / event sourcing of the project blob.
+4. Live ERP/P6 connectors and outbound event webhooks.
+5. Shared rate-limit store for multi-replica deploys; Redis (or similar).
+6. Execute `scheduleCron` as real cron rather than a fixed monthly next-run.
+7. Copy (or embed) `server/src/db/migrations/*.sql` so the bundled image can apply them; align `scripts/backup.sh` `DATA_DIR` with bundled `../../data` from `server/dist`.
+8. Read `JWT_ISSUER` / `DATABASE_PATH` / `USERS_PATH` / `BCRYPT_ROUNDS` at call time (today they miss `.env` because ESM imports run before `loadRootEnvFile()`).
 
 ## Edge-case register (initial)
 
 Categories to cover before claiming “production ready”:
 
-- **Cost**: parallel WBS detail vs control account, contingency double-draw, FX revaluation timing
+- **Cost**: parallel WBS detail vs control account, contingency double-draw, FX revaluation timing, ancestor vs descendant accrual roll-up
 - **Change**: budget vs forecast variance mechanism, partial approval, withdrawn COs
 - **Forecast**: locked period override, forecast-only changes after budget freeze
 - **Portfolio**: inactive benchmark drift, currency mix, JV non-operated share
 - **Integration**: partial ERP load, schedule actuals lag, duplicate PO lines
 - **Audit**: actor impersonation, retroactive correction (requires compensating entry, not delete)
 
-See `src/data/edgeCaseRegister.ts` for tracked scenarios and test linkage.
+See `src/data/edgeCaseRegister.ts` for tracked scenarios and test linkage. Public HTTP details: `API.md`.

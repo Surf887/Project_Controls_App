@@ -36,6 +36,19 @@ npm run dev:server
 
 Default store is the JSON file at `server/data/projects.json` (auto-seeded on first run). Set `DATABASE_URL` to enable the PostgreSQL store (`server/src/db/postgresProjectStore.ts`) for enterprise persistence.
 
+### Environment files
+
+Copy `.env.example` to `.env` at the **repo root** for Vite (`VITE_*`). The API file loader (`server/src/config/loadEnv.ts`) does **not** override variables already in the process environment, and the file it reads depends on how the process is started:
+
+| How you run the API | File loaded |
+|---|---|
+| `npm run dev:server` (`tsx` on `server/src/…`) | `server/.env` |
+| Bundled `node server/dist/index.js` (Docker / `npm start --prefix server`) | repo-root `.env` |
+
+If a parent process injects `PORT`, set `API_PORT=3001` so the API stays on its expected port.
+
+First login (non-demo): set `ADMIN_EMAIL` + `ADMIN_PASSWORD` so startup can bootstrap the first admin when the user store is empty. Demo sign-in is documented under [Authentication](#authentication).
+
 ## Architecture
 
 | Layer | Stack | Role |
@@ -47,17 +60,19 @@ Default store is the JSON file at `server/data/projects.json` (auto-seeded on fi
 
 ### Key API routes
 
+Full tables, RBAC, webhook signing, monthly-close gates, and workflow transitions: **`API.md`**.
+
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/health` | Liveness check |
-| GET | `/api/projects` | List projects |
-| GET | `/api/projects/active` | Active project state |
-| GET | `/api/projects/:id` | Project state by id |
-| POST | `/api/projects/:id/activate` | Switch active project |
-| POST | `/api/projects/:id/actions` | Apply `ProjectAction` (server runs reducer) |
-| POST | `/api/projects/:id/reset` | Reset project to seed data |
-| GET | `/api/projects/:id/compute/forecast` | Server-side forecast totals |
-| GET | `/api/projects/:id/compute/evm` | Server-side EVM summary |
+| GET | `/api/health` | Process + optional DB ping (`ok`, not a `ready` field) |
+| GET | `/api/health/live` | Liveness (restart policy) |
+| GET | `/api/health/ready` | Readiness (503 if DB down) |
+| GET | `/api/platform/auth/config` | Which login options the server exposes |
+| POST | `/api/platform/auth/login` | Password session |
+| POST | `/api/projects/:id/actions` | Apply `ProjectAction` (`If-Match` version; 409 on conflict) |
+| GET | `/api/projects/:id/compute/forecast` | Server-side forecast totals (`rows` = snapshot count) |
+| GET | `/api/projects/:id/compute/evm` | Server-side EVM `{ summary, accounts }` (`accounts` = account count) |
+| GET | `/api/projects/:id/exports/close-pack.pdf` | Monthly close PDF |
 
 
 ## Modules
@@ -67,12 +82,11 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 | Group | Purpose | Modules |
 |-------|---------|---------|
 | **Programme overview** | Owner / PMO health | Command Center, Portfolio Compare |
-| **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR) |
-| **Monthly control cycle** | Period close sequence | Accruals, Cost Sheet, Contingency, Forecast Engine, Forecast Approval |
+| **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR), ISO 19008 SCCS |
+| **Monthly control cycle** | Period close sequence | Accruals, Cost Sheet, Contingency, Forecast Engine, Forecast Approval, What-if & Monte Carlo |
 | **VOWD & performance** | Physical progress → EV | Rules of Credit, EVM, Predictive |
 | **Commitments & delivery** | PO · LLI · FX together | Long-Lead, Procurement, FX & Hedging |
-| **Change & risk board** | Linked governance | Change Register, Risks, Opportunities, Decisions |
-| **Forecast analytics** | Scenario / Monte Carlo | What-if |
+| **Change & risk board** | Linked governance | Change Register, Claims, Risks, Opportunities, Decisions |
 | **EPC execution** | Discipline workspaces | Engineering, Construction, Commissioning |
 | **Project logs** | Supporting registers | Issues, Actions, Lessons |
 | **Reporting & traceability** | Stakeholder packs | Team Reports, Audit Trail |
@@ -101,7 +115,9 @@ Deterministic EAC per WBS row:
 
 **FX module** — multi-currency POs, treasury rate table, hedge % per commitment, unhedged exposure rolled into forecast when enabled.
 
-**Accruals** — period-end unbilled cost from subcontracts (earned − invoiced), PO commitment gaps, pending invoices, and manual/timesheet adjustments. WBS rollup shows posted actuals + open accruals = economic actuals.
+**ISO 19008 SCCS** — PBS · SAB · COR facet tables and a composite code on each control account (`src/engine/sccs.ts`). Manual assignments win; otherwise WBS/CBS/phase mapping fills the code. Roll-up at `/cost-structure/sccs` sums **control accounts only** (same grain as financial totals).
+
+**Accruals** — period-end unbilled cost from subcontracts (earned − invoiced), PO commitment gaps, pending invoices, and manual/timesheet adjustments. WBS rollup shows posted actuals + open accruals = economic actuals. `accruedCostForWbs` includes the queried WBS and its **descendants** only (`reviewed` / `posted`) — a parent-level entry is not attributed to every child. Generated PO accruals are booked to WBS `P.04` (`purchaseOrderAccrual`), not the PO line’s own code.
 
 Cost sheet EAC and approved changes sync from registers. FTC period forecasts support **linear**, **front-end loaded**, and **back-end loaded** curves.
 
@@ -119,13 +135,15 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).
 
-**Forecast approval** — draft monthly package from forecast engine → submit → approve/reject with workflow trail; approved packages lock reporting context.
+**Monthly close** — guided hub at `/close` (`src/engine/monthlyCloseProgress.ts`): baseline → WBS → accruals → VOWD → changes → forecast → approval → reports. Each step is derived from live data (not a stored workflow status); later steps stay blocked until the prior step completes. Gate table: `API.md`. Command palette: Ctrl/Cmd+K.
+
+**Forecast approval** — draft monthly package from forecast engine → submit → approve/reject with workflow trail; approved packages lock reporting context. Server rejects illegal status transitions (`server/src/services/workflowEngine.ts`).
 
 **Change register workflow** — raise change requests in-app, submit for approval, approve/reject with step-by-step approval history per CO.
 
 **Team reports** — CSV packs by audience (cost summary, change register, forecast status, EVM snapshot, audit activity) for team consumption.
 
-**Audit trail** — who changed forecast/cost sheet, settings, change decisions, and forecast approvals (last 100 entries, persisted).
+**Audit trail** — who changed forecast/cost sheet, settings, change decisions, and forecast approvals (in-state last 100 entries plus the append-only JSONL store).
 
 ## WBS CSV format
 
@@ -138,12 +156,45 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 
 - Active project is single-project at a time; portfolio compare shows seeded benchmark projects alongside the live one
 - Persistence is either JSON file or PostgreSQL (set `DATABASE_URL`); project state is stored as a versioned JSONB blob in Postgres today — splitting cost sheet / registers into relational tables is the next enterprise step
-- Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
-- Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
+- Baseline snapshots and audit log are filesystem JSONL/JSON. Under `tsx` they live in `server/data/{baselines,audit}`; the production bundle writes repo-root `data/` (`../../data` from `server/dist`). Migrating both into Postgres tables is still a follow-up.
+- Auth is password login at `/api/platform/auth/login`, optional OIDC **token exchange** at `/api/platform/auth/oidc` (`OIDC_ISSUER`, `OIDC_CLIENT_ID`), and per-project RBAC (`server/src/auth`). Demo role switching (`x-pc-role` / `POST /api/platform/auth/token`) is never available in production. In development, server demo auth defaults **on** if `DEMO_AUTH` is unset; the client switcher still needs `VITE_DEMO_AUTH=true`. See [Authentication](#authentication) and `API.md`.
 - Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
 - No P6/SAP/EcoSys live API feeds
 - Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
 
+## Authentication
+
+| Path | When to use |
+|---|---|
+| Password (`ADMIN_EMAIL` / `ADMIN_PASSWORD` on first boot) | Local or production accounts |
+| OIDC exchange + optional `VITE_OIDC_LOGIN_URL` (`#id_token=` fragment) | Corporate SSO. JWKS verify (`OIDC_ISSUER` + `OIDC_CLIENT_ID`); `OIDC_CLIENT_SECRET` is unused. Not Authorization-Code + PKCE yet. |
+| Demo `POST /api/platform/auth/token` / `x-pc-role` | Local demos and Playwright only |
+
+The UI hydrates from the API. If the API returns 401, the login screen is shown. If the API is **unreachable**, the client falls back to `localStorage` (no login).
+
 ## Reset demo data
 
-Use **Reset demo** in the top bar to restore seeded state and clear saved local data.
+Use **Reset demo** in the top bar to restore seeded state and clear saved local data (admin-only against the API).
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---|---|
+| Login screen with no users that work | User store is empty and `ADMIN_EMAIL`/`ADMIN_PASSWORD` were not set before first boot. |
+| Demo role switcher missing / `/auth/token` is 404 | Client needs `VITE_DEMO_AUTH=true` **and** the server must have demo auth on. Production always rejects demo auth. |
+| Server ignored repo-root `.env` in `npm run dev` | `tsx` loads `server/.env`, not the monorepo root. Copy or symlink, or export the vars. The production bundle reads the repo-root file. |
+| `JWT_ISSUER` / `SESSION_TTL_SEC` / `DATABASE_PATH` / `USERS_PATH` / `BCRYPT_ROUNDS` in `.env` had no effect | Captured when their modules load, **before** `loadRootEnvFile()`. Export them in the shell or inject them (Compose already injects `JWT_ISSUER`). |
+| `Requires … role` / `You do not have access` | Production defaults `ENFORCE_PROJECT_MEMBERSHIP=true`. Assign the user with `POST /api/platform/projects/:id/roles`, or sign in as the bootstrap admin. |
+| Global approver suddenly a viewer on one project | A project role **replaces** the global role (`effectiveRole`). There is no HTTP disable-user / global-role-change API — only register + project-role assign. |
+| Saved a workflow delegation but still cannot approve | Delegations are stored and listed; `workflowEngine.ts` never consults them. |
+| `GET .../compute/evm` has no account rows | `accounts` is a **count**, same pattern as forecast `rows`. |
+| Edit discarded after save | `409` version conflict — another writer won. The UI reloads server state; re-apply the edit. Scripts that omit `If-Match` skip the conflict check entirely. |
+| API listens on the wrong port | A parent process set `PORT`. Set `API_PORT=3001`. Existing env vars win over any `.env` file. |
+| Server refuses to start in production | Missing `DATABASE_URL` or `JWT_SECRET` (<16 chars also fails). `DEMO_AUTH=true`, `DISABLE_RATE_LIMIT=true`, and `USERS_PATH` are rejected in production. |
+| Compose/image exits while applying SQL migrations | Bundled `runSqlMigrations()` reads `server/dist/migrations`. The current `Dockerfile` does not COPY the `.sql` files there. `tsx` uses `server/src/db/migrations` (works locally). |
+| Audit / baseline files not under `server/data` in Docker | The bundle resolves `../../data` from `server/dist` → repo-root `data/`. Point `DATA_DIR` / `AUDIT_DIR` at that location. |
+| E2E / some server tests fail locally | Run with `DEMO_AUTH=true` (CI already does). |
+| Accrual total on a child WBS looks “too small” | Parent-level accruals no longer roll down onto children (see Forecast engine → Accruals). |
+| Monthly close step stuck on “blocked” | Prior step is incomplete. Gates are sequential — see `API.md` Monthly close gates. |
+
+Operational runbook: `DEPLOYMENT.md`. Contributing checks: `CONTRIBUTING.md`.

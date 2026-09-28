@@ -2,6 +2,30 @@
 
 Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Status as of this remediation pass.
 
+### Code vs this document (verify before treating a ✅ as current)
+
+Two items below drifted from the live tree and should not be taken at face value:
+
+- **Audit HMAC / serialized appends.** `server/src/services/auditService.ts` still hashes with unkeyed SHA-256 and appends with `appendFileSync` (no mutex). Corrupt trailing lines are tolerated so a failed audit write cannot 500 an already-committed action. Postgres `audit_events` is still not the live writer.
+- **Structured request logging / `x-request-id`.** `server/src/utils/logger.ts` exists but is unused. 500s and some route errors return `errorId` only; there is no request-id middleware.
+
+Health probes (`/api/health`, `/live`, `/ready`), graceful shutdown, Zod on mutating routes, membership on `:projectId` routers, webhook HMAC, and encrypted connector tokens **do** match the current code.
+
+Additional live-tree notes (not original audit findings):
+
+- **`.env` path split.** `loadRootEnvFile()` walks `../..` from `import.meta.url`. Under `tsx` that is `server/.env`; the esbuild bundle (`server/dist/index.js`) resolves to the repo-root `.env`.
+- **Compose env surface.** `CREDENTIALS_KEY` and `TRUST_PROXY` are not injected by `docker-compose.yml` today. Connector crypto falls back to `JWT_SECRET` when `CREDENTIALS_KEY` is unset.
+- **Export `scheduleCron`.** Stored, not executed. Hourly poll + first-of-month 06:00 UTC next run.
+- **Forecast compute `rows` / EVM `accounts`.** `GET .../compute/forecast` `rows` and `GET .../compute/evm` `accounts` are **counts**, not payloads.
+- **`If-Match`.** Parsed with `Number(...)` (no Zod positive-integer check). Omit the header → no conflict check. Non-numeric → `NaN` → 409.
+- **Monthly close workflow id.** Published on `/workflows` but UI gates are sequential and data-derived (`monthlyCloseProgress.ts`), not `workflowEngine` assertions.
+- **Import-time env.** `JWT_ISSUER` (`jwt.ts`), `SESSION_TTL_SEC` (`routes/auth.ts`), `DATABASE_PATH` (`jsonProjectStore.ts`), `USERS_PATH` and `BCRYPT_ROUNDS` (`userStore.ts`) are captured when the ESM graph loads, before `loadRootEnvFile()`. Compose/Docker inject `JWT_ISSUER` into the process, so that path is fine; a `.env`-only value is not.
+- **Delegations.** `POST /api/platform/workflows/delegations` persists a row. `workflowEngine.ts` never reads it. `GET` returns all rows (Postgres `LIMIT 50`) to any viewer.
+- **Project role replacement.** `effectiveRole` returns the project assignment when present, not `max(global, project)`.
+- **SQL migrations.** `runSqlMigrations()` applies each file then inserts `schema_migrations` without a wrapping transaction.
+- **Bundled filesystem.** `fileURLToPath(import.meta.url)` in the esbuild bundle is `server/dist/index.js`. JSON/audit/baseline writers therefore use repo-root `data/`. `runSqlMigrations()` reads `server/dist/migrations`; the Dockerfile does not COPY `server/src/db/migrations/*.sql` there.
+- **`OIDC_CLIENT_SECRET`.** Present in `.env.example` / older docs; `oidc.ts` never reads it (JWKS ID-token verify only).
+
 ## P0 — Critical blockers (all fixed)
 
 | # | Finding | Status | How |
@@ -23,7 +47,7 @@ Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Statu
 - ✅ Route-level code splitting (main chunk ~600 kB → ~308 kB).
 - ✅ Connector OAuth tokens encrypted at rest (AES-256-GCM, `CREDENTIALS_KEY`).
 - ✅ CI: added dependency audit + production Docker build jobs; e2e demo-auth fix.
-- ✅ Secrets: compose uses env vars; Postgres not host-exposed; `server/data/*` and `.env` gitignored.
+- ✅ Secrets: compose uses env vars; Postgres not host-exposed; `server/data/*` and `.env` are gitignored.
 - ✅ Path-traversal guard on `projectId`; production admin-password length check.
 - ✅ Fixed a fresh-checkout seeding bug (migration pre-created an empty store, blocking seed) that would have hung server tests/CI on a clean clone.
 

@@ -15,9 +15,9 @@ The latest release on the default branch receives security fixes.
 - **Input validation** — Zod schemas validate request payloads on mutating endpoints; the action envelope is type- and role-checked.
 - **Transport / HTTP** — Helmet headers, deny-by-default CORS allowlist in production, baseline + login rate limiting, `x-powered-by` disabled, capped JSON body size, and production error masking with a correlation id.
 - **Webhooks** — inbound webhooks require a valid HMAC-SHA256 signature (`WEBHOOK_SECRET` / per-connector secret).
-- **Data integrity** — tamper-evident audit chain keyed with `AUDIT_HMAC_SECRET`; optimistic-concurrency writes are atomic (transactional, version-conditional on Postgres; atomic file replace on the JSON store).
+- **Data integrity** — append-only JSONL audit chain (`server/data/audit/{projectId}.jsonl`) hashed with SHA-256 over each record plus `prevHash`. `AUDIT_HMAC_SECRET` is **not** applied today (a keyed HMAC chain is still a follow-up). Optimistic-concurrency writes are atomic (transactional, version-conditional on Postgres; atomic file replace on the JSON store).
 - **Secrets at rest** — connector OAuth tokens encrypted with AES-256-GCM (`CREDENTIALS_KEY`). Application secrets are supplied via environment/secret manager and are never committed (`server/data/` and `.env` are gitignored).
 
 ## Known follow-ups
 
-See `REMEDIATION-STATUS.md` for hardening still recommended (e.g. third-party penetration test, SOC 2 control mapping, full OIDC Authorization-Code+PKCE flow, shared-store rate limiting for multi-replica deployments).
+See `REMEDIATION-STATUS.md` for hardening still recommended (HMAC-keyed audit chain, third-party penetration test, SOC 2 control mapping, full OIDC Authorization-Code+PKCE flow, shared-store rate limiting for multi-replica deployments, structured request logging).

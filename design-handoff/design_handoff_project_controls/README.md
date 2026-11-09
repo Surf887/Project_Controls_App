@@ -1,5 +1,7 @@
 # Handoff: Project Controls — Shared Sidebar + 7-Screen Design System
 
+> **Implemented in the app.** These `.dc.html` files are design reference, not runtime. The React shell is `src/components/AppSidebar.tsx`; tokens are `src/design-tokens.css` (`data-accent` on `<html>`); layout restyle is `src/design-overrides.css`. Monthly-close `stage` is computed by `evaluateMonthlyClose` (not the 5-step mock in this package — the product close cycle has 8 steps). Accent values: `signal-blue` \| `petrol` \| `amber` \| `navy-coral`.
+
 ## Overview
 This package documents the visual + structural design for the Project Controls workspace (Marlin LNG · Train 2): a dark **sidebar shell** plus a light **workspace canvas**, applied consistently across 7 screens.
 

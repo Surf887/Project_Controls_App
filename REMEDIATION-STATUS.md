@@ -14,11 +14,11 @@ Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Statu
 
 ## P1 — High (fixed)
 
-- ✅ Audit chain now HMAC-keyed (`AUDIT_HMAC_SECRET`) with serialized appends.
+- ⚠️ Audit chain is append-only JSONL with SHA-256 `prevHash` and skip-corrupt-line resilience. **HMAC keying (`AUDIT_HMAC_SECRET`) is not wired** — treat that as still open. Appends are per-process `appendFileSync`, not a cross-replica lock.
 - ✅ Fail-fast in production when `DATABASE_URL` is unset; JSON writes are atomic.
 - ✅ Zod validation on all mutating routes; `If-Match` validated as a positive integer.
 - ✅ Top-level React error boundary; 409 conflicts surfaced (no silent edit loss); token expiry handling.
-- ✅ Structured JSON logging + request logging with `x-request-id`; real DB health (`/api/health`, `/live`, `/ready`).
+- ⚠️ DB health is split (`/api/health`, `/live`, `/ready`) with a real Postgres probe. A JSON logger module exists but is unused; requests are not assigned `x-request-id`. Production 500s return an `errorId` UUID.
 - ✅ Graceful shutdown (drain + pool close + timeout, SIGTERM/SIGINT).
 - ✅ Route-level code splitting (main chunk ~600 kB → ~308 kB).
 - ✅ Connector OAuth tokens encrypted at rest (AES-256-GCM, `CREDENTIALS_KEY`).
@@ -40,7 +40,9 @@ Tracks how the findings in `PRODUCTION-READINESS-AUDIT.md` were addressed. Statu
 These are either operational (not code we can complete here) or larger initiatives:
 
 - **ESLint/Prettier + coverage gates in CI.** Config and a baseline cleanup require adding devDependencies (a lockfile change) and fixing the existing lint backlog — do this as a dedicated pass, then flip the CI jobs to blocking.
-- **Metrics, tracing, error tracking** (Prometheus/OpenTelemetry/Sentry). Hooks/log correlation are in place; wiring an APM/error SDK is the next step.
+- **HMAC-keyed audit chain** (`AUDIT_HMAC_SECRET`) and persist events to Postgres `audit_events`.
+- **Request logging** — use `server/src/utils/logger.ts` on every request; add a correlation id.
+- **Metrics, tracing, error tracking** (Prometheus/OpenTelemetry/Sentry).
 - **Shared-store rate limiting** (e.g. Redis) for multi-replica deployments — current limiter is per-instance.
 - **DB normalization / event sourcing.** State is stored as a versioned JSONB blob today; splitting cost sheet/registers into relational tables is a Phase-2/3 effort.
 - **Full OIDC Authorization-Code + PKCE** server-side flow (current flow verifies a client-supplied ID token at the exchange endpoint).

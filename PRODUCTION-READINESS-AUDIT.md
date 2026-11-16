@@ -1,5 +1,7 @@
 # Production-Readiness Audit — Project Controls Intelligence Platform
 
+**Historical snapshot.** Findings below were true of commit `a72fafb`. Subsequent hardening is tracked in `REMEDIATION-STATUS.md` — do not treat P0/P1 items here as current without checking that file and the code.
+
 **Date:** June 2026 · **Commit audited:** `a72fafb` (master) · **Method:** static review of `src/`, `server/src/`, infra, CI, and docs (read-only). Evidence is cited as `file:line`.
 
 ---

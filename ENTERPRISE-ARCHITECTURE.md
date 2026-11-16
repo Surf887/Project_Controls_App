@@ -4,19 +4,21 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 ## Capability matrix
 
-| Capability | Today | Phase 1 (foundation) | Phase 2 (enterprise) | Phase 3 (scale) |
-|---|---|---|---|---|
-| **Configurable workflows** | Hard-coded forecast/change flows | `workflowConfig.ts` + `workflowEngine.ts` | Admin UI, delegation, SLAs | BPMN, multi-tenant templates |
-| **Multi-project / portfolio** | 3-project compare, active sync | Portfolio API, roll-up policies | PMO dashboards, cross-project RBAC | Federated portfolios, JV structures |
-| **Role-based permissions** | Demo `x-pc-role` header | `actionPolicy.ts` aligned to reducer | OIDC/JWT, project-scoped roles | SoD, attribute-based access |
-| **Real database** | JSON file + localStorage fallback | Postgres schema + Docker | Read replicas, connection pooling | Sharding, event store |
-| **Audit immutability** | Mutable in-state array (100 cap) | Append-only JSONL + hash chain | Postgres `audit_events` (no UPDATE) | WORM storage, SIEM export |
-| **Budget versioning** | Label + forecast revs | Baseline snapshots (immutable) | Sanction lock, revision compare | Full CPM baseline integration |
-| **Integrations** | Simulated connectors UI | Adapter registry + sync jobs API | SAP/P6 OAuth, webhooks | iPaaS, message bus |
-| **Validation / approval gates** | Domain rules in engines | Workflow engine + RBAC on actions | Configurable thresholds per portfolio | ML anomaly gates |
-| **Report packs** | CSV templates + export centre | Server `exportService` bundles | PDF packs, scheduled distribution | Branded exec dashboards |
-| **Security / deployment** | CI + smoke | Docker Compose, `.env.example` | TLS, rate limits, secrets vault | K8s, backup/DR runbooks |
-| **Edge cases** | Core O&G scenarios in seed | Documented edge-case register | Per-domain regression suites | Production incident library |
+“Today” is what the repo actually does (verified against `server/src` / `src/`). Phase 2/3 remain roadmap except where noted as shipped.
+
+| Capability | Today (shipped) | Still open |
+|---|---|---|
+| **Configurable workflows** | `workflowConfig.ts` + `workflowEngine.ts` gate **forecast/change** transitions; `GET /api/platform/workflows`; admin UI at `/admin/workflows`; delegations API. Monthly-close / baseline rows are config+UI only | Wire remaining workflows, SLA clocks, BPMN, DB-loaded templates |
+| **Multi-project / portfolio** | Seeded 3-project compare, active-project sync, `GET /api/platform/portfolio/governance` | True portfolio API, roll-up policies, federated / JV |
+| **Role-based permissions** | JWT sessions, `actionPolicy.ts`, per-project membership (`ENFORCE_PROJECT_MEMBERSHIP`), OIDC **token exchange**. Demo `x-pc-role` only when `DEMO_AUTH` is on | SoD, ABAC, Authorization-Code+PKCE |
+| **Real database** | Postgres when `DATABASE_URL` is set (required in production). JSON file store is **dev-only**. State is a versioned JSONB blob | Relational split of cost sheet/registers, replicas |
+| **Audit immutability** | Append-only JSONL + SHA-256 `prevHash` chain; corrupt trailing lines skipped. In-state array still exists for the UI | HMAC keying (`AUDIT_HMAC_SECRET` is unused), write to Postgres `audit_events`, serialized lock across processes |
+| **Budget versioning** | Filesystem snapshots `GET/POST /api/projects/:id/baselines`, admin lock | Sanction compare UI, CPM baseline integration |
+| **Integrations** | Adapter registry, sync jobs API, HMAC webhooks. Connectors are **simulated** (`configured: false` on list; `sap-s4` uses sample rows; no live SAP/P6 OAuth) | Real adapters, iPaaS |
+| **Validation / approval gates** | Zod on mutating routes; workflow engine + RBAC on actions | Configurable portfolio thresholds, ML gates |
+| **Report packs** | Server JSON close pack + **PDF** (`/exports/close-pack.pdf`); hourly scheduler (cron string stored, not parsed) | Branded packs, real cron, scheduled email |
+| **Security / deployment** | Compose + multi-stage Docker, Helmet/CORS/rate-limit, fail-fast prod env, `DEPLOYMENT.md` / backup script | Shared rate-limit store, metrics/tracing, K8s |
+| **Edge cases** | `src/data/edgeCaseRegister.ts`; accrual ancestor double-count fixed | Field incident library |
 
 ## Phase 1 — Foundation (implemented in this repo)
 
@@ -24,7 +26,7 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 - Shared definitions: `src/data/workflowConfig.ts`
 - Server validation: `server/src/services/workflowEngine.ts`
-- Workflows: forecast approval, change board, monthly close gates
+- Workflows: forecast approval and change board are server-gated; monthly close gates are the UI stepper (`monthlyCloseProgress.ts`)
 
 ### Role-based permissions
 
@@ -35,8 +37,9 @@ Maps product capabilities to implementation phases. The trust milestone establis
 ### Immutable audit
 
 - Append-only store: `server/data/audit/{projectId}.jsonl`
-- Hash chain per entry: `server/src/services/auditService.ts`
+- SHA-256 hash chain per entry: `server/src/services/auditService.ts` (HMAC keying is **not** wired; `AUDIT_HMAC_SECRET` is unused)
 - API: `GET /api/projects/:id/audit` (never via reducer from client)
+- Trailing corrupt JSONL lines are skipped so a partial write cannot 500 a successful action
 
 ### Budget versioning
 
@@ -45,9 +48,10 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 ### Real database path
 
-- Postgres schema: `server/src/db/migrations/002_core_schema.sql`
-- Enable with `DATABASE_URL` (Docker Compose included)
-- JSON store remains default for local dev without Postgres
+- Postgres schema: `server/src/db/migrations/*.sql` (tsx reads them from `server/src/db/migrations`; the Docker image currently does **not** copy them next to `server/dist`)
+- Store: `server/src/db/postgresProjectStore.ts` — versioned JSONB blob + transactional `If-Match` (`FOR UPDATE`)
+- JSON store (`projects.json`) remains the default for local dev **without** Postgres and is refused in production
+- Filesystem artifacts (audit, baselines) have **no** `/app/data` volume in Compose
 
 ### Integrations
 
@@ -58,7 +62,8 @@ Maps product capabilities to implementation phases. The trust milestone establis
 ### Report packs
 
 - Server bundles: `server/src/services/exportService.ts`
-- API: `GET /api/projects/:id/exports/close-pack`
+- API: `GET /api/projects/:id/exports/close-pack` (JSON) and `.../close-pack.pdf` (PDFKit)
+- Scheduler: `exportScheduler.ts` — hourly tick; `scheduleCron` is stored but not parsed
 
 ### Deployment
 
@@ -67,20 +72,32 @@ Maps product capabilities to implementation phases. The trust milestone establis
 
 ## Phase 2 — Enterprise hardening
 
-1. Wire Postgres store when `DATABASE_URL` is set (dual-write migration from JSON)
-2. OIDC provider (`server/src/auth/providers/oidcProvider.ts`)
-3. Portfolio governance policies (approval thresholds, delegation)
-4. PDF close packs (puppeteer or pdfkit)
-5. Webhook delivery for approved forecast/change events
-6. Optimistic concurrency (`version` column, 409 on conflict)
+Shipped in-repo (do not re-build):
+
+1. Postgres store when `DATABASE_URL` is set (`postgresProjectStore.ts`)
+2. OIDC ID-token → session exchange (`server/src/auth/oidc.ts`, `POST /api/platform/auth/oidc`)
+3. PDF close packs (`pdfExport.ts`, pdfkit)
+4. Inbound HMAC webhooks (`webhookAuth.ts`)
+5. Atomic optimistic concurrency (409 on `If-Match` mismatch)
+
+Still open:
+
+1. Dual-write / cutover tooling from JSON files for existing deploys
+2. Full OIDC Authorization-Code + PKCE (current flow verifies a client-supplied ID token)
+3. Portfolio governance policies (approval thresholds, delegation SLAs)
+4. Outbound webhook delivery for approved forecast/change events
+5. HMAC-keyed audit chain + persist `audit_events` in Postgres
+6. Parse `scheduleCron` instead of the fixed hourly / next-month runner; persist scheduled PDF output instead of discarding it
+7. Copy SQL migrations into the image and mount `/app/data` (or `AUDIT_DIR`) so Compose boots a durable schema + audit trail
 
 ## Phase 3 — Production scale
 
-1. Event sourcing for cost sheet mutations
+1. Event sourcing / normalized cost-sheet tables (state is still one JSONB blob)
 2. Cross-portfolio consolidation currency
-3. Backup automation (pg_dump schedule, audit archive)
+3. Automated backup **scheduling** (script exists: `scripts/backup.sh`; ops must cron it)
 4. Pen-test remediation, SOC2 controls mapping
-5. Edge-case library from field deployments (accrual reversals, FX revals, JV splits, etc.)
+5. Shared rate-limit store (Redis) + metrics/tracing
+6. Edge-case library from field deployments (accrual reversals, FX revals, JV splits, etc.)
 
 ## Edge-case register (initial)
 

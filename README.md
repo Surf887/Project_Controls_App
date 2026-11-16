@@ -15,7 +15,18 @@ npm run dev
 - **Frontend:** http://localhost:5173/ (Vite proxies `/api` → backend)
 - **API:** http://localhost:3001/api/health
 
+Copy `.env.example` to **both** `.env` (Vite) and `server/.env` (`tsx` / `npm run dev`). The two processes do not share one file — see `CONTRIBUTING.md`. Sign in as `ADMIN_EMAIL` / `ADMIN_PASSWORD` when demo auth is off. To use the in-app role switcher, set both `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (never in production). Vite's `/api` proxy is hardcoded to `http://localhost:3001`.
+
 The React app hydrates project state from the API and dispatches all mutations as `ProjectAction`s that the server reducer applies under optimistic concurrency control (`If-Match` version). If the API is unreachable the client falls back to `localStorage`.
+
+| Doc | What it covers |
+|---|---|
+| `CONTRIBUTING.md` | Local setup, PR checks, troubleshooting |
+| `API.md` | HTTP routes, auth, concurrency, errors |
+| `DEPLOYMENT.md` | Production runbook (Compose, health, backups) |
+| `SECURITY.md` | Controls and how to report issues |
+| `ENTERPRISE-ARCHITECTURE.md` | What is built vs still roadmap |
+| `MILESTONE-TRUST.md` | Control-account grain, monthly close, E2E |
 
 ### Frontend only (legacy local mode)
 
@@ -24,8 +35,9 @@ npm run dev:client
 ```
 
 ```bash
-npm run build    # production client build + typecheck
-npm run test     # Vitest engine + server suite
+npm run build                       # production client build + typecheck
+npm test                            # client/engine Vitest
+DEMO_AUTH=true npm test --prefix server
 ```
 
 ### API only
@@ -47,17 +59,25 @@ Default store is the JSON file at `server/data/projects.json` (auto-seeded on fi
 
 ### Key API routes
 
+Full catalogue, auth, and error codes: **`API.md`**.
+
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/health` | Liveness check |
-| GET | `/api/projects` | List projects |
-| GET | `/api/projects/active` | Active project state |
+| GET | `/api/health` | Status + DB probe (`ok`, not a `ready` field) |
+| GET | `/api/health/live` | Process liveness |
+| GET | `/api/health/ready` | Readiness (503 if Postgres unreachable) |
+| GET | `/api/platform/auth/config` | `{ demoAuthEnabled, oidcEnabled }` |
+| POST | `/api/platform/auth/login` | Password → session JWT |
+| GET | `/api/projects` | List projects (membership-filtered in prod) |
+| GET | `/api/projects/active` | Active project `{ state, version }` |
 | GET | `/api/projects/:id` | Project state by id |
 | POST | `/api/projects/:id/activate` | Switch active project |
-| POST | `/api/projects/:id/actions` | Apply `ProjectAction` (server runs reducer) |
-| POST | `/api/projects/:id/reset` | Reset project to seed data |
+| POST | `/api/projects/:id/actions` | Apply `ProjectAction` (server runs reducer; send `If-Match`) |
+| POST | `/api/projects/:id/reset` | Reset project to seed data (admin) |
 | GET | `/api/projects/:id/compute/forecast` | Server-side forecast totals |
 | GET | `/api/projects/:id/compute/evm` | Server-side EVM summary |
+| GET | `/api/projects/:id/audit` | Append-only audit chain + integrity |
+| GET | `/api/projects/:id/exports/close-pack.pdf` | Monthly close pack PDF |
 
 
 ## Modules
@@ -67,17 +87,17 @@ Navigation is designed for **oil & gas capital project controls** (AACE TCM mont
 | Group | Purpose | Modules |
 |-------|---------|---------|
 | **Programme overview** | Owner / PMO health | Command Center, Portfolio Compare |
-| **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR) |
+| **Estimate & baseline** | MCE → CCE at sanction | BoE, WBS, Cost Structure (CBS · TECOP/NTR), ISO 19008 SCCS |
 | **Monthly control cycle** | Period close sequence | Accruals, Cost Sheet, Contingency, Forecast Engine, Forecast Approval |
 | **VOWD & performance** | Physical progress → EV | Rules of Credit, EVM, Predictive |
 | **Commitments & delivery** | PO · LLI · FX together | Long-Lead, Procurement, FX & Hedging |
 | **Change & risk board** | Linked governance | Change Register, Risks, Opportunities, Decisions |
 | **Forecast analytics** | Scenario / Monte Carlo | What-if |
 | **EPC execution** | Discipline workspaces | Engineering, Construction, Commissioning |
-| **Project logs** | Supporting registers | Issues, Actions, Lessons |
-| **Reporting & traceability** | Stakeholder packs | Team Reports, Audit Trail |
+| **Project logs** | Supporting registers | Issues, Actions, Lessons, Cost-control logs (`/logs`) |
+| **Reporting & traceability** | Stakeholder packs | Team Reports, Audit Trail, Export centre (`/exports`) |
 | **Contractor submissions** | Early variation capture | Ingestion, Review, Validation, Lineage |
-| **Platform admin** | Integrations & intel | Connectors, Governance, intel modules |
+| **Platform admin** | Integrations & intel | Connectors, Governance, intel modules, PMO (`/admin/pmo`), Workflow admin (`/admin/workflows`) |
 
 ### Improvements over legacy PMIS (EcoSys / Unifier)
 
@@ -99,9 +119,11 @@ Deterministic EAC per WBS row:
 
 **Contingency engine** — CN.00 / MR.00 reserve WBS rows with auto-draw rules linked to approved changes in the Change Register.
 
-**FX module** — multi-currency POs, treasury rate table, hedge % per commitment, unhedged exposure rolled into forecast when enabled.
+**FX module** — multi-currency POs, treasury rate table, hedge % per commitment, unhedged exposure rolled into forecast when enabled. A missing USD rate silently treats the foreign amount as USD (`convertToUsd`).
 
 **Accruals** — period-end unbilled cost from subcontracts (earned − invoiced), PO commitment gaps, pending invoices, and manual/timesheet adjustments. WBS rollup shows posted actuals + open accruals = economic actuals.
+
+`accruedCostForWbs` rolls **the queried account and its descendants only** (`WBS` or `WBS.*`) for `reviewed`/`posted` entries. It does **not** pull ancestor bookings. PO accruals are booked on `P.04`; attributing that parent line to every child used to double-count it across sibling subtrees (`src/engine/accruals.ts`). `incurredForRow` is different: open (not posted/reversed) accruals on that **exact** WBS + `actualsToDate`.
 
 Cost sheet EAC and approved changes sync from registers. FTC period forecasts support **linear**, **front-end loaded**, and **back-end loaded** curves.
 
@@ -115,6 +137,16 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 **Cost structure** — CBS hierarchy with direct/indirect nature, TECOP/NTR categories, burden rules, and loaded-budget view tied to cost sheet control accounts.
 
+**ISO 19008 SCCS** — workspace at `/cost-structure/sccs`. Cost rows and extracted values get a composite `PBS.SAB.COR` (e.g. `AAC.KD.BP`):
+
+- **PBS** from longest-prefix WBS match (`defaultWbsPbsRules`)
+- **SAB** from phase, or extraction category if no phase
+- **COR** from CBS prefix
+- `source: 'manual'` assignments are never overwritten by mapping
+- Rollups and CSV export use **control accounts only** (`parentId === null`), same grain as EVM/forecast
+
+Reference tables: `src/data/sccs.ts` (facets) + `src/data/sccsMappings.ts` (rules). Engine: `src/engine/sccs.ts`. The tables are a representative ISO 19008 subset, not the full annex.
+
 ## Governance & reporting
 
 **Portfolio compare** — side-by-side BAC, EAC, CPI/SPI, open changes/risks, and forecast approval status across seeded portfolio projects (active project syncs from live state).
@@ -125,7 +157,9 @@ Monte Carlo (N=2000) in **Cost & forecast → What-if** reports P10/P50/P90, his
 
 **Team reports** — CSV packs by audience (cost summary, change register, forecast status, EVM snapshot, audit activity) for team consumption.
 
-**Audit trail** — who changed forecast/cost sheet, settings, change decisions, and forecast approvals (last 100 entries, persisted).
+**Audit trail** — in-app log (capped, part of project state) plus an append-only JSONL chain at `GET /api/projects/:id/audit` (`server/data/audit`). The on-disk chain is a SHA-256 hash of each record plus `prevHash`; it is not HMAC-keyed today despite `AUDIT_HMAC_SECRET` appearing in `.env.example`.
+
+**UI shell** — dark sidebar + light canvas. Tokens live in `src/design-tokens.css` (`data-accent` on `<html>`: `signal-blue` \| `petrol` \| `amber` \| `navy-coral`); layout restyle in `src/design-overrides.css`. One `AppSidebar` drives navigation and monthly-close progress (`evaluateMonthlyClose`). HTML mocks in `design-handoff/` are design reference, not runtime code.
 
 ## WBS CSV format
 
@@ -139,10 +173,11 @@ A.01,,Process Area A,CAPEX,Engineering,Mechanical,84000000,USD
 - Active project is single-project at a time; portfolio compare shows seeded benchmark projects alongside the live one
 - Persistence is either JSON file or PostgreSQL (set `DATABASE_URL`); project state is stored as a versioned JSONB blob in Postgres today — splitting cost sheet / registers into relational tables is the next enterprise step
 - Baseline snapshots and audit log are written to the filesystem under `server/data/baselines` and `server/data/audit`; migrating both into Postgres tables is tracked as a follow-up for enterprise-grade versioning
-- Auth ships with JWT issuance at `/platform/auth/token` plus per-project RBAC (`server/src/auth`). Demo role switching via `x-pc-role` / topbar selector is gated behind `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (both default **false**) — production deployments should configure OIDC (`OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`)
+- Auth: password login at `POST /api/platform/auth/login`, optional OIDC **token exchange** at `POST /api/platform/auth/oidc` (`OIDC_ISSUER` + `OIDC_CLIENT_ID`). Demo `/auth/token` and `x-pc-role` are gated behind `DEMO_AUTH` (forced off in production). Under `npm run dev`, `DEMO_AUTH` is read from **`server/.env`**; the repo-root copy only feeds Vite. With no `DEMO_AUTH` set, the server enables demo auth in `NODE_ENV=development` only. Per-project RBAC: `server/src/auth`.
+- Item detail (`/item/:type/:id`) only resolves `change`, `risk`, and `wbs`. Offline `switchProject` is a no-op; logout keeps the `project-controls-platform-v2` blob.
 - Integrations use simulated handshake/sync (configure endpoints, no live OAuth)
 - No P6/SAP/EcoSys live API feeds
-- Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools
+- Monte Carlo is AACE-aligned but not a substitute for specialist risk consultancy tools (`src/engine/scenario.ts` uses `Math.random()`, not a seeded RNG)
 
 ## Reset demo data
 

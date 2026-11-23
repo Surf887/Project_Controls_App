@@ -1,5 +1,7 @@
 # Production-Readiness Audit — Project Controls Intelligence Platform
 
+> **Historical snapshot** of commit `a72fafb` (June 2026). Several P0/P1 items were later remediated. For current status use `REMEDIATION-STATUS.md`. Do not treat HMAC-keyed audit, `x-request-id` logging, `/api/health.ready`, or “Docker never compiles the server” as a description of `master` today.
+
 **Date:** June 2026 · **Commit audited:** `a72fafb` (master) · **Method:** static review of `src/`, `server/src/`, infra, CI, and docs (read-only). Evidence is cited as `file:line`.
 
 ---

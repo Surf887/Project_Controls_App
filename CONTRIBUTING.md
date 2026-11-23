@@ -5,11 +5,36 @@
 ```bash
 npm install
 npm install --prefix server
-cp .env.example .env        # set JWT_SECRET etc. for local runs
-npm run dev                 # client (5173) + API (3001)
+cp .env.example .env
+cp .env.example server/.env   # tsx (`npm run dev`) reads this file, not the repo-root copy
+npm run dev                   # client (5173) + API (3001)
 ```
 
-For a quick frontend-only/demo run, set `VITE_DEMO_AUTH=true` and `DEMO_AUTH=true` (local only — never in production).
+`loadRootEnvFile()` (`server/src/config/loadEnv.ts`) does **not** always read the repo-root `.env`:
+
+| How you start the API | `import.meta.url` lives in | `.env` loaded |
+|---|---|---|
+| `npm run dev` / `tsx watch src/index.ts` | `server/src/config/` | **`server/.env`** (`../..` from that file) |
+| Bundled `node server/dist/index.js` | `server/dist/` | **repo-root `.env`** |
+
+Vite still loads repo-root `.env` for `VITE_*`. Copying `.env.example` only to the repo root turns the **client** demo picker off (`VITE_DEMO_AUTH=false`) while the **tsx server** never sees `DEMO_AUTH=false` and, in `NODE_ENV=development`, demo auth stays **on**. Put the same file at `server/.env` (or export `DEMO_AUTH` in the shell) so both sides match.
+
+Sign in at the login screen with `ADMIN_EMAIL` / `ADMIN_PASSWORD` (defaults `admin@example.com` / `change-me-strong-password`) when demo auth is off.
+
+For credential-free local demos, set **both** in the file each process actually loads:
+
+```bash
+VITE_DEMO_AUTH=true   # client: role switcher + x-pc-role fallback (repo-root `.env`)
+DEMO_AUTH=true        # server: accept demo header + POST /api/platform/auth/token (`server/.env` under tsx)
+```
+
+Never enable either flag in production (`NODE_ENV=production` hard-disables `DEMO_AUTH` and refuses to boot if it is `true`).
+
+Frontend-only (no API, `localStorage` persistence):
+
+```bash
+npm run dev:client
+```
 
 ## Checks before opening a PR
 
@@ -35,3 +60,65 @@ CI (`.github/workflows/ci.yml`) runs the same client, server, and e2e jobs, plus
 ## Branching & review
 
 Work on a feature branch, open a PR against `master`, ensure CI is green, and get review before merge. Use clear, conventional commit messages.
+
+HTTP surface: `API.md`. Ops: `DEPLOYMENT.md`.
+
+## Client sync (connected vs offline)
+
+`src/store/projectStore.tsx` is the source of truth for how the SPA talks to the API.
+
+| Mode | What dispatch does | Persistence |
+|---|---|---|
+| Connected (`backendRef === true`) | Queue `POST .../actions`, then `hydrate` the response. **No optimistic local apply.** | Server only. The `localStorage` writer is skipped. |
+| Offline (API unreachable at bootstrap) | `baseDispatch` immediately | `project-controls-platform-v2` (`schemaVersion = 2`) |
+| Auth required (API up, no session) | Login screen | Nothing written |
+
+Reconnect / password / SSO / demo login all call `connectBackend()`, which **replaces** in-memory state with `GET` of the active project. Offline edits are not merged.
+
+Other constraints:
+
+- `switchProject` is a **no-op** while offline.
+- `logout` clears `pc-token` / `pc-role` / `pc-user` / `pc-expires-at` only. The v2 project blob and any `pc-saved-filters:*` keys stay.
+- ErrorBoundary “Reset local data” removes **only** `project-controls-platform-v2`.
+- `If-Match` is sent solely from `dispatchAction`. `activateProject` / `resetProject` do not send it.
+- `useProjectRole` reads `currentUser.role`. Unknown/absent values become **`cost_controller`** (so `canEdit` is true). Editing `localStorage['pc-role']` alone does not change that hook.
+- `canPerformAction` in `useProjectRole.ts` is unused; server `actionPolicy.ts` is what actually gates POST `/actions`.
+- Audit Trail / `/audit/:entryId` read `state.auditLog`. The JSONL chain is only `GET /api/projects/:id/audit`.
+
+## Troubleshooting
+
+| Symptom | Likely cause | What to do |
+|---|---|---|
+| Login screen, demo picker missing | Repo-root `.env` has `VITE_DEMO_AUTH=false` | Sign in with bootstrap admin, **or** set `VITE_DEMO_AUTH=true` (repo-root) **and** `DEMO_AUTH=true` (`server/.env` under tsx) and restart both processes. |
+| Client demo off, `/token` still works | tsx did not load repo-root `.env` | Copy `.env` to `server/.env`, or export `DEMO_AUTH=false` in the shell. |
+| `401` / demo `/token` returns 404 | Server demo auth off | `DEMO_AUTH=true` is a **server** env var. `VITE_*` only affects the client. |
+| Client talks to the wrong port | Harness set `PORT` | Vite uses `PORT` (default 5173). The API uses `API_PORT` then `PORT` (default 3001). If something injects `PORT`, set `API_PORT=3001` so the API does not collide. |
+| `/api` 502 in Vite even though API_PORT is set | Proxy target is hardcoded | `vite.config.ts` always proxies `/api` → `http://localhost:3001`, not `API_PORT`. Keep the API on 3001 or change the proxy. |
+| `JWT_SECRET must be at least 16 characters` | Short secret in `.env` | Use `openssl rand -hex 32`. In production the server also refuses to boot with no secret. Unset `JWT_SECRET` in **dev** falls back to a source-committed secret (`jwt.ts`) — do not rely on that outside local toys. |
+| `JWT_ISSUER` / `SESSION_TTL_SEC` in `.env` ignored | Captured at **import time** | `JWT_ISSUER` (`jwt.ts`), `SESSION_TTL_SEC` (`auth.ts`), `DATABASE_PATH`, `USERS_PATH`, and `BCRYPT_ROUNDS` are read when the module first loads — **before** `loadRootEnvFile()`. Export them in the shell (or Compose) so they exist before Node starts. `JWT_SECRET` is read later in `getJwtSecret()` and does pick up the file. |
+| Server tests / e2e hang on login | Demo auth off in that process | `DEMO_AUTH=true npm test --prefix server` and `DEMO_AUTH=true npm run test:e2e` (CI already sets this). Playwright has **no login spec** — it hits routes directly and needs demo auth. |
+| `409` after an edit | Another write incremented `version` | Expected. The UI reloads server state; re-apply the change. Send `If-Match` on `POST .../actions`. Omitting `If-Match` **skips** the version check. |
+| Edits feel laggy / flash after save | Connected dispatch is not optimistic | Wait for the POST. Do not add a second local `baseDispatch` unless you also handle 409 rollback. |
+| Offline edits vanished after login | `connectBackend` hydrates from the API | There is no merge. Copy values out before reconnecting, or stay on `npm run dev:client`. |
+| Cost sheet / commitments / apply-extractions “do nothing” | Period is locked | Reducer returns prior state with no error for those three types. `SET_VALUES` still runs. |
+| Cannot lock the period (API 400) | Approved extractions not yet applied | Server `validateProjectAction` rejects `LOCK_REPORTING_PERIOD` while `pendingApplyCount > 0`. Offline, the reducer swallows the throw (silent no-op). |
+| Extraction apply did nothing | Locked, empty batch, or unmapped WBS | Last cost/forecast per WBS wins; unmapped rows increment `skippedUnmapped` and are skipped. |
+| `SET_VALUES` undid a posted extraction | Dual approval lost or financial fields changed | `applyValuesUpdate` reverses the active posting, then persists values. Not blocked by period lock. |
+| Production-like `npm start` dies immediately | Missing `DATABASE_URL` | JSON file store is **dev-only**. Production fail-fast requires Postgres. |
+| Empty UI after a crash loop | Corrupt `localStorage` project blob | Error boundary “Reset local data” only clears `project-controls-platform-v2`. Auth keys (`pc-token`, `pc-role`, …) stay. Or **Reset demo** in the top bar. |
+| Webhook `401` locally | No `WEBHOOK_SECRET` **and** you sent a bad signature | Dev allows unsigned webhooks only when **no** secret is configured. If a secret is set, `x-webhook-signature` must be HMAC-SHA256 of the raw body. |
+| SSO button missing though OIDC is on | Client URL not set | Server OIDC is `OIDC_ISSUER` + `OIDC_CLIENT_ID`. The login button also needs `VITE_OIDC_LOGIN_URL`. `OIDC_CLIENT_SECRET` is unused (token-exchange verifies the ID token against JWKS). |
+
+`loadRootEnvFile()` does not override variables already in the environment. Changes to `.env` need a server restart; Vite picks up `VITE_*` on client restart.
+
+## Architecture notes for contributors
+
+- Shared domain lives in `src/engine/*` and `src/store/projectReducer.ts` — imported by both the SPA fallback and the server.
+- Financial totals use **control accounts only** (`parentId === null`). See `MILESTONE-TRUST.md`.
+- Accrual WBS rollup is descendant-only; do not “fix” it to match parent codes bidirectionally (`src/engine/accruals.ts`). `incurredForRow` uses **open** accruals on that exact WBS only (no descendant rollup, excludes `posted`/`reversed`) — it is not a second name for `accruedCostForWbs`.
+- Forecast EAC allocates FX stress and **net** (open-threat − open-opportunity) exposure **equally** across non-reserve control accounts (`src/engine/forecast.ts`). Period loading curves (`linear` / `front_end` / `back_end`) live in `src/engine/loading.ts`, not `forecast.ts`.
+- `workflowEngine.ts` asserts **forecast** and **change** transitions only. Monthly-close progress in the sidebar is `monthlyCloseProgress.ts` (UI). Baseline/monthly-close rows in `workflowConfig.ts` are not server-enforced.
+- New views: add a `NavView` + path in `src/routes/viewPaths.ts` and `src/data/navigationModel.ts`, lazy-load from `App.tsx`. Extra routes that are **not** in `viewPaths`: `/logs`, `/admin/pmo`, `/admin/workflows`, `/exports`, `/close`, `/item/:type/:id` (change/risk/wbs only).
+- Saved filters: `useSavedFilters` POSTs without `shared: true` and falls back to `localStorage` key `pc-saved-filters:${scope}` when the API fails. No view currently imports the hook.
+- `src/api/client.ts` has no baseline helpers — use `API.md` / curl for `GET/POST /baselines`. `If-Match` is sent only from `dispatchAction`.
+- Design tokens: `src/design-tokens.css` + `src/design-overrides.css`. Accent is `data-accent` on `<html>`. Do not duplicate sidebar markup — use `AppSidebar`.

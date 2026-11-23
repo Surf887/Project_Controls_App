@@ -3,7 +3,9 @@
 ## Overview
 This package documents the visual + structural design for the Project Controls workspace (Marlin LNG · Train 2): a dark **sidebar shell** plus a light **workspace canvas**, applied consistently across 7 screens.
 
-The headline change in this round of design work: the sidebar was a **hand-copied block duplicated into several screens** (drifting apart). It is now a **single reusable component** driven by two inputs (`active`, `stage`) so every screen renders the correct navigation + monthly-cycle progress from one source of truth. The implementation task is to mirror that: build **one `Sidebar` component** in the app and pass props per route — not re-paste sidebar markup per page.
+The headline change in this round of design work: the sidebar was a **hand-copied block duplicated into several screens** (drifting apart). It is now a **single reusable component** driven by two inputs (`active`, `stage`) so every screen renders the correct navigation + monthly-cycle progress from one source of truth.
+
+**Shipped in the app:** `src/components/AppSidebar.tsx` plus `src/design-tokens.css` / `src/design-overrides.css`. These HTML files remain design reference — do not paste them into production views. Monthly-close `stage` in the live sidebar comes from `evaluateMonthlyClose` (`monthlyCloseProgress.ts`), not the hardcoded 1–5 table below.
 
 ## About the Design Files
 The files in `screens/` are **design references created in HTML** (`.dc.html` prototypes). They show the intended look, layout, and behavior. They are **not production code to copy directly**.
